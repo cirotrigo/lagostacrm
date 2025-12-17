@@ -99,21 +99,23 @@ export async function POST(req: Request) {
     // Test: Find deals
     const { data: deals, error: dealsError } = await supabase
         .from('deals')
-        .select('id, title, value')
+        .select('id, title, value, is_won, is_lost')
         .eq('organization_id', context.organizationId)
         .eq('board_id', targetBoardId)
         .eq('stage_id', stageId)
-        .eq('is_won', false)
-        .eq('is_lost', false)
         .order('value', { ascending: false })
-        .limit(10);
+        .limit(50);
+
+    // Compat: deals legados podem ter is_won/is_lost = NULL.
+    // Considera NULL como "aberto".
+    const openDeals = (deals || []).filter((d: any) => !d.is_won && !d.is_lost).slice(0, 10);
 
     return NextResponse.json({
         success: true,
         tool: toolName,
         context: { boardId: targetBoardId, stageName },
         stage: stages[0],
-        dealsCount: deals?.length || 0,
-        deals: deals || []
+        dealsCount: openDeals.length || 0,
+        deals: openDeals
     });
 }

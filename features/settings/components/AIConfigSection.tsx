@@ -171,15 +171,21 @@ export const AIConfigSection: React.FC = () => {
 
     const hasUnsavedChanges = localApiKey !== aiApiKey;
 
+    // Preços exibidos: input / output (por 1M tokens), apenas como referência na UI.
+    // Fontes oficiais (podem mudar):
+    // - OpenAI: https://platform.openai.com/docs/pricing
+    // - Google Gemini API: https://ai.google.dev/gemini-api/docs/pricing
+    // - Anthropic (model comparison / pricing): https://platform.claude.com/docs/en/about-claude/models
+    // Observação: alguns provedores têm preço em faixas (ex.: Gemini por tamanho de contexto) e/ou “cached input” (OpenAI).
     const providers = [
         {
             id: 'google',
             name: 'Google Gemini',
             models: [
-                { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Recomendado - Best value', price: '$0.15 / $0.60' },
-                { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', description: 'Ultra fast', price: '$0.05 / $0.20' },
-                { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Thinking model', price: '$2.50 / $10' },
-                { id: 'gemini-3-pro-preview', name: 'Gemini 3.0 Pro', description: 'Most intelligent', price: '$7 / $21' },
+                { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Recomendado - Best value', price: '$0.30 / $2.50' },
+                { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', description: 'Ultra fast', price: '$0.10 / $0.40' },
+                { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Thinking model', price: '$1.25–$2.50 / $10–$15' },
+                { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro (Preview)', description: 'Most intelligent', price: '$2–$4 / $12–$18' },
             ]
         },
         {
@@ -195,15 +201,12 @@ export const AIConfigSection: React.FC = () => {
             id: 'openai',
             name: 'OpenAI',
             models: [
-                { id: 'gpt-5.1-codex-mini', name: 'GPT-5.1 Codex Mini', description: 'Fastest coder', price: '$0.50 / $1' },
-                { id: 'gpt-5.1-codex', name: 'GPT-5.1 Codex', description: 'Full coder model', price: '$2 / $6' },
-                { id: 'gpt-5.1-chat-latest', name: 'GPT-5.1 Chat Latest', description: 'Latest chat', price: '$3 / $9' },
-                { id: 'gpt-5.1', name: 'GPT-5.1', description: 'Standard', price: '$5 / $15' },
-                { id: 'gpt-5-pro', name: 'GPT-5 Pro', description: 'Recomendado - Premium', price: '$10 / $30' },
-                { id: 'gpt-5', name: 'GPT-5', description: 'Flagship model', price: '$8 / $24' },
-                { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Fast & efficient', price: '$2 / $6' },
-                { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: 'Ultra fast', price: '$0.30 / $0.90' },
-                { id: 'gpt-4o', name: 'GPT-4o', description: 'Legacy flagship', price: '$5 / $15' },
+                { id: 'gpt-5.2', name: 'GPT-5.2 (Preview)', description: 'Preview', price: '$1.75 / $14' },
+                { id: 'gpt-5.2-pro', name: 'GPT-5.2 Pro', description: 'Premium', price: '$21 / $168' },
+                { id: 'gpt-5.2-chat-latest', name: 'GPT-5.2 Chat Latest', description: 'Latest chat', price: '$1.75 / $14' },
+                { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Fast & efficient', price: '$0.25 / $2' },
+                { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: 'Ultra fast', price: '$0.05 / $0.40' },
+                { id: 'gpt-4o', name: 'GPT-4o', description: 'Legacy flagship', price: '$2.50 / $10' },
             ]
         },
     ];
@@ -331,7 +334,7 @@ export const AIConfigSection: React.FC = () => {
                                     className="sr-only peer"
                                     aria-label="Ativar Modo Pensamento"
                                 />
-                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
                     </div>
@@ -357,7 +360,7 @@ export const AIConfigSection: React.FC = () => {
                                     className="sr-only peer"
                                     aria-label="Ativar Prompt Caching"
                                 />
-                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-600"></div>
+                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-600"></div>
                             </label>
                         </div>
                     </div>
@@ -383,7 +386,7 @@ export const AIConfigSection: React.FC = () => {
                                     className="sr-only peer"
                                     aria-label="Ativar busca na web"
                                 />
-                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
                             </label>
                         </div>
                     </div>

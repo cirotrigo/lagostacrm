@@ -1,7 +1,11 @@
 import { ToolLoopAgent, stepCountIs } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { CRMCallOptionsSchema, type CRMCallOptions } from '@/types/ai';
 import { createCRMTools } from './tools';
+
+type AIProvider = 'google' | 'openai' | 'anthropic';
 
 /**
  * Build context prompt from call options
@@ -76,8 +80,17 @@ REGRAS:
 - Sempre explique os resultados das ferramentas
 - Se der erro, informe de forma amigável
 - Use o boardId do contexto automaticamente quando disponível
-- Para ações destrutivas (criar, mover, marcar), o usuário será solicitado a aprovar
-- PRIORIZE usar IDs que você já conhece antes de buscar novamente`;
+- Para buscas (deals/contatos): ao chamar ferramentas de busca, passe APENAS o termo (ex.: "Nike"), sem frases como "buscar deal Nike".
+- Para ações que alteram dados (criar, mover, marcar, atualizar, atribuir, criar tarefa):
+    - NÃO peça confirmação em texto (não peça “sim/não”, “você confirma?”, etc.)
+    - Chame a ferramenta diretamente; a UI já vai mostrar um card único de Aprovar/Negar
+    - Só faça perguntas se faltar informação para executar (ex.: qual deal? qual estágio?)
+- PRIORIZE usar IDs que você já conhece antes de buscar novamente
+
+APRESENTAÇÃO (MUITO IMPORTANTE):
+- NÃO mostre IDs/UUIDs para o usuário final (ex.: "(ID: ...)")
+- NÃO cite nomes internos de tools (ex.: "listStagnantDeals", "markDealAsWon")
+- Sempre prefira: título do deal (nome do card) + contato + valor + estágio (quando fizer sentido)`;
 
 /**
  * Factory function to create a CRM Agent with dynamic context
@@ -91,7 +104,8 @@ export async function createCRMAgent(
     context: CRMCallOptions,
     userId: string,
     apiKey: string,
-    modelId: string = 'gemini-2.0-flash-exp'
+    modelId: string = 'gemini-2.0-flash-exp',
+    provider: AIProvider = 'google'
 ) {
     console.log('[CRMAgent] 🤖 Creating agent with context:', {
         boardId: context.boardId,
@@ -99,10 +113,32 @@ export async function createCRMAgent(
         stagesCount: context.stages?.length,
         userId,
         modelId,
+        provider,
     });
 
-    // Create Google provider with org-specific API key
-    const google = createGoogleGenerativeAI({ apiKey });
+    // Create provider client with org-specific API key
+    // NOTE: Model IDs are stored in organization_settings and passed through.
+    const model = (() => {
+        switch (provider) {
+            case 'google': {
+                const google = createGoogleGenerativeAI({ apiKey });
+                return google(modelId);
+            }
+            case 'openai': {
+                const openai = createOpenAI({ apiKey });
+                return openai(modelId);
+            }
+            case 'anthropic': {
+                const anthropic = createAnthropic({ apiKey });
+                return anthropic(modelId);
+            }
+            default: {
+                // Should be unreachable due to type, but keep runtime safety.
+                const google = createGoogleGenerativeAI({ apiKey });
+                return google(modelId);
+            }
+        }
+    })();
 
     // Create tools with context injected
     const tools = createCRMTools(context, userId);
@@ -113,7 +149,7 @@ export async function createCRMAgent(
     });
 
     return new ToolLoopAgent({
-        model: google(modelId),
+        model,
         callOptionsSchema: CRMCallOptionsSchema,
         instructions: BASE_INSTRUCTIONS,
         // prepareCall runs ONCE at the start - injects initial context

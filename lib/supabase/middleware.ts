@@ -58,12 +58,28 @@ export async function updateSession(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser()
 
+    // ---------------------------------------------------------------------
+    // Setup guard: se a instância não foi inicializada, forçar /setup
+    // ---------------------------------------------------------------------
+    // Observação: is_instance_initialized() está com GRANT para anon/authenticated.
+    // Se der erro, falhamos "aberto" (não bloqueia navegação) para evitar lockout.
+    const pathname = request.nextUrl.pathname
+    const isSetupRoute = pathname === '/setup' || pathname.startsWith('/setup/')
+
+    try {
+        const { data: initData, error: initError } = await supabase.rpc('is_instance_initialized')
+        if (!initError && initData === false && !isSetupRoute) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/setup'
+            return NextResponse.redirect(url)
+        }
+    } catch {
+        // ignore
+    }
+
     // Protected routes - redirect to login if not authenticated
-    const isAuthRoute = request.nextUrl.pathname.startsWith('/login') ||
-        request.nextUrl.pathname.startsWith('/auth')
-    const isPublicRoute = request.nextUrl.pathname === '/' ||
-        request.nextUrl.pathname.startsWith('/join') ||
-        request.nextUrl.pathname.startsWith('/setup')
+    const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/auth')
+    const isPublicRoute = pathname === '/' || pathname.startsWith('/join') || isSetupRoute
 
     if (!user && !isAuthRoute && !isPublicRoute) {
         const url = request.nextUrl.clone()

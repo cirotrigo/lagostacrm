@@ -3,8 +3,10 @@
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, Loader2, Bot, User, Sparkles, Wrench, X, MessageCircle, Minimize2, Maximize2 } from 'lucide-react';
+import { Send, Loader2, Bot, User, Sparkles, Wrench, X, MessageCircle, Minimize2, Maximize2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAI } from '@/context/AIContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type ActiveObjectMetadata = {
     boardId?: string;
@@ -81,11 +83,13 @@ export function UIChat({
         metadata?.wonStage, metadata?.lostStage
     ]);
 
-    console.log('[UIChat Debug] Context ready:', {
-        id: `chat-${context.boardId || context.dealId || 'global'}`,
-        boardId: context.boardId,
-        boardName: context.boardName
-    });
+    // Dev-only: ajuda a inspecionar o contexto real enviado ao backend.
+    if (process.env.NODE_ENV === 'development') {
+        console.log('[UIChat Debug] Context ready (will be sent in POST /api/ai/chat body.context):', {
+            id: `chat-${context.boardId || context.dealId || 'global'}`,
+            context,
+        });
+    }
 
     // Use transport with dynamic body function + maxSteps for approval flow
     const transport = useMemo(
@@ -99,13 +103,75 @@ export function UIChat({
 
     const { messages, sendMessage, status, error, addToolApprovalResponse } = useChat({
         transport,
+        // Re-submete automaticamente quando o usuário aprova/nega uma tool.
+        // Sem isso, o clique só atualiza o estado local e a execução pode “parar”.
+        sendAutomaticallyWhen: ({ messages }) => {
+            // Importante: se houver múltiplas aprovações pendentes no mesmo "step" (ex.: mover vários deals),
+            // não podemos re-submeter após a PRIMEIRA resposta, senão o backend tenta continuar com tool-calls
+            // ainda sem tool-result, gerando erros e executando apenas parte das ações.
+
+            let hasResponded = false;
+            let hasPending = false;
+
+            for (const m of messages) {
+                if (m.role !== 'assistant') continue;
+                for (const part of (m.parts as any[]) ?? []) {
+                    const type = (part?.type as string) || '';
+                    const isTool = type.startsWith('tool-') || type === 'dynamic-tool' || type === 'tool-invocation';
+                    if (!isTool) continue;
+
+                    if (part?.state === 'approval-responded') {
+                        hasResponded = true;
+                    }
+                    if (part?.state === 'approval-requested' && part?.approval?.approved == null) {
+                        hasPending = true;
+                    }
+                }
+            }
+
+            return hasResponded && !hasPending;
+        },
         // @ts-expect-error - maxSteps is required for approval flow; types may be outdated
         maxSteps: 10,
     });
 
+    const dealTitleById = useMemo(() => {
+        const map = new Map<string, string>();
+
+        const recordDeal = (d: any) => {
+            if (d?.id && d?.title && !map.has(d.id)) {
+                map.set(d.id, d.title);
+            }
+        };
+
+        for (const m of messages) {
+            for (const p of (m.parts as any[])) {
+                const type = (p?.type as string) || '';
+                const isToolPart = type.startsWith('tool-') || type === 'dynamic-tool' || type === 'tool-invocation';
+                if (!isToolPart) continue;
+
+                const output = p?.output;
+                if (!output) continue;
+
+                if (Array.isArray(output?.deals)) {
+                    for (const d of output.deals) recordDeal(d);
+                }
+                // getDealDetails-like
+                recordDeal(output);
+            }
+        }
+
+        return map;
+    }, [messages]);
+
     const [input, setInput] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    // UI state para cards de aprovação (agrupados).
+    const [expandedApprovalGroups, setExpandedApprovalGroups] = useState<Record<string, boolean>>({});
+    const [selectedApprovalsById, setSelectedApprovalsById] = useState<Record<string, boolean>>({});
+    const [selectionModeByGroup, setSelectionModeByGroup] = useState<Record<string, boolean>>({});
 
     // Auto-scroll to bottom
     useEffect(() => {
@@ -126,8 +192,9 @@ export function UIChat({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('[UIChat] Submit attempt:', { input, status, isLoading: status !== 'ready' });
-        if (input.trim() && status === 'ready') {
+        console.log('[UIChat] Submit attempt:', { input, status, canSend });
+        if (!canSend) return;
+        if (input.trim()) {
             sendMessage({ text: input });
             setInput('');
         }
@@ -135,12 +202,142 @@ export function UIChat({
 
     const isLoading = status === 'streaming' || status === 'submitted';
 
+    // Se existir uma tool-call aguardando aprovação, não podemos aceitar novas mensagens:
+    // alguns providers exigem que toda tool-call tenha um tool-result antes de continuar.
+    // Caso contrário, aparece o erro “No tool output found for function call ...”.
+    const pendingApprovalIds = (() => {
+        const ids: string[] = [];
+        for (const m of messages) {
+            const parts = (m as any).parts || [];
+            for (const part of parts) {
+                const partType = part?.type as string | undefined;
+                const isTool = partType === 'tool-invocation' || (typeof partType === 'string' && partType.startsWith('tool-'));
+                if (!isTool) continue;
+
+                const toolPart = part as any;
+                if (toolPart?.state !== 'approval-requested') continue;
+                if (toolPart?.approval?.approved != null) continue;
+
+                const id = toolPart?.approval?.id || toolPart?.toolCallId;
+                if (id) ids.push(id);
+            }
+        }
+        return Array.from(new Set(ids));
+    })();
+
+    const hasPendingApprovals = pendingApprovalIds.length > 0;
+    const canSend = status === 'ready' && !hasPendingApprovals;
+
+    const friendlyError = (() => {
+        const msg = error?.message;
+        if (!msg) return null;
+        if (/No tool output found for function call/i.test(msg)) {
+            return 'Existe uma confirmação pendente acima. Aprove ou negue a ação anterior antes de enviar uma nova mensagem.';
+        }
+        return msg;
+    })();
+
     // Quick action buttons
     const quickActions = [
         { label: '📊 Analisar Pipeline', prompt: 'Analise meu pipeline de vendas' },
         { label: '⏰ Deals Parados', prompt: 'Quais deals estão parados há mais de 7 dias?' },
         { label: '🔍 Buscar', prompt: 'Buscar ' },
     ];
+
+    const toolLabelMap: Record<string, string> = {
+        moveDeal: 'Mover estágio',
+        createDeal: 'Criar novo deal',
+        updateDeal: 'Atualizar deal',
+        markDealAsWon: 'Marcar deal como ganho',
+        markDealAsLost: 'Marcar deal como perdido',
+        assignDeal: 'Atribuir deal',
+        createTask: 'Criar tarefa',
+    };
+
+    const formatDateTimePtBr = (isoLike: string | Date): string => {
+        const d = isoLike instanceof Date ? isoLike : new Date(isoLike);
+        if (Number.isNaN(d.getTime())) return String(isoLike);
+
+        const ddmm = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(d);
+        const hhmm = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(d);
+        return `${ddmm} às ${hhmm}`;
+    };
+
+    const getDateBadge = (isoLike?: string): { label: string; className: string } | null => {
+        if (!isoLike) return null;
+        const due = new Date(isoLike);
+        if (Number.isNaN(due.getTime())) return null;
+
+        const now = new Date();
+        const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const diffDays = Math.round((startOfDay(due).getTime() - startOfDay(now).getTime()) / 86400000);
+
+        if (diffDays < 0) return { label: 'Atrasada', className: 'bg-red-500/15 text-red-200 border border-red-500/30' };
+        if (diffDays === 0) return { label: 'Hoje', className: 'bg-slate-500/15 text-slate-200 border border-slate-500/30' };
+        if (diffDays === 1) return { label: 'Amanhã', className: 'bg-blue-500/15 text-blue-200 border border-blue-500/30' };
+        return null;
+    };
+
+    const sanitizeAssistantText = (text: string) => {
+        // Remove UUIDs e trechos comuns do tipo "(ID: <uuid>)" para não poluir a UI.
+        // Mantém o texto humano (título/contato/valor) e evita exposição de identificadores internos.
+        let t = text;
+        t = t.replace(/\(ID:\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)/gi, '');
+        t = t.replace(/\bID:\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '');
+        t = t.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '');
+        // Não colapsar quebras de linha (senão markdown de lista vira um parágrafo com "*").
+        t = t.replace(/[\t ]{2,}/g, ' ').trim();
+        return t;
+    };
+
+    const summarizeToolInput = (toolName: string, input: any): string[] => {
+        const lines: string[] = [];
+
+        const dealTitleFromId = (dealId?: string) => {
+            if (!dealId) return undefined;
+            return dealTitleById.get(dealId);
+        };
+
+        switch (toolName) {
+            case 'markDealAsLost': {
+                const title = input?.dealTitle || dealTitleFromId(input?.dealId);
+                if (title) lines.push(`Deal: ${title}`);
+                if (input?.reason) lines.push(`Motivo: ${input.reason}`);
+                break;
+            }
+            case 'markDealAsWon': {
+                const title = input?.dealTitle || dealTitleFromId(input?.dealId);
+                if (title) lines.push(`Deal: ${title}`);
+                if (input?.wonValue !== undefined) lines.push(`Valor final: R$ ${Number(input.wonValue).toLocaleString('pt-BR')}`);
+                break;
+            }
+            case 'moveDeal': {
+                const title = input?.dealTitle || dealTitleFromId(input?.dealId);
+                if (title) lines.push(`Deal: ${title}`);
+                if (input?.stageName) lines.push(`Destino: ${input.stageName}`);
+                break;
+            }
+            case 'createTask': {
+                if (input?.title) lines.push(`Tarefa: ${input.title}`);
+                if (input?.dueDate) lines.push(`Vencimento: ${formatDateTimePtBr(input.dueDate)}`);
+                {
+                    const title = input?.dealTitle || dealTitleFromId(input?.dealId);
+                    if (title) lines.push(`Deal: ${title}`);
+                }
+                break;
+            }
+            default: {
+                // Fallback: tente ao menos mostrar o título do deal, sem expor UUID.
+                {
+                    const title = input?.dealTitle || dealTitleFromId(input?.dealId);
+                    if (title) lines.push(`Deal: ${title}`);
+                }
+                break;
+            }
+        }
+
+        return lines.length > 0 ? lines : ['Confirma essa ação?'];
+    };
 
     // Floating minimized button
     if (floating && !isOpen) {
@@ -235,26 +432,492 @@ export function UIChat({
                     </div>
                 )}
 
-                {messages.map((message) => (
-                    <div
-                        key={message.id}
-                        className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                        {message.role === 'assistant' && (
-                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center">
-                                <Bot className="w-3.5 h-3.5 text-white" />
-                            </div>
-                        )}
-                        <div className={`max-w-[85%] ${message.role === 'user'
-                            ? 'bg-primary-600 text-white rounded-2xl rounded-tr-sm'
-                            : 'bg-slate-800/80 text-slate-200 rounded-2xl rounded-tl-sm border border-slate-700/50'
-                            } px-3 py-2`}>
+                {messages.map((message) => {
+                    const messageParts = (message.parts ?? []) as any[];
 
-                            {message.parts.map((part, index) => {
+                    // Agrupa múltiplos pedidos de aprovação do mesmo tool numa única confirmação.
+                    // Motivação: quando o modelo propõe várias ações repetidas (tarefas, mover deals, etc.),
+                    // a UI não deve exigir dezenas de cliques (um por ação) para aprovar.
+                    const getToolName = (p: any) => {
+                        const partType = p?.type as string | undefined;
+                        return p?.toolName || (typeof partType === 'string' && partType.startsWith('tool-') ? partType.replace('tool-', '') : undefined);
+                    };
+
+                    const approvalParts = messageParts.filter((p: any) => {
+                        const partType = p?.type as string | undefined;
+                        const isTool = partType === 'tool-invocation' || (typeof partType === 'string' && partType.startsWith('tool-'));
+                        if (!isTool) return false;
+                        return p?.state === 'approval-requested';
+                    });
+
+                    const approvalsByTool = new Map<string, any[]>();
+                    for (const p of approvalParts) {
+                        const name = getToolName(p) || 'ferramenta';
+                        const arr = approvalsByTool.get(name) ?? [];
+                        arr.push(p);
+                        approvalsByTool.set(name, arr);
+                    }
+
+                    const groupedApprovals = Array.from(approvalsByTool.entries())
+                        .filter(([, items]) => items.length > 1)
+                        .map(([toolName, items]) => ({ toolName, items }));
+
+                    const groupedToolCounts: Record<string, number> = {};
+                    for (const { toolName, items } of groupedApprovals) {
+                        groupedToolCounts[toolName] = items.length;
+                    }
+
+                    // Mini bug comum: às vezes o backend envia uma mensagem do assistente apenas com parts
+                    // de tools "silenciosas" (sem necessidade de aprovação) e sem texto. Como a UI oculta
+                    // essas tools, acabava aparecendo um avatar + balão vazio (geralmente junto do "Pensando...").
+                    // Aqui evitamos renderizar mensagens do assistente sem conteúdo visível.
+                    const hasVisibleText = messageParts.some((p: any) => {
+                        if (p?.type !== 'text') return false;
+                        const raw = String(p?.text ?? '').trim();
+                        if (!raw) return false;
+                        return message.role === 'assistant' ? sanitizeAssistantText(raw).trim().length > 0 : true;
+                    });
+
+                    const ungroupedApprovalsCount = approvalParts.filter((p: any) => {
+                        const name = getToolName(p) || 'ferramenta';
+                        return (groupedToolCounts[name] ?? 0) <= 1;
+                    }).length;
+
+                    const hasVisibleApprovals = groupedApprovals.length > 0 || ungroupedApprovalsCount > 0;
+
+                    if (message.role === 'assistant' && !hasVisibleText && !hasVisibleApprovals) {
+                        return null;
+                    }
+
+                    return (
+                        <div
+                            key={message.id}
+                            className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                            {message.role === 'assistant' && (
+                                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center">
+                                    <Bot className="w-3.5 h-3.5 text-white" />
+                                </div>
+                            )}
+                            <div className={`max-w-[85%] ${message.role === 'user'
+                                ? 'bg-primary-600 text-white rounded-2xl rounded-tr-sm'
+                                : 'bg-slate-800/80 text-slate-200 rounded-2xl rounded-tl-sm border border-slate-700/50'
+                                } px-3 py-2`}>
+
+                                {groupedApprovals.length > 0 && (
+                                    <div className="mt-2 space-y-2">
+                                        {groupedApprovals.map(({ toolName, items }) => {
+                                            const toolTitle = toolLabelMap[toolName] || toolName;
+                                            const groupKey = `${message.id}:${toolName}`;
+                                            const expanded = !!expandedApprovalGroups[groupKey];
+                                            const selectionMode = !!selectionModeByGroup[groupKey];
+
+                                            const getApprovalId = (toolPart: any) => toolPart?.approval?.id || toolPart?.toolCallId;
+
+                                            const parsedItems = items
+                                                .map((toolPart) => {
+                                                    const toolInput = toolPart.input ?? toolPart.args;
+                                                    const lines = summarizeToolInput(toolName, toolInput);
+                                                    const dealLine = lines.find((l) => l.startsWith('Deal: '));
+                                                    const dealTitle = dealLine ? dealLine.replace(/^Deal:\s*/, '') : (toolInput?.dealTitle || undefined);
+                                                    const dueDate = toolInput?.dueDate as string | undefined;
+
+                                                    const detailLines = lines
+                                                        .filter((l) => !l.startsWith('Deal: '))
+                                                        // se tiver vencimento, vamos mostrar de forma humanizada fora da lista
+                                                        .filter((l) => !l.startsWith('Vencimento: '));
+
+                                                    const main =
+                                                        detailLines.find((l) => l.startsWith('Tarefa: '))?.replace(/^Tarefa:\s*/, '') ||
+                                                        detailLines.find((l) => l.startsWith('Destino: '))?.replace(/^Destino:\s*/, 'Destino: ') ||
+                                                        detailLines.find((l) => l.startsWith('Motivo: '))?.replace(/^Motivo:\s*/, 'Motivo: ') ||
+                                                        detailLines.find((l) => l.startsWith('Valor final: '))?.replace(/^Valor final:\s*/, 'Valor final: ') ||
+                                                        detailLines[0] ||
+                                                        'Confirma essa ação?';
+
+                                                    return {
+                                                        toolPart,
+                                                        id: getApprovalId(toolPart),
+                                                        toolInput,
+                                                        dealTitle: dealTitle || 'Sem deal',
+                                                        dueDate,
+                                                        main,
+                                                        extra: detailLines.slice(1),
+                                                    };
+                                                })
+                                                .filter((x) => !!x.id);
+
+                                            const uniqueDeals = new Set(parsedItems.map((p) => p.dealTitle));
+                                            const dueDates = parsedItems
+                                                .map((p) => (p.dueDate ? new Date(p.dueDate) : null))
+                                                .filter((d): d is Date => !!d && !Number.isNaN(d.getTime()))
+                                                .sort((a, b) => a.getTime() - b.getTime());
+
+                                            const earliestDue = dueDates[0];
+                                            const latestDue = dueDates[dueDates.length - 1];
+                                            const dueSummary = (() => {
+                                                if (!earliestDue) return null;
+                                                const earliestStr = formatDateTimePtBr(earliestDue);
+                                                if (latestDue && latestDue.getTime() !== earliestDue.getTime()) {
+                                                    const latestStr = formatDateTimePtBr(latestDue);
+                                                    return `Vencimentos: ${earliestStr} → ${latestStr}`;
+                                                }
+                                                return `Vencimento: ${formatDateTimePtBr(earliestDue)}`;
+                                            })();
+
+                                            const selectedCount = parsedItems.reduce((acc, p) => acc + ((selectedApprovalsById[p.id] ?? true) ? 1 : 0), 0);
+                                            const hasPartialSelection = selectedCount > 0 && selectedCount < parsedItems.length;
+
+                                            const setAllSelection = (value: boolean) => {
+                                                setSelectedApprovalsById((prev) => {
+                                                    const next = { ...prev };
+                                                    for (const p of parsedItems) next[p.id] = value;
+                                                    return next;
+                                                });
+                                            };
+
+                                            const ensureDefaultSelection = () => {
+                                                setSelectedApprovalsById((prev) => {
+                                                    let changed = false;
+                                                    const next = { ...prev };
+                                                    for (const p of parsedItems) {
+                                                        if (next[p.id] === undefined) {
+                                                            next[p.id] = true;
+                                                            changed = true;
+                                                        }
+                                                    }
+                                                    return changed ? next : prev;
+                                                });
+                                            };
+
+                                            const approveItems = (ids: string[], approved: boolean) => {
+                                                for (const id of ids) {
+                                                    addToolApprovalResponse?.({ id, approved });
+                                                }
+                                            };
+
+                                            const approveAllIds = parsedItems.map((p) => p.id);
+                                            const selectedIds = parsedItems.filter((p) => (selectedApprovalsById[p.id] ?? true)).map((p) => p.id);
+
+                                            const groupedByDeal = (() => {
+                                                const map = new Map<string, typeof parsedItems>();
+                                                for (const p of parsedItems) {
+                                                    const arr = map.get(p.dealTitle) ?? [];
+                                                    arr.push(p);
+                                                    map.set(p.dealTitle, arr);
+                                                }
+                                                return Array.from(map.entries());
+                                            })();
+
+                                            // Se todas as ações têm o mesmo "main" (ex.: moveDeal com o mesmo destino),
+                                            // mostramos esse detalhe uma vez só e listamos apenas os deals.
+                                            const commonMain = (() => {
+                                                if (parsedItems.length === 0) return null;
+                                                const first = parsedItems[0].main;
+                                                const allSame = parsedItems.every((p) => p.main === first);
+                                                return allSame ? first : null;
+                                            })();
+
+                                            const headerTitle = (() => {
+                                                // Evita o título gigante (que quebra palavra por palavra em telas estreitas)
+                                                // e traz o “parâmetro principal” pro título quando fizer sentido.
+                                                if (toolName === 'moveDeal' && commonMain?.startsWith('Destino: ')) {
+                                                    const dest = commonMain.replace(/^Destino:\s*/, '').trim();
+                                                    return `Mover → ${dest}`;
+                                                }
+                                                return toolTitle;
+                                            })();
+
+                                            return (
+                                                <div key={toolName} className="p-3 bg-amber-900/25 border border-amber-600/40 rounded-xl">
+                                                    <div className="flex items-start gap-2">
+                                                        <Wrench className="w-4 h-4 shrink-0 text-amber-200" />
+                                                        <div className="min-w-0 flex-1">
+                                                            {/* Linha 1: só o título (não compete com detalhes) */}
+                                                            <div className="flex items-baseline gap-2 min-w-0">
+                                                                <div className="text-sm font-semibold text-amber-100 whitespace-normal leading-snug">
+                                                                    {headerTitle}
+                                                                </div>
+                                                                <span className="text-xs text-amber-200/80 shrink-0">({parsedItems.length}x)</span>
+                                                            </div>
+
+                                                            {/* Linha 2: contexto + botão */}
+                                                            <div className="mt-1 flex items-start justify-between gap-3">
+                                                                <div className="text-[12px] text-amber-200/80 flex flex-wrap gap-x-2 gap-y-1 min-w-0">
+                                                                    <span>{uniqueDeals.size} deal{uniqueDeals.size === 1 ? '' : 's'}</span>
+                                                                    {dueSummary && (
+                                                                        <>
+                                                                            <span className="opacity-60">•</span>
+                                                                            <span>{dueSummary}</span>
+                                                                        </>
+                                                                    )}
+                                                                    {/* Se o parâmetro principal não foi promovido pro título, mostramos como detalhe */}
+                                                                    {commonMain && headerTitle === toolTitle && (
+                                                                        <>
+                                                                            <span className="opacity-60">•</span>
+                                                                            <span className="text-amber-100/90">{commonMain}</span>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setExpandedApprovalGroups((prev) => ({ ...prev, [groupKey]: !expanded }));
+                                                                        if (!expanded) ensureDefaultSelection();
+                                                                    }}
+                                                                    className="shrink-0 inline-flex items-center gap-1 text-xs text-amber-200/90 hover:text-amber-100 px-2 py-1 rounded-lg hover:bg-amber-500/10 transition-colors whitespace-nowrap"
+                                                                    title={expanded ? 'Ocultar detalhes' : 'Ver detalhes'}
+                                                                >
+                                                                    {expanded ? (
+                                                                        <>
+                                                                            Ocultar <ChevronUp className="w-4 h-4" />
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            Detalhes <ChevronDown className="w-4 h-4" />
+                                                                        </>
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {expanded && (
+                                                        <div className="mt-3">
+                                                            <div className="flex items-center justify-between gap-2 mb-2">
+                                                                <div className="text-[12px] text-amber-200/70">
+                                                                    {selectionMode ? `Selecionadas: ${selectedCount}/${parsedItems.length}` : 'Detalhes'}
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    {!selectionMode ? (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                ensureDefaultSelection();
+                                                                                setSelectionModeByGroup((prev) => ({ ...prev, [groupKey]: true }));
+                                                                            }}
+                                                                            className="text-[12px] text-amber-200/90 hover:text-amber-100 underline underline-offset-2"
+                                                                        >
+                                                                            Selecionar
+                                                                        </button>
+                                                                    ) : (
+                                                                        <>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setAllSelection(true)}
+                                                                                className="text-[12px] text-amber-200/90 hover:text-amber-100 underline underline-offset-2"
+                                                                            >
+                                                                                Selecionar todas
+                                                                            </button>
+                                                                            <span className="text-amber-200/40">·</span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setAllSelection(false)}
+                                                                                className="text-[12px] text-amber-200/90 hover:text-amber-100 underline underline-offset-2"
+                                                                            >
+                                                                                Limpar
+                                                                            </button>
+                                                                            <span className="text-amber-200/40">·</span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setSelectionModeByGroup((prev) => ({ ...prev, [groupKey]: false }))}
+                                                                                className="text-[12px] text-amber-200/90 hover:text-amber-100 underline underline-offset-2"
+                                                                            >
+                                                                                Concluir
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
+                                                                {groupedByDeal.map(([dealTitle, dealItems]) => (
+                                                                    <div key={dealTitle} className="rounded-lg border border-amber-600/20 bg-black/10">
+                                                                        <div className="px-3 py-2 border-b border-amber-600/15">
+                                                                            <div className="text-[12px] font-semibold text-amber-100 truncate">{dealTitle}</div>
+                                                                        </div>
+                                                                        {/* Quando todas as ações são iguais (commonMain) e é 1 item por deal sem extras,
+                                                                            a lista já faz sentido só com os nomes dos deals. Evita “Incluído” repetido. */}
+                                                                        {!(commonMain && !selectionMode && dealItems.length === 1 && dealItems[0].extra.length === 0 && !dealItems[0].dueDate) && (
+                                                                            <div className="px-2 py-2 space-y-1">
+                                                                                {dealItems.map((p) => {
+                                                                                const checked = selectedApprovalsById[p.id] ?? true;
+                                                                                const dueBadge = getDateBadge(p.dueDate);
+                                                                                const dueText = p.dueDate ? formatDateTimePtBr(p.dueDate) : null;
+
+                                                                                // Se commonMain existe (ex.: mesmo "Destino" para todos):
+                                                                                // - no modo normal (sem seleção) não precisamos repetir; mostramos um placeholder amigável.
+                                                                                // - no modo seleção, é útil ter um rótulo por checkbox; usamos o commonMain.
+                                                                                const lineMain = commonMain
+                                                                                    ? (selectionMode ? commonMain : '')
+                                                                                    : p.main;
+
+                                                                                if (!selectionMode) {
+                                                                                    return (
+                                                                                        <div key={p.id} className="px-2 py-2 rounded-md">
+                                                                                            <div className="flex items-start justify-between gap-2">
+                                                                                                {lineMain ? (
+                                                                                                    <div className="text-sm text-amber-100 leading-snug truncate">
+                                                                                                        {lineMain}
+                                                                                                    </div>
+                                                                                                ) : (
+                                                                                                    <div className="text-[12px] text-amber-200/70">
+                                                                                                        Incluído
+                                                                                                    </div>
+                                                                                                )}
+                                                                                                {(dueBadge || dueText) && (
+                                                                                                    <div className="shrink-0 flex items-center gap-2">
+                                                                                                        {dueBadge && (
+                                                                                                            <span className={`px-2 py-0.5 rounded-full text-[11px] ${dueBadge.className}`}>
+                                                                                                                {dueBadge.label}
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                        {dueText && (
+                                                                                                            <span className="text-[11px] text-amber-200/80 whitespace-nowrap">
+                                                                                                                {dueText}
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                            {p.extra.length > 0 && (
+                                                                                                <div className="mt-1 text-[12px] text-amber-200/70 space-y-0.5">
+                                                                                                    {p.extra.map((l, idx) => (
+                                                                                                        <div key={idx} className="leading-snug">{l}</div>
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    );
+                                                                                }
+
+                                                                                return (
+                                                                                    <label
+                                                                                        key={p.id}
+                                                                                        className="flex items-start gap-2 px-2 py-2 rounded-md hover:bg-amber-500/5 cursor-pointer"
+                                                                                    >
+                                                                                        <input
+                                                                                            type="checkbox"
+                                                                                            className="mt-0.5"
+                                                                                            checked={checked}
+                                                                                            onChange={(e) => {
+                                                                                                const value = e.target.checked;
+                                                                                                setSelectedApprovalsById((prev) => ({ ...prev, [p.id]: value }));
+                                                                                            }}
+                                                                                            aria-label="Selecionar ação"
+                                                                                        />
+                                                                                        <div className="min-w-0 flex-1">
+                                                                                            <div className="flex items-start justify-between gap-2">
+                                                                                                <div className="text-sm text-amber-100 leading-snug truncate">
+                                                                                                    {lineMain || 'Incluído'}
+                                                                                                </div>
+                                                                                                {(dueBadge || dueText) && (
+                                                                                                    <div className="shrink-0 flex items-center gap-2">
+                                                                                                        {dueBadge && (
+                                                                                                            <span className={`px-2 py-0.5 rounded-full text-[11px] ${dueBadge.className}`}>
+                                                                                                                {dueBadge.label}
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                        {dueText && (
+                                                                                                            <span className="text-[11px] text-amber-200/80 whitespace-nowrap">
+                                                                                                                {dueText}
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+
+                                                                                            {p.extra.length > 0 && (
+                                                                                                <div className="mt-1 text-[12px] text-amber-200/70 space-y-0.5">
+                                                                                                    {p.extra.map((l, idx) => (
+                                                                                                        <div key={idx} className="leading-snug">{l}</div>
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </label>
+                                                                                );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="mt-3 flex flex-wrap gap-2">
+                                                        <button
+                                                            onClick={() => approveItems(approveAllIds, true)}
+                                                            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg transition-all"
+                                                        >
+                                                            ✓ Aprovar tudo
+                                                        </button>
+                                                        <button
+                                                            onClick={() => approveItems(approveAllIds, false)}
+                                                            className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white text-xs rounded-lg transition-all"
+                                                        >
+                                                            ✗ Negar tudo
+                                                        </button>
+
+                                                        {expanded && selectionMode && hasPartialSelection && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => approveItems(selectedIds, true)}
+                                                                    className="px-3 py-2 text-xs rounded-lg transition-all border border-amber-500/30 text-amber-100 hover:bg-amber-500/10"
+                                                                >
+                                                                    Aprovar selecionadas
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => approveItems(selectedIds, false)}
+                                                                    className="px-3 py-2 text-xs rounded-lg transition-all border border-amber-500/30 text-amber-100 hover:bg-amber-500/10"
+                                                                >
+                                                                    Negar selecionadas
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {messageParts.map((part, index) => {
                                 if (part.type === 'text') {
-                                    return (
-                                        <p key={index} className="text-sm whitespace-pre-wrap m-0">{part.text}</p>
-                                    );
+                                    const text = message.role === 'assistant'
+                                        ? sanitizeAssistantText(part.text)
+                                        : part.text;
+
+                                    // Markdown só para o assistente (melhora leitura: listas, negrito, etc.).
+                                    if (message.role === 'assistant') {
+                                        return (
+                                            <div key={index} className="text-sm leading-relaxed">
+                                                <ReactMarkdown
+                                                    remarkPlugins={[remarkGfm]}
+                                                    components={{
+                                                        p: (props) => <p className="m-0 whitespace-pre-wrap" {...props} />,
+                                                        strong: (props) => <strong className="font-semibold text-slate-100" {...props} />,
+                                                        em: (props) => <em className="italic" {...props} />,
+                                                        ul: (props) => <ul className="m-0 mt-2 list-disc pl-5 space-y-1" {...props} />,
+                                                        ol: (props) => <ol className="m-0 mt-2 list-decimal pl-5 space-y-1" {...props} />,
+                                                        li: (props) => <li className="m-0" {...props} />,
+                                                        code: (props) => (
+                                                            <code className="rounded bg-black/20 px-1 py-0.5 font-mono text-[0.85em]" {...props} />
+                                                        ),
+                                                        a: (props) => (
+                                                            <a className="text-primary-300 underline underline-offset-2" target="_blank" rel="noreferrer" {...props} />
+                                                        ),
+                                                    }}
+                                                >
+                                                    {text}
+                                                </ReactMarkdown>
+                                            </div>
+                                        );
+                                    }
+
+                                    return <p key={index} className="text-sm whitespace-pre-wrap m-0">{text}</p>;
                                 }
 
                                 const partType = part.type as string;
@@ -263,19 +926,31 @@ export function UIChat({
                                 if (isTool) {
                                     const toolPart = part as any;
                                     const toolName = toolPart.toolName || (partType.startsWith('tool-') ? partType.replace('tool-', '') : 'ferramenta');
+                                    const toolTitle = toolLabelMap[toolName] || toolName;
+
+                                    // Se houver múltiplas aprovações do mesmo tool, renderizamos uma confirmação
+                                    // agrupada acima. Então escondemos as individuais aqui.
+                                    if (toolPart.state === 'approval-requested' && (groupedToolCounts[toolName] ?? 0) > 1) {
+                                        return null;
+                                    }
 
                                     console.log('[UIChat] 🔧 Handling tool part:', { type: partType, state: toolPart.state, name: toolName });
 
                                     if (toolPart.state === 'approval-requested') {
+                                        const toolInput = toolPart.input ?? toolPart.args;
+                                        const summaryLines = summarizeToolInput(toolName, toolInput);
+
                                         return (
                                             <div key={index} className="mt-2 p-3 bg-amber-900/30 border border-amber-600/50 rounded-lg">
                                                 <div className="flex items-center gap-2 text-sm text-amber-200 mb-2">
                                                     <Wrench className="w-4 h-4" />
-                                                    <span className="font-medium">Confirmar ação: {toolName}</span>
+                                                    <span className="font-medium">Confirmar ação: {toolTitle}</span>
                                                 </div>
-                                                <p className="text-xs text-amber-300/70 mb-3">
-                                                    {JSON.stringify(toolPart.args || toolPart.input, null, 2)}
-                                                </p>
+                                                <div className="text-xs text-amber-200/80 mb-3 space-y-1">
+                                                    {summaryLines.map((line, i) => (
+                                                        <p key={i} className="m-0">• {line}</p>
+                                                    ))}
+                                                </div>
                                                 <div className="flex gap-2">
                                                     <button
                                                         onClick={() => addToolApprovalResponse?.({
@@ -300,14 +975,9 @@ export function UIChat({
                                         );
                                     }
 
-                                    return (
-                                        <div key={index} className="flex items-center gap-1.5 text-xs text-slate-400 mt-1.5 p-1.5 bg-slate-900/50 rounded">
-                                            <Wrench className="w-3 h-3" />
-                                            <span>{toolName}</span>
-                                            {toolPart.state === 'result' && <span className="text-emerald-400">✓</span>}
-                                            {toolPart.state === 'call' && <Loader2 className="w-3 h-3 animate-spin" />}
-                                        </div>
-                                    );
+                                    // Não renderizar invocações de tools (nome técnico/etapas) na UI.
+                                    // O único caso em que mostramos tool é quando precisa de aprovação.
+                                    return null;
                                 }
 
                                 return null;
@@ -323,7 +993,8 @@ export function UIChat({
                             )
                         }
                     </div>
-                ))}
+                    );
+                })}
 
                 {isLoading && (
                     <div className="flex gap-2">
@@ -339,9 +1010,9 @@ export function UIChat({
                     </div>
                 )}
 
-                {error && (
+                {friendlyError && (
                     <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 text-xs">
-                        ❌ {error.message}
+                        ❌ {friendlyError}
                     </div>
                 )}
 
@@ -350,6 +1021,12 @@ export function UIChat({
 
             {/* Input Area */}
             < form onSubmit={handleSubmit} className="p-3 border-t border-slate-700/50" >
+                {hasPendingApprovals && (
+                    <div className="mb-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-100">
+                        Você tem {pendingApprovalIds.length} confirmação{pendingApprovalIds.length === 1 ? '' : 'ões'} pendente{pendingApprovalIds.length === 1 ? '' : 's'}. Aprove ou negue acima para continuar.
+                    </div>
+                )}
+
                 <div className="flex gap-2">
                     <input
                         ref={inputRef}
@@ -357,12 +1034,12 @@ export function UIChat({
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Pergunte algo..."
-                        disabled={status !== 'ready'}
+                        disabled={!canSend}
                         className="flex-1 px-3 py-2 bg-slate-800/60 border border-slate-700/50 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all disabled:opacity-50"
                     />
                     <button
                         type="submit"
-                        disabled={!input.trim() || status !== 'ready'}
+                        disabled={!input.trim() || !canSend}
                         className="px-3 py-2 bg-gradient-to-r from-primary-600 to-violet-600 hover:from-primary-500 hover:to-violet-500 disabled:from-slate-600 disabled:to-slate-700 text-white rounded-xl transition-all disabled:opacity-50"
                     >
                         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

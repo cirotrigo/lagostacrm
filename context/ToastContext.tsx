@@ -182,3 +182,22 @@ export const useToast = () => {
         showToast: context.addToast
     };
 };
+
+/**
+ * Hook opcional para toast.
+ *
+ * Útil em componentes que podem ser renderizados em testes/ambientes
+ * sem ToastProvider. Retorna funções no-op quando o provider não existe.
+ */
+export const useOptionalToast = () => {
+    const context = useContext(ToastContext);
+    const noop = () => {
+        // no-op
+    };
+
+    return {
+        addToast: context?.addToast ?? noop,
+        removeToast: context?.removeToast ?? noop,
+        showToast: context?.addToast ?? noop,
+    };
+};

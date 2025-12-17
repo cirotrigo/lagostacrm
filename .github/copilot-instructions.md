@@ -27,8 +27,7 @@
   - Chave/modelo: **org-wide** em `organization_settings` (fonte de verdade).
     - Qualquer fallback para `user_settings` deve ser tratado como legado/compat e não como fluxo recomendado.
   - Ferramentas: `lib/ai/tools.ts` usa service role e **sempre filtra por `organization_id`** do contexto.
-- **IA legada (Supabase Edge Function)**: ver `services/geminiService.ts` e `supabase/functions/ai-proxy/`.
-  - Testes de contrato das Edge Functions estão documentados em `supabase/functions/README.md`.
+- **IA “legada” (não-streaming, via Route Handler)**: ver `services/geminiService.ts` e `app/api/ai/actions/route.ts`.
 - Rotas internas de teste (dev-only): `ALLOW_AI_TEST_ROUTE=true` (ver README).
 
 ## Workflows do dia a dia

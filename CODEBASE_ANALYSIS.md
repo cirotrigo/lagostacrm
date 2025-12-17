@@ -26,7 +26,7 @@ Observação importante: o roteamento é **100% Next App Router** (sem `react-ro
 Nota de terminologia (evita confusão):
 
 - **Proxy** = feature do Next (`proxy.ts` na raiz, ex-`middleware.ts`).
-- **ai-proxy** = Edge Function do Supabase (um “proxy” de IA do backend), não tem relação com a convenção do Next.
+- **ai-proxy** = nome legado usado na codebase para o endpoint interno de IA (hoje: Route Handler em `/api/ai/actions`), não tem relação com a convenção do Next.
 
 ---
 
@@ -70,7 +70,7 @@ Além disso, existem contexts “por domínio” que hoje funcionam como **faça
 - `client.ts`: browser client (retorna `null` se envs faltarem)
 - `server.ts`: server client (usa `!` nos envs; pode quebrar se envs faltarem)
 - `middleware.ts`: função `updateSession()` para refresh + redirects
-- `ai-proxy.ts`: cliente para chamar Edge Function `ai-proxy` (legado)
+- `ai-proxy.ts`: cliente para chamar `/api/ai/actions` (nome legado “ai-proxy”)
 
 Observação: há um `.env` no root com placeholders (e já está ignorado no git). Variáveis essenciais:
 
@@ -84,7 +84,7 @@ Observação: há um `.env` no root com placeholders (e já está ignorado no gi
 - `actions.tsx`: server action com `streamUI` (parece uma implementação paralela/legada)
 
 ### `services/`
-- `geminiService.ts`: camada grande de IA via `ai-proxy` (Edge Function) com LGPD/consent/rate-limit
+- `geminiService.ts`: camada de IA não-streaming via `callAIProxy()` (Route Handler) com LGPD/consent/rate-limit
 
 ### `lib/query/` (TanStack Query)
 
@@ -145,13 +145,13 @@ Pontos de atenção:
   - Isso é aceitável se (e somente se) `organizationId` for confiável (hoje vem do profile server-side).
   - Ainda assim, exige auditoria: logs + validações + limites.
 
-### 4) IA (implementação legada — Edge Function `ai-proxy`)
+### 4) IA (implementação “legada” — Route Handler `/api/ai/actions`)
 
-- `services/geminiService.ts` chama `callAIProxy()` (Edge Function). Tem tratamento de consentimento e rate limit.
+- `services/geminiService.ts` chama `callAIProxy()` (Route Handler `/api/ai/actions`). Tem tratamento de consentimento e rate limit.
 
 ⚠️ A base tem **duas arquiteturas de IA** convivendo:
-- Nova: `/api/ai/chat` + tools + approval
-- Legada: `ai-proxy` + `geminiService`
+- Nova (streaming): `/api/ai/chat` + tools + approval
+- “Legada” (JSON, não-streaming): `/api/ai/actions` + `geminiService`
 
 E uma terceira variação “RPC-style” (não streaming):
 

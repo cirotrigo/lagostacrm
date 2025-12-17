@@ -28,7 +28,7 @@ const supabaseMock = {
   }),
 }
 
-vi.mock('@/lib/supabase/server', () => ({
+vi.mock('@/lib/supabase/staticAdminClient', () => ({
   createStaticAdminClient: () => supabaseMock,
 }))
 

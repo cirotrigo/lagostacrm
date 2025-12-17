@@ -38,7 +38,7 @@ Exemplos típicos (self-service):
 ## Regras de implementação (defesa em profundidade)
 
 1) **UI/Rotas**: esconder/limitar seções admin-only no frontend (não é segurança, mas melhora UX e reduz erro).
-2) **Server-side**: toda ação admin-only deve ser validada no servidor (Route Handlers / Server Actions / Edge Functions) usando o `profile.role` derivado do usuário autenticado.
+2) **Server-side**: toda ação admin-only deve ser validada no servidor (Route Handlers / Server Actions) usando o `profile.role` derivado do usuário autenticado.
 3) **Banco/RLS**: tabelas sensíveis devem ter políticas que bloqueiem escrita/leitura indevida. 
 4) **Service role**: onde for necessário bypass de RLS, aplicar checagem de role ANTES de qualquer operação.
 
@@ -47,5 +47,5 @@ Exemplos típicos (self-service):
 - [ ] Vendor não acessa gestão de usuários
 - [ ] Vendor não altera configurações globais (webhooks/chaves/integrations)
 - [ ] Vendor consegue editar o próprio perfil
-- [ ] Endpoints e Edge Functions fazem validação server-side
+- [ ] Endpoints/Server Actions fazem validação server-side
 - [ ] Políticas RLS revisadas para tabelas sensíveis

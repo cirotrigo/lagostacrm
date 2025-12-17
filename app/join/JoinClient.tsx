@@ -29,24 +29,19 @@ export function JoinClient({ token }: { token: string | null }) {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('organization_invites')
-          .select('*')
-          .eq('token', token)
-          .is('used_at', null)
-          .single()
+        const res = await fetch(`/api/invites/validate?token=${encodeURIComponent(token)}`, {
+          method: 'GET',
+          headers: { accept: 'application/json' },
+        })
 
-        if (error || !data) {
-          throw new Error('Este convite não existe ou já foi utilizado.')
+        const payload = await res.json().catch(() => null)
+        if (!res.ok || !payload?.valid) {
+          throw new Error(payload?.error || 'Este convite não existe ou já foi utilizado.')
         }
 
-        if (data.expires_at && new Date(data.expires_at) < new Date()) {
-          throw new Error('Este convite expirou.')
-        }
-
-        setInviteData(data)
-        if (data.email) {
-          setFormData(prev => ({ ...prev, email: data.email }))
+        setInviteData(payload.invite)
+        if (payload.invite?.email) {
+          setFormData(prev => ({ ...prev, email: payload.invite.email }))
         }
       } catch (err: any) {
         setError(getErrorMessage(err))
@@ -66,17 +61,19 @@ export function JoinClient({ token }: { token: string | null }) {
     setError(null)
 
     try {
-      const { data, error } = await supabase.functions.invoke('accept-invite', {
-        body: {
+      const res = await fetch('/api/invites/accept', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
           token,
           email: formData.email,
           password: formData.password,
           name: formData.name,
-        },
+        }),
       })
 
-      if (error) throw error
-      if (data?.error) throw new Error(data.error)
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || `Erro ao aceitar convite (HTTP ${res.status})`)
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,

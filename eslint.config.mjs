@@ -15,7 +15,6 @@ const eslintConfig = defineConfig([
 
     // Repo-specific ignores (generated/auxiliary code)
     "testsprite_tests/**",
-    "supabase/functions/**",
     "tmp/**",
     "**/*.bak",
   ]),

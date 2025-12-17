@@ -13,7 +13,7 @@
 // -> 200 { result?: any, error?: string, consentType?: string, retryAfter?: number }
 
 import { generateObject, generateText } from 'ai';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { getModel, type AIProvider } from '@/services/ai/config';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { isAllowedOrigin } from '@/lib/security/sameOrigin';
@@ -140,20 +140,25 @@ export async function POST(req: Request) {
 
   const { data: orgSettings, error: orgError } = await supabase
     .from('organization_settings')
-    .select('ai_google_key, ai_model')
+    .select('ai_provider, ai_model, ai_google_key, ai_openai_key, ai_anthropic_key')
     .eq('organization_id', profile.organization_id)
     .single();
 
   // Frontend expects "AI consent required" as a *payload* error.
-  if (orgError || !orgSettings?.ai_google_key) {
+  const provider: AIProvider = (orgSettings?.ai_provider ?? 'google') as AIProvider;
+  const apiKey: string | null =
+    provider === 'google'
+      ? (orgSettings?.ai_google_key ?? null)
+      : provider === 'openai'
+        ? (orgSettings?.ai_openai_key ?? null)
+        : (orgSettings?.ai_anthropic_key ?? null);
+
+  if (orgError || !apiKey) {
     return json<AIActionResponse>({ error: 'AI consent required', consentType: 'AI_CONSENT' }, 200);
   }
 
-  const apiKey = orgSettings.ai_google_key;
-  const modelId = orgSettings.ai_model || 'gemini-2.0-flash-exp';
-
-  const google = createGoogleGenerativeAI({ apiKey });
-  const model = google(modelId);
+  const modelId = orgSettings.ai_model || '';
+  const model = getModel(provider, apiKey, modelId);
 
   try {
     switch (action) {

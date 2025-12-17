@@ -282,10 +282,14 @@ export const dealsService = {
         return { data: null, error: e as Error };
       }
 
+      // organization_id é obrigatório no banco. Se não vier do caller, inferimos pelo board.
+      // (Evita deals com organization_id NULL que somem de ferramentas e quebram isolamento multi-tenant.)
+      let organizationId: string | null = sanitizeUUID((deal as any).organizationId);
+
       // Validação: verifica se o board existe antes de inserir
       const { data: boardExists, error: boardCheckError } = await supabase
         .from('boards')
-        .select('id')
+        .select('id, organization_id')
         .eq('id', boardId)
         .single();
 
@@ -296,7 +300,19 @@ export const dealsService = {
         };
       }
 
+      if (!organizationId) {
+        organizationId = sanitizeUUID((boardExists as any).organization_id);
+      }
+
+      if (!organizationId) {
+        return {
+          data: null,
+          error: new Error('Organização não identificada para este deal. Recarregue a página e tente novamente.')
+        };
+      }
+
       const insertData = {
+        organization_id: organizationId,
         title: deal.title,
         value: deal.value || 0,
         probability: deal.probability || 0,
@@ -309,6 +325,12 @@ export const dealsService = {
         tags: deal.tags || [],
         custom_fields: deal.customFields || {},
         owner_id: sanitizeUUID(deal.ownerId),
+        // Importante: deals legados podem ficar com is_won/is_lost = NULL se o schema
+        // estiver permissivo ou se defaults não estiverem aplicados. Forçamos valores
+        // explícitos para evitar que deals "abertos" sumam de queries que filtram por FALSE.
+        is_won: deal.isWon ?? false,
+        is_lost: deal.isLost ?? false,
+        closed_at: deal.closedAt ?? null,
       };
 
       const { data, error } = await supabase

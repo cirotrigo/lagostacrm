@@ -14,9 +14,52 @@ export default function SetupPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [checkingInit, setCheckingInit] = useState(true)
 
   const router = useRouter()
   const { checkInitialization } = useAuth()
+
+  // Se a instância já estiver inicializada, não faz sentido exibir o wizard de setup.
+  // Mantemos a rota pública, mas redirecionamos o usuário para login (ou dashboard se já estiver logado).
+  React.useEffect(() => {
+    let cancelled = false
+
+    const run = async () => {
+      try {
+        if (!supabase) {
+          // Sem Supabase configurado localmente: não dá pra checar init. Apenas mostra a UI.
+          return
+        }
+
+        const [{ data: initData, error: initError }, { data: sessionData }] = await Promise.all([
+          supabase.rpc('is_instance_initialized'),
+          supabase.auth.getSession(),
+        ])
+
+        if (initError) throw initError
+
+        if (initData === true) {
+          if (cancelled) return
+          if (sessionData?.session?.user) {
+            router.replace('/dashboard')
+          } else {
+            router.replace('/login')
+          }
+          return
+        }
+      } catch (e) {
+        console.error('Setup init check error:', e)
+        // Em caso de erro, não bloqueia o setup.
+      } finally {
+        if (!cancelled) setCheckingInit(false)
+      }
+    }
+
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [router])
 
   const passwordRequirements = {
     minLength: password.length >= 6,
@@ -29,6 +72,8 @@ export default function SetupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (checkingInit) return
 
     if (!isPasswordValid) {
       setError('A senha não atende aos requisitos mínimos')
@@ -44,12 +89,15 @@ export default function SetupPage() {
     setError(null)
 
     try {
-      const { data, error } = await supabase.functions.invoke('setup-instance', {
-        body: { companyName, email, password },
+      const res = await fetch('/api/setup-instance', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ companyName, email, password }),
       })
 
-      if (error) throw error
-      if (data?.error) throw new Error(data.error)
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || `Erro no setup (HTTP ${res.status})`)
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -84,6 +132,12 @@ export default function SetupPage() {
         </div>
 
         <div className="bg-white dark:bg-dark-card border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl p-8 backdrop-blur-sm">
+          {checkingInit ? (
+            <div className="flex items-center justify-center py-10 text-slate-600 dark:text-slate-300">
+              <Loader2 className="animate-spin h-5 w-5 mr-2" />
+              Verificando configuração…
+            </div>
+          ) : (
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="company-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -234,6 +288,7 @@ export default function SetupPage() {
               )}
             </button>
           </form>
+          )}
         </div>
 
         <p className="mt-8 text-center text-xs text-slate-400 dark:text-slate-500">

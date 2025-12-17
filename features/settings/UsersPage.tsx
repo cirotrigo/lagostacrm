@@ -58,51 +58,45 @@ export const UsersPage: React.FC = () => {
     const sb = supabase;
 
     const fetchUsers = async () => {
-        if (!sb) return;
         try {
-            // Usa Edge Function para buscar usuários com status
-            const { data, error } = await sb.functions.invoke('list-users');
+            const res = await fetch('/api/admin/users', {
+                method: 'GET',
+                headers: { accept: 'application/json' },
+                credentials: 'include',
+            });
 
-            if (error) throw error;
-            if (data?.error) throw new Error(data.error);
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                throw new Error(data?.error || `Falha ao carregar usuários (HTTP ${res.status})`);
+            }
 
             setUsers(data?.users || []);
         } catch (err) {
             console.error('Error fetching users:', err);
-            // Fallback para query direta se a função falhar
-            try {
-                const { data: profiles } = await sb
-                    .from('profiles')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-                setUsers((profiles || []).map(p => ({ ...p, status: 'active' as const })));
-            } catch {
-                setUsers([]);
-            }
+            setUsers([]);
         } finally {
             setLoading(false);
         }
     };
 
     const fetchActiveInvites = async () => {
-        if (!sb) return;
         try {
-            // Fetch invites that are either not expired OR have null expiration (never expires)
-            // Supabase query for "expires_at > now OR expires_at is null" is tricky with simple syntax
-            // So we fetch all and filter in memory or use a raw query if needed.
-            // For simplicity, let's just fetch all for this organization and filter client side or use 'or' syntax
+            const res = await fetch('/api/admin/invites', {
+                method: 'GET',
+                headers: { accept: 'application/json' },
+                credentials: 'include',
+            });
 
-            const { data } = await sb
-                .from('organization_invites')
-                .select('*')
-                .order('created_at', { ascending: false });
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                throw new Error(data?.error || `Falha ao carregar convites (HTTP ${res.status})`);
+            }
 
-            // Filter: (expires_at > now OR expires_at is null)
-            const validInvites = (data || []).filter(invite => {
+            const invites = data?.invites || [];
+            const validInvites = (invites || []).filter((invite: any) => {
                 if (!invite.expires_at) return true;
                 return new Date(invite.expires_at) > new Date();
             });
-
             setActiveInvites(validInvites);
         } catch (error) {
             console.error('Error fetching invites:', error);
@@ -112,13 +106,13 @@ export const UsersPage: React.FC = () => {
     useEffect(() => {
         fetchUsers();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sb]);
+    }, []);
 
     useEffect(() => {
         if (isModalOpen) {
             fetchActiveInvites();
         }
-    }, [isModalOpen, sb]);
+    }, [isModalOpen]);
 
     if (!sb) {
         return (
@@ -154,15 +148,20 @@ export const UsersPage: React.FC = () => {
                 ? new Date(Date.now() + expirationDays * 24 * 60 * 60 * 1000).toISOString()
                 : null;
 
-            const { error } = await sb
-                .from('organization_invites')
-                .insert({
-                    organization_id: currentUserProfile?.organization_id,
+            const res = await fetch('/api/admin/invites', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
                     role: newUserRole,
-                    expires_at: expiresAt,
-                });
+                    expiresAt,
+                }),
+            });
 
-            if (error) throw error;
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                throw new Error(data?.error || `Erro ao gerar link (HTTP ${res.status})`);
+            }
 
             await fetchActiveInvites();
             addToast('Novo link gerado!', 'success');
@@ -175,12 +174,15 @@ export const UsersPage: React.FC = () => {
 
     const handleDeleteInvite = async (id: string) => {
         try {
-            const { error } = await sb
-                .from('organization_invites')
-                .delete()
-                .eq('id', id);
-
-            if (error) throw error;
+            const res = await fetch(`/api/admin/invites/${id}`, {
+                method: 'DELETE',
+                headers: { accept: 'application/json' },
+                credentials: 'include',
+            });
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                throw new Error(data?.error || `Erro ao remover link (HTTP ${res.status})`);
+            }
 
             await fetchActiveInvites();
             addToast('Link removido!', 'success');
@@ -202,12 +204,15 @@ export const UsersPage: React.FC = () => {
         setUserToDelete(null);
 
         try {
-            const { data, error } = await sb.functions.invoke('delete-user', {
-                body: { userId: userToDelete.id }
+            const res = await fetch(`/api/admin/users/${userToDelete.id}`, {
+                method: 'DELETE',
+                headers: { accept: 'application/json' },
+                credentials: 'include',
             });
-
-            if (error) throw error;
-            if (data?.error) throw new Error(data.error);
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                throw new Error(data?.error || `Erro ao remover usuário (HTTP ${res.status})`);
+            }
 
             addToast(
                 userToDelete.status === 'pending' ? 'Convite cancelado' : 'Usuário removido',

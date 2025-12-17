@@ -38,6 +38,8 @@ describeSupabase('Next AI tools - multi-tenant isolation (service-role sentinel)
   let contactAEmail = '';
   let contactBEmail = '';
   let dealBId = '';
+  let boardAId = '';
+  let boardBId = '';
 
   beforeAll(async () => {
     const fx = await createMinimalFixtures();
@@ -46,6 +48,8 @@ describeSupabase('Next AI tools - multi-tenant isolation (service-role sentinel)
     contactAEmail = fx.contactA.email;
     contactBEmail = fx.contactB.email;
     dealBId = fx.dealB.dealId;
+    boardAId = fx.boardA.boardId;
+    boardBId = fx.boardB.boardId;
   }, 60_000);
 
   afterAll(async () => {
@@ -131,5 +135,49 @@ describeSupabase('Next AI tools - multi-tenant isolation (service-role sentinel)
 
     // If tool returns an error object/string, leakedId will be undefined.
     expect(leakedId).not.toBe(dealBId);
+  });
+
+  it('moveDealsBulk não deve permitir mover deal/board de outro tenant', async () => {
+    const toolsA = createCRMTools({ organizationId: orgAId }, '00000000-0000-0000-0000-000000000000');
+    const toolMap = toolsA as unknown as Record<string, { execute: (input: unknown) => unknown | Promise<unknown> }>;
+
+    // 1) Tentar usar o board do tenant B deve falhar (guard de board)
+    const resWrongBoard = await callTool(toolMap, 'moveDealsBulk', {
+      dealIds: [dealBId],
+      boardId: boardBId,
+      stageName: 'Proposta',
+      allowPartial: false,
+    });
+
+    const asObj = (v: unknown): Record<string, unknown> | null =>
+      v && typeof v === 'object' ? (v as Record<string, unknown>) : null;
+    const err1 = asObj(resWrongBoard)?.error;
+    expect(typeof err1 === 'string' || resWrongBoard === null).toBe(true);
+
+    // 2) Mesmo com board correto, um deal do tenant B não pode ser movido
+    const resWrongDeal = await callTool(toolMap, 'moveDealsBulk', {
+      dealIds: [dealBId],
+      boardId: boardAId,
+      stageName: 'Proposta',
+      allowPartial: false,
+    });
+
+    const err2 = asObj(resWrongDeal)?.error;
+    expect(typeof err2 === 'string' || resWrongDeal === null).toBe(true);
+  });
+
+  it('addDealNote não deve permitir inserir nota em deal de outro tenant', async () => {
+    const toolsA = createCRMTools({ organizationId: orgAId }, '00000000-0000-0000-0000-000000000000');
+    const toolMap = toolsA as unknown as Record<string, { execute: (input: unknown) => unknown | Promise<unknown> }>;
+
+    const res = await callTool(toolMap, 'addDealNote', {
+      dealId: dealBId,
+      content: 'nota de teste (não deveria ser permitida)'
+    });
+
+    const asObj = (v: unknown): Record<string, unknown> | null =>
+      v && typeof v === 'object' ? (v as Record<string, unknown>) : null;
+    const err = asObj(res)?.error;
+    expect(typeof err === 'string' || res === null).toBe(true);
   });
 });
