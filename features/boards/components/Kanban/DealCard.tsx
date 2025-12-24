@@ -10,8 +10,13 @@ interface DealCardProps {
   activityStatus: string;
   isDragging: boolean;
   onDragStart: (e: React.DragEvent, id: string) => void;
-  onClick: () => void;
-  openMenuId: string | null;
+  /** Callback de seleção do deal (mantido estável via useCallback no pai para permitir memoização) */
+  onSelect: (dealId: string) => void;
+  /**
+   * Performance: boolean derivado por-card evita prop global mutável.
+   * Isso reduz re-render em listas grandes quando o usuário abre/fecha o menu.
+   */
+  isMenuOpen: boolean;
   setOpenMenuId: (id: string | null) => void;
   onQuickAddActivity: (
     dealId: string,
@@ -47,14 +52,14 @@ const getInitials = (name: string) => {
     .toUpperCase();
 };
 
-export const DealCard: React.FC<DealCardProps> = ({
+const DealCardComponent: React.FC<DealCardProps> = ({
   deal,
   isRotting,
   activityStatus,
   isDragging,
   onDragStart,
-  onClick,
-  openMenuId,
+  onSelect,
+  isMenuOpen,
   setOpenMenuId,
   onQuickAddActivity,
   setLastMouseDownDealId,
@@ -65,7 +70,7 @@ export const DealCard: React.FC<DealCardProps> = ({
 
   const handleToggleMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setOpenMenuId(openMenuId === deal.id ? null : deal.id);
+    setOpenMenuId(isMenuOpen ? null : deal.id);
   };
 
   const handleQuickAdd = (type: 'CALL' | 'MEETING' | 'EMAIL') => {
@@ -158,13 +163,13 @@ export const DealCard: React.FC<DealCardProps> = ({
       onMouseDown={() => setLastMouseDownDealId(deal.id)}
       onClick={e => {
         if ((e.target as HTMLElement).closest('button')) return;
-        onClick();
+        onSelect(deal.id);
       }}
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           if (!(e.target as HTMLElement).closest('button')) {
-            onClick();
+            onSelect(deal.id);
           }
         }
       }}
@@ -268,7 +273,7 @@ export const DealCard: React.FC<DealCardProps> = ({
             type={deal.nextActivity?.type}
             dealId={deal.id}
             dealTitle={deal.title}
-            isOpen={openMenuId === deal.id}
+            isOpen={isMenuOpen}
             onToggle={handleToggleMenu}
             onQuickAdd={handleQuickAdd}
             onRequestClose={() => setOpenMenuId(null)}
@@ -279,3 +284,10 @@ export const DealCard: React.FC<DealCardProps> = ({
     </div>
   );
 };
+
+/**
+ * Performance: `DealCard` fica em lista grande (Kanban).
+ * Usamos `React.memo` para evitar re-render de TODOS os cards quando apenas o menu de 1 deal muda.
+ * Isso depende de props estáveis do pai (ex.: `onSelect` via useCallback e `isMenuOpen` por-card).
+ */
+export const DealCard = React.memo(DealCardComponent);

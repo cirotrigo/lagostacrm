@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { DealView, BoardStage } from '@/types';
 import { DealCard } from './DealCard';
 import { isDealRotting, getActivityStatus } from '@/features/boards/hooks/useBoardsController';
@@ -49,17 +49,31 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     currentStageId: string;
   } | null>(null);
 
-  // Handler to open move-to-stage modal
-  const handleOpenMoveToStage = (dealId: string) => {
-    const deal = filteredDeals.find(d => d.id === dealId);
-    if (deal) {
-      setMoveToStageModal({
-        isOpen: true,
-        deal,
-        currentStageId: deal.status,
-      });
-    }
-  };
+  // Performance: index deals by id once so callbacks can stay stable across menu toggles.
+  const dealsById = useMemo(() => new Map(filteredDeals.map((d) => [d.id, d])), [filteredDeals]);
+
+  // Performance: keep selection callback stable so DealCard can be memoized.
+  const handleSelectDeal = useCallback(
+    (dealId: string) => {
+      setSelectedDealId(dealId);
+    },
+    [setSelectedDealId]
+  );
+
+  // Handler to open move-to-stage modal (stable across re-renders when only menu state changes)
+  const handleOpenMoveToStage = useCallback(
+    (dealId: string) => {
+      const deal = dealsById.get(dealId);
+      if (deal) {
+        setMoveToStageModal({
+          isOpen: true,
+          deal,
+          currentStageId: deal.status,
+        });
+      }
+    },
+    [dealsById]
+  );
 
   // Handler to confirm move to a new stage
   const handleConfirmMoveToStage = (dealId: string, newStageId: string) => {
@@ -163,8 +177,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   activityStatus={getActivityStatus(deal)}
                   isDragging={draggingId === deal.id}
                   onDragStart={handleDragStart}
-                  onClick={() => setSelectedDealId(deal.id)}
-                  openMenuId={openActivityMenuId}
+                  onSelect={handleSelectDeal}
+                  // Performance: avoid passing openMenuId (string) to all cards.
+                  // Only 1–2 cards will flip `isMenuOpen` when the menu is toggled.
+                  isMenuOpen={openActivityMenuId === deal.id}
                   setOpenMenuId={setOpenActivityMenuId}
                   onQuickAddActivity={handleQuickAddActivity}
                   setLastMouseDownDealId={setLastMouseDownDealId}
