@@ -10,6 +10,7 @@
   - Fix de multi-tenant: `boardsService` agora garante `organization_id` ao criar boards/estágios (inferindo do `profiles.organization_id` quando o caller não fornece), evitando falhas de criação de deals (“Organização não identificada…”).
   - Fix de resiliência: `dealsService.create` agora tenta recuperar `organization_id` via `profiles` se o board estiver com `organization_id` vazio, e faz um repair best-effort do board em background.
   - Fix (Next/React): removido warning de **hydration mismatch** no header (botão de debug) inicializando o estado do debug de forma determinística no SSR e sincronizando com `localStorage` somente no client.
+  - Fix (Settings): “💣 Zerar Database” agora limpa primeiro `boards.won_stage_id/lost_stage_id/next_board_id` antes de deletar `board_stages`, evitando erro de FK (`boards_won_stage_id_fkey`).
 
 ## 24/12/2025
 

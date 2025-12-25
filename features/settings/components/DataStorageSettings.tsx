@@ -50,6 +50,15 @@ export const DataStorageSettings: React.FC = () => {
 
         try {
             // Ordem importa por causa das FKs!
+            // 0. Limpar referências de stages/boards dentro de `boards` (FK boards.won_stage_id/lost_stage_id -> board_stages)
+            // Se não zerarmos isso antes, o delete de `board_stages` falha com:
+            // "violates foreign key constraint boards_won_stage_id_fkey".
+            const { error: boardsRefsError } = await sb
+                .from('boards')
+                .update({ won_stage_id: null, lost_stage_id: null, next_board_id: null })
+                .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all
+            if (boardsRefsError) throw boardsRefsError;
+
             // 1. Activities (depende de deals)
             const { error: activitiesError } = await sb.from('activities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (activitiesError) throw activitiesError;
