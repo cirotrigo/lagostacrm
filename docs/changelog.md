@@ -14,6 +14,8 @@
   - Edge Function `supabase/functions/webhook-in` implementa o endpoint público de entrada com `X-Webhook-Secret`.
 - **Settings (UX)**:
   - Criada a aba **Integrações** em Configurações e movidas para lá as seções de **Chaves de API** e **Webhooks** (admin-only).
+- **Fix (Zerar Database)**:
+  - Ajustada a ordem de deleção para limpar **Integrações/Webhooks** antes de `board_stages`, evitando erro de FK (`integration_inbound_sources_entry_stage_id_fkey`).
 - **Contatos (Importar/Exportar CSV)**:
   - Botão de **Importar/Exportar** no header de **Contatos → Pessoas**, abrindo modal com abas de import/export.
   - Exportação via endpoint `GET /api/contacts/export` respeitando **filtros/pesquisa/ordenação** atuais.
