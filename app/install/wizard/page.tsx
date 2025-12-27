@@ -727,12 +727,19 @@ export default function InstallWizardPage() {
   ]);
 
   const selectSupabaseProject = (ref: string) => {
-    const selected = supabaseProjects.find((p) => p.ref === ref) || null;
-    if (!selected) return;
-    setSupabaseSelectedProjectRef(selected.ref);
-    setSupabaseUrl(selected.supabaseUrl);
+    const cleanRef = String(ref || '').trim();
+    if (!cleanRef) return;
+
+    // Prefer the org-scoped list (this is what we render in the UI).
+    const selected =
+      supabaseOrgProjects.find((p) => p.ref === cleanRef) ||
+      supabaseProjects.find((p) => p.ref === cleanRef) ||
+      null;
+
+    setSupabaseSelectedProjectRef(cleanRef);
+    setSupabaseUrl(selected?.supabaseUrl || `https://${cleanRef}.supabase.co`);
     setSupabaseProjectRefTouched(true);
-    setSupabaseProjectRef(selected.ref);
+    setSupabaseProjectRef(cleanRef);
     setSupabaseResolveError(null);
     setSupabaseUiStep('final');
   };

@@ -67,6 +67,7 @@
     - UX/Fix (Supabase org duplicada): removido seletor duplicado de organização (e label em inglês) no modo “Criar novo”; a criação agora usa a org selecionada no topo.
     - UX (Supabase Free): erro do limite de 2 projetos ativos agora é exibido em pt‑BR com instruções claras (usar existente / pausar / deletar / upgrade).
     - UX (Supabase Free — iPhone setup): quando a org está sem slot, o wizard vira uma **tela única de decisão** com CTA “Liberar 1 slot” (pausar → auto-criar e continuar) e “Opções avançadas” só para deleção.
+    - Fix (Supabase seleção de projeto): ao escolher um projeto de uma organização, o wizard agora usa a lista **da própria org** (e fallback por `ref`) para preencher `supabaseUrl/projectRef`, evitando o caso de “lista aparece, mas não seleciona”.
     - UX (zero fricção): ao colar um PAT válido, o Supabase step tenta listar orgs automaticamente e **auto-avança** para “Destino” quando a verificação passa; se houver apenas 1 org, ela é selecionada automaticamente e o sistema já carrega os projetos.
 
 - **Build (fix)**:
