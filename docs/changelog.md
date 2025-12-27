@@ -11,7 +11,7 @@
     - Resposta do instalador agora inclui `functions[]` com status por slug (`ok`/`error`); o step vira `warning` quando alguma function falha.
 
 - **Installer (Padrão “100% mágico” para aluno)**:
-  - Vercel: `install/start` agora permite **buscar times/projetos via PAT** e selecionar o projeto (fluxo mais à prova de domínio errado).
+  - Vercel: por padrão, `install/start` usa **o projeto do deploy atual** (detecção via `VERCEL_PROJECT_ID/VERCEL_ORG_ID` no `/api/installer/bootstrap`); seleção manual via PAT ficou como **modo avançado (fallback)**.
   - Supabase:
     - Wizard permite **listar projetos via PAT** e selecionar (preenche `projectRef`/`supabaseUrl`).
     - Wizard permite **criar projeto via PAT** (listar orgs → criar projeto com `db_pass` + região smart group) e já auto-preencher o resto.
@@ -21,6 +21,8 @@
   - Edge Functions:
     - Deploy ganhou **concorrência limitada** e **retry/backoff** (reduz falhas transitórias).
     - O step `supabase_edge_functions` agora **auto-skip** quando não existem functions no repo (não exige PAT só por isso).
+  - UX (Supabase):
+    - Ao colar o **PAT**, o Wizard agora **lista projetos automaticamente** (com debounce) e, se não encontrar nenhum, sugere **criar um projeto automaticamente** (já seguindo com auto-preenchimento).
 
 - **Database (Migrations / Onboarding do aluno)**:
   - Consolidado o schema do Supabase para **1 única migration** em `supabase/migrations/20251201000000_schema_init.sql`.
@@ -75,6 +77,8 @@
   - Adicionados endpoints de **Boards**: `GET /api/public/v1/boards`, `GET /api/public/v1/boards/{boardKeyOrId}`, `GET /api/public/v1/boards/{boardKeyOrId}/stages`, e integração disso na UI (selecionar pipeline via `board_key`).
   - Implementados endpoints essenciais (escopo B): **Companies**, **Contacts**, **Deals**, **Activities** e ações (`move-stage`, `mark-won`, `mark-lost`), com OpenAPI atualizado e botões “Copiar cURL”/“Testar agora” na UI.
   - Swagger UI em `GET /api/public/v1/docs` (renderiza o OpenAPI do CRM), com CSS refinado para um visual mais clean e legível.
+  - DX: `move-stage` agora aceita `to_stage_label` (além de `to_stage_id`) e resolve a etapa automaticamente dentro do board do deal.
+  - DX: endpoint “sem UUID” para automações agora é `POST /api/public/v1/deals/move-stage` (board + phone/email + `to_stage_label`). (`/deals/move-stage-by-identity` ficou deprecated/alias.)
   - UX (produto): o assistente agora usa dados do próprio app (boards/deals/stages) para montar o cURL **com valores reais** (wizard dinâmico), e a **API key virou independente do wizard** (colar/validar chave é opcional e fica só em memória).
 - **Debug Mode (UX)**:
   - Debug agora é **reativo** (sem refresh): toggle dispara evento (`DEBUG_MODE_EVENT`) e `DebugFillButton` usa `useDebugMode`.

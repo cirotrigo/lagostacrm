@@ -3,7 +3,6 @@ import { Key, Copy, ExternalLink, CheckCircle2, Plus, Trash2, ShieldCheck, Refre
 
 import { useOptionalToast } from '@/context/ToastContext';
 import { useBoards } from '@/context/boards/BoardsContext';
-import { useDeals } from '@/context/deals/DealsContext';
 import { supabase } from '@/lib/supabase/client';
 
 import { SettingsSection } from './SettingsSection';
@@ -24,7 +23,6 @@ type ApiKeyRow = {
 export const ApiKeysSection: React.FC = () => {
   const { addToast } = useOptionalToast();
   const { boards: boardsFromContext } = useBoards();
-  const { rawDeals } = useDeals();
 
   const [action, setAction] = useState<'create_lead' | 'create_deal' | 'move_stage' | 'create_activity'>('create_lead');
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
@@ -38,8 +36,9 @@ export const ApiKeysSection: React.FC = () => {
   const [testLoading, setTestLoading] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [selectedBoardId, setSelectedBoardId] = useState<string>('');
-  const [selectedDealId, setSelectedDealId] = useState<string>('');
   const [selectedToStageId, setSelectedToStageId] = useState<string>('');
+  const [identityPhone, setIdentityPhone] = useState<string>('');
+  const [identityEmail, setIdentityEmail] = useState<string>('');
   const [activityType, setActivityType] = useState<string>('NOTE');
   const [activityTitle, setActivityTitle] = useState<string>('Nota via integração');
   const [actionTestLoading, setActionTestLoading] = useState(false);
@@ -167,7 +166,6 @@ export const ApiKeysSection: React.FC = () => {
 
   useEffect(() => {
     // troca de board reseta seleções dependentes
-    setSelectedDealId('');
     setSelectedToStageId('');
   }, [selectedBoardId]);
 
@@ -176,11 +174,12 @@ export const ApiKeysSection: React.FC = () => {
     [boardsFromContext, selectedBoardId]
   );
   const selectedBoardKey = selectedBoard?.key || '';
-  const dealsForBoard = useMemo(() => {
-    if (!selectedBoardId) return [];
-    return rawDeals.filter((d) => d.boardId === selectedBoardId);
-  }, [rawDeals, selectedBoardId]);
   const stagesForBoard = useMemo(() => selectedBoard?.stages || [], [selectedBoard]);
+  const selectedToStageLabel = useMemo(() => {
+    if (!selectedToStageId) return '';
+    const stage = stagesForBoard.find((s) => s.id === selectedToStageId);
+    return stage?.label || '';
+  }, [selectedToStageId, stagesForBoard]);
 
   const curlExample = useMemo(() => {
     const token = (apiKeyToken.trim() || createdToken?.trim() || '') || 'SUA_API_KEY';
@@ -192,12 +191,33 @@ export const ApiKeysSection: React.FC = () => {
       return `curl -X POST '${dealsUrl}' \\\n+  -H 'Content-Type: application/json' \\\n+  -H 'X-Api-Key: ${token}' \\\n+  -d '{\n+    \"title\": \"Deal Teste\",\n+    \"value\": 0,\n+    \"board_key\": \"${boardKey}\",\n+    \"contact\": {\n+      \"name\": \"Lead Teste\",\n+      \"email\": \"teste@exemplo.com\",\n+      \"phone\": \"+5511999999999\"\n+    }\n+  }'`;
     }
     if (action === 'move_stage') {
-      const dealId = selectedDealId || 'DEAL_ID';
-      const stageId = selectedToStageId || 'STAGE_UUID';
-      return `curl -X POST '/api/public/v1/deals/${dealId}/move-stage' \\\n+  -H 'Content-Type: application/json' \\\n+  -H 'X-Api-Key: ${token}' \\\n+  -d '{ \"to_stage_id\": \"${stageId}\" }'`;
+      const stageLabel = selectedToStageLabel || 'STAGE_LABEL';
+      const boardKeyOrId = selectedBoardKey || selectedBoardId || 'board_key';
+      const phone = identityPhone.trim() || '+5511999999999';
+      const email = identityEmail.trim() || 'teste@exemplo.com';
+      const identityField =
+        identityPhone.trim()
+          ? `\"phone\": \"${phone.replaceAll('"', '\\"')}\",`
+          : `\"email\": \"${email.replaceAll('"', '\\"')}\",`;
+      return `curl -X POST '/api/public/v1/deals/move-stage' \\\n+  -H 'Content-Type: application/json' \\\n+  -H 'X-Api-Key: ${token}' \\\n+  -d '{\n+    \"board_key_or_id\": \"${boardKeyOrId}\",\n+    ${identityField}\n+    \"to_stage_label\": \"${stageLabel.replaceAll('"', '\\"')}\"\n+  }'`;
     }
     return `curl -X POST '${activitiesUrl}' \\\n+  -H 'Content-Type: application/json' \\\n+  -H 'X-Api-Key: ${token}' \\\n+  -d '{\n+    \"type\": \"${activityType}\",\n+    \"title\": \"${activityTitle.replaceAll('"', '\\"')}\",\n+    \"description\": \"Criada via integração\",\n+    \"date\": \"${new Date().toISOString()}\"\n+  }'`;
-  }, [action, activitiesUrl, contactsUrl, createdToken, dealsUrl, selectedBoardKey, apiKeyToken, selectedDealId, selectedToStageId, activityTitle, activityType]);
+  }, [
+    action,
+    activitiesUrl,
+    contactsUrl,
+    createdToken,
+    dealsUrl,
+    selectedBoardKey,
+    selectedBoardId,
+    apiKeyToken,
+    identityPhone,
+    identityEmail,
+    selectedToStageId,
+    selectedToStageLabel,
+    activityTitle,
+    activityType,
+  ]);
 
   const runActionTest = async () => {
     const token = (apiKeyToken.trim() || createdToken?.trim() || '') || '';
@@ -269,20 +289,36 @@ export const ApiKeysSection: React.FC = () => {
       }
 
       if (action === 'move_stage') {
-        if (!selectedDealId) {
-          addToast('Selecione um deal para mover.', 'warning');
-          setActionTestResult({ ok: false, message: 'Selecione um deal.' });
-          return;
-        }
         if (!selectedToStageId) {
           addToast('Selecione a etapa de destino.', 'warning');
           setActionTestResult({ ok: false, message: 'Selecione uma etapa.' });
           return;
         }
-        const res = await fetch(`/api/public/v1/deals/${selectedDealId}/move-stage`, {
+        if (!selectedToStageLabel) {
+          addToast('Etapa inválida para este board.', 'warning');
+          setActionTestResult({ ok: false, message: 'Etapa inválida.' });
+          return;
+        }
+        if (!selectedBoardKey && !selectedBoardId) {
+          addToast('Selecione um board.', 'warning');
+          setActionTestResult({ ok: false, message: 'Selecione um board.' });
+          return;
+        }
+        const phone = identityPhone.trim();
+        const email = identityEmail.trim().toLowerCase();
+        if (!phone && !email) {
+          addToast('Informe telefone ou email.', 'warning');
+          setActionTestResult({ ok: false, message: 'Informe telefone ou email.' });
+          return;
+        }
+        const res = await fetch(`/api/public/v1/deals/move-stage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Api-Key': token },
-          body: JSON.stringify({ to_stage_id: selectedToStageId }),
+          body: JSON.stringify({
+            board_key_or_id: selectedBoardKey || selectedBoardId,
+            ...(phone ? { phone } : { email }),
+            to_stage_label: selectedToStageLabel,
+          }),
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.error || 'Falha no teste');
@@ -441,21 +477,23 @@ export const ApiKeysSection: React.FC = () => {
 
               {action === 'move_stage' && (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">Deal</div>
-                  <select
-                    value={selectedDealId}
-                    onChange={(e) => setSelectedDealId(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-900 dark:text-white"
-                  >
-                    <option value="">Selecione…</option>
-                    {dealsForBoard.slice(0, 250).map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.title} — {d.id.slice(0, 8)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">Identidade do lead</div>
+                  <input
+                    value={identityPhone}
+                    onChange={(e) => setIdentityPhone(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-900 dark:text-white font-mono text-sm"
+                    placeholder="+5511999999999"
+                  />
+                  <div className="mt-2">
+                    <input
+                      value={identityEmail}
+                      onChange={(e) => setIdentityEmail(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-900 dark:text-white"
+                      placeholder="email@exemplo.com (opcional)"
+                    />
+                  </div>
                   <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                    Mostrando até 250 deals do board selecionado.
+                    Informe <strong>telefone</strong> (E.164) ou <strong>email</strong>. No board deve existir só 1 deal aberto para essa identidade.
                   </div>
                 </div>
               )}

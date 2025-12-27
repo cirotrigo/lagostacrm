@@ -538,8 +538,111 @@ export function getPublicApiOpenApiDocument(): OpenApiDocument {
           summary: 'Mover etapa do deal',
           security: [{ ApiKeyAuth: [] }],
           parameters: [{ name: 'dealId', in: 'path', required: true, schema: { type: 'string' } }],
-          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { to_stage_id: { type: 'string' } }, required: ['to_stage_id'] } } } },
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    { type: 'object', additionalProperties: false, properties: { to_stage_id: { type: 'string', description: 'UUID do estágio de destino' } }, required: ['to_stage_id'] },
+                    { type: 'object', additionalProperties: false, properties: { to_stage_label: { type: 'string', description: 'Label exato do estágio de destino (case-insensitive) dentro do board do deal' } }, required: ['to_stage_label'] },
+                  ],
+                },
+                examples: {
+                  byId: { value: { to_stage_id: '00000000-0000-0000-0000-000000000000' } },
+                  byLabel: { value: { to_stage_label: 'Em conversa' } },
+                },
+              },
+            },
+          },
           responses: { 200: { description: 'OK', content: { 'application/json': { schema: { type: 'object' } } } }, 401: { $ref: '#/components/responses/Unauthorized' } },
+        },
+      },
+      '/deals/move-stage-by-identity': {
+        post: {
+          tags: ['Deals'],
+          summary: 'Mover etapa do deal por telefone/email (sem UUID)',
+          description:
+            'Resolve o deal aberto dentro de um board usando `phone` e/ou `email` (regra: 1 deal aberto por board por telefone OU email) e move para a etapa indicada.',
+          deprecated: true,
+          security: [{ ApiKeyAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  additionalProperties: false,
+                  properties: {
+                    board_key_or_id: { type: 'string', description: 'Key (slug) do board ou UUID do board' },
+                    phone: { type: 'string', description: 'Telefone E.164 (ex: +5511999999999)' },
+                    email: { type: 'string', description: 'Email (lowercase recomendado)' },
+                    to_stage_label: { type: 'string', description: 'Label do estágio de destino (case-insensitive) dentro do board' },
+                    to_stage_id: { type: 'string', description: 'UUID do estágio de destino (alternativa ao label)' },
+                  },
+                  required: ['board_key_or_id'],
+                },
+                examples: {
+                  phone: { value: { board_key_or_id: 'sales', phone: '+5511999999999', to_stage_label: 'Em conversa' } },
+                  email: { value: { board_key_or_id: 'sales', email: 'ana@acme.com', to_stage_label: 'Proposta' } },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: 'OK', content: { 'application/json': { schema: { type: 'object' } } } },
+            401: { $ref: '#/components/responses/Unauthorized' },
+          },
+        },
+      },
+      '/deals/move-stage': {
+        post: {
+          tags: ['Deals'],
+          summary: 'Mover etapa do deal (UUID ou telefone/email)',
+          description:
+            'Move etapa via `deal_id` (UUID) ou via `board_key_or_id` + `phone/email` (sem UUID). Preferir usar `to_stage_label`.',
+          security: [{ ApiKeyAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  oneOf: [
+                    {
+                      type: 'object',
+                      additionalProperties: false,
+                      properties: {
+                        deal_id: { type: 'string', description: 'UUID do deal' },
+                        to_stage_label: { type: 'string' },
+                        to_stage_id: { type: 'string' },
+                      },
+                      required: ['deal_id'],
+                    },
+                    {
+                      type: 'object',
+                      additionalProperties: false,
+                      properties: {
+                        board_key_or_id: { type: 'string', description: 'Key (slug) do board ou UUID do board' },
+                        phone: { type: 'string', description: 'Telefone E.164 (ex: +5511999999999)' },
+                        email: { type: 'string', description: 'Email (lowercase recomendado)' },
+                        to_stage_label: { type: 'string' },
+                        to_stage_id: { type: 'string' },
+                      },
+                      required: ['board_key_or_id'],
+                    },
+                  ],
+                },
+                examples: {
+                  byDealId: { value: { deal_id: '00000000-0000-0000-0000-000000000000', to_stage_label: 'Em conversa' } },
+                  byPhone: { value: { board_key_or_id: 'sales', phone: '+5511999999999', to_stage_label: 'Em conversa' } },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: 'OK', content: { 'application/json': { schema: { type: 'object' } } } },
+            401: { $ref: '#/components/responses/Unauthorized' },
+          },
         },
       },
       '/deals/{dealId}/mark-won': {

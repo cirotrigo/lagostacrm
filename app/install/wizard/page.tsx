@@ -112,6 +112,7 @@ export default function InstallWizardPage() {
   const [supabaseProjectsError, setSupabaseProjectsError] = useState<string | null>(null);
   const [supabaseProjects, setSupabaseProjects] = useState<SupabaseProjectOption[]>([]);
   const [supabaseSelectedProjectRef, setSupabaseSelectedProjectRef] = useState('');
+  const [supabaseProjectsLoadedForPat, setSupabaseProjectsLoadedForPat] = useState<string>('');
 
   const [supabaseOrgsLoading, setSupabaseOrgsLoading] = useState(false);
   const [supabaseOrgsError, setSupabaseOrgsError] = useState<string | null>(null);
@@ -395,6 +396,7 @@ export default function InstallWizardPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || `Falha ao listar projetos (HTTP ${res.status})`);
       setSupabaseProjects((data?.projects || []) as SupabaseProjectOption[]);
+      setSupabaseProjectsLoadedForPat(supabaseAccessToken.trim());
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Falha ao listar projetos';
       setSupabaseProjectsError(message);
@@ -426,6 +428,33 @@ export default function InstallWizardPage() {
       setSupabaseOrgsLoading(false);
     }
   };
+
+  useEffect(() => {
+    // “100% mágico”: ao colar o PAT, lista projetos automaticamente (com debounce) e evita spam.
+    if (!supabaseDeployEdgeFunctions) return;
+    if (supabaseMode !== 'existing') return;
+    const pat = supabaseAccessToken.trim();
+    if (!pat) return;
+    if (supabaseProjectsLoading) return;
+    if (supabaseProjectsLoadedForPat === pat) return;
+
+    const handle = setTimeout(() => {
+      void loadSupabaseProjects();
+    }, 650);
+
+    return () => clearTimeout(handle);
+  }, [
+    supabaseDeployEdgeFunctions,
+    supabaseMode,
+    supabaseAccessToken,
+    supabaseProjectsLoading,
+    supabaseProjectsLoadedForPat,
+  ]);
+
+  useEffect(() => {
+    // Se o aluno trocar o PAT, limpamos a seleção (evita selecionar projeto “de outro token”).
+    setSupabaseSelectedProjectRef('');
+  }, [supabaseAccessToken]);
 
   const createSupabaseProject = async () => {
     if (supabaseCreating) return;
@@ -807,6 +836,27 @@ export default function InstallWizardPage() {
                             <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-900/20 p-3 text-amber-700 dark:text-amber-300 text-sm">
                               <AlertCircle size={16} className="mt-0.5" />
                               <span>{supabaseProjectsError}</span>
+                            </div>
+                          ) : null}
+
+                          {!supabaseProjectsLoading &&
+                          supabaseProjectsLoadedForPat === supabaseAccessToken.trim() &&
+                          supabaseProjects.length === 0 ? (
+                            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/30 p-3 text-sm text-slate-700 dark:text-slate-200 space-y-2">
+                              <div className="font-semibold">Nenhum projeto encontrado nesse PAT.</div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400">
+                                Se você ainda não tem projeto, a melhor opção é criar um automaticamente.
+                              </div>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  setSupabaseMode('create');
+                                  await loadSupabaseOrgs();
+                                }}
+                                className="px-3 py-2 rounded-lg text-sm font-semibold bg-primary-600 text-white hover:bg-primary-500"
+                              >
+                                Criar projeto automaticamente
+                              </button>
                             </div>
                           ) : null}
 

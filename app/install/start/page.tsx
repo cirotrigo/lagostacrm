@@ -62,7 +62,8 @@ export default function InstallStartPage() {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const [usePicker, setUsePicker] = useState(true);
+  // “100% mágico”: só mostramos seleção manual se a detecção automática falhar.
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,7 +125,7 @@ export default function InstallStartPage() {
     setStep('validating');
 
     try {
-      if (usePicker && selectedProjectId) {
+      if (showAdvanced && selectedProjectId) {
         const p = projects.find((x) => x.id === selectedProjectId);
         if (!p) throw new Error('Selecione um projeto válido.');
         const productionAliases = p.targets?.production?.alias || [];
@@ -166,6 +167,7 @@ export default function InstallStartPage() {
       setStep('confirm');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao validar token');
+      setShowAdvanced(true);
       setStep('input');
     } finally {
       setIsLoading(false);
@@ -380,23 +382,25 @@ export default function InstallStartPage() {
                     />
                   </div>
 
-                  <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900/50 space-y-3">
-                    <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-200">
-                      <span className="font-medium">Selecionar projeto automaticamente</span>
-                      <input
-                        type="checkbox"
-                        checked={usePicker}
-                        onChange={(e) => setUsePicker(e.target.checked)}
-                        className="accent-primary-600"
-                        disabled={isLoading}
-                      />
-                    </label>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Se ligado, você busca seus projetos e seleciona 1 (à prova de domínio errado).
-                      Se desligado, tentamos detectar pelo domínio atual automaticamente.
-                    </p>
+                  {showAdvanced ? (
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                          Modo avançado (fallback)
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowAdvanced(false)}
+                          className="text-xs underline underline-offset-2 text-slate-600 dark:text-slate-300"
+                          disabled={isLoading}
+                        >
+                          esconder
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        A detecção automática do projeto falhou. Use este modo para selecionar manualmente.
+                      </p>
 
-                    {usePicker ? (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
                           <button
@@ -473,8 +477,8 @@ export default function InstallStartPage() {
                           </div>
                         ) : null}
                       </div>
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : null}
 
                   <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm text-slate-600 dark:text-slate-300">
                     <p className="font-medium mb-2 text-slate-700 dark:text-slate-200">
@@ -525,7 +529,7 @@ export default function InstallStartPage() {
 
                   <button
                     type="submit"
-                    disabled={isLoading || !token.trim() || (usePicker && !selectedProjectId && projects.length > 0)}
+                    disabled={isLoading || !token.trim()}
                     className="w-full bg-primary-600 hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 active:scale-[0.98]"
                   >
                     {isLoading ? (
