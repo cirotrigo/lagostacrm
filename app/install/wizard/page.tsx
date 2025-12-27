@@ -95,6 +95,18 @@ function suggestSupabaseProjectName(existingNames: string[]) {
   return `${base}-${Math.floor(Date.now() / 1000)}`;
 }
 
+function humanizeSupabaseCreateError(message: string) {
+  const lower = String(message || '').toLowerCase();
+  if (
+    lower.includes('maximum limits') ||
+    lower.includes('2 project limit') ||
+    lower.includes('limit of 2 active projects')
+  ) {
+    return 'Essa organização atingiu o limite do Free (2 projetos ativos para admins/owners). Para continuar: pause 1 projeto ativo (reversível), ou delete 1 (permanente), ou escolha um projeto existente.';
+  }
+  return message;
+}
+
 /**
  * Componente React `InstallWizardPage`.
  * @returns {Element} Retorna um valor do tipo `Element`.
@@ -160,6 +172,8 @@ export default function InstallWizardPage() {
   const [supabaseCreateName, setSupabaseCreateName] = useState('');
   const [supabaseCreateDbPass, setSupabaseCreateDbPass] = useState('');
   const [supabaseDbPassCopied, setSupabaseDbPassCopied] = useState(false);
+  const [supabaseFreeWallExpanded, setSupabaseFreeWallExpanded] = useState(false);
+  const [supabaseAutoCreateAfterFreeSlot, setSupabaseAutoCreateAfterFreeSlot] = useState(false);
   const [supabaseCreateRegion, setSupabaseCreateRegion] = useState<'americas' | 'emea' | 'apac'>('americas');
   const [supabaseCreating, setSupabaseCreating] = useState(false);
   const [supabaseCreateError, setSupabaseCreateError] = useState<string | null>(null);
@@ -682,6 +696,36 @@ export default function InstallWizardPage() {
   const supabaseOrgIsFreePlan = (supabaseSelectedOrgPlan || '').toLowerCase() === 'free';
   const supabaseOrgHasFreeSlot = !supabaseOrgIsFreePlan || supabaseActiveCount < 2;
 
+  const supabaseCreateReady = Boolean(
+    supabaseAccessToken.trim() &&
+      (supabaseCreateOrgSlug.trim() || supabaseSelectedOrgSlug.trim()) &&
+      supabaseCreateName.trim() &&
+      supabaseCreateDbPass.length >= 12
+  );
+
+  useEffect(() => {
+    // iPhone-like: se o usuário liberou 1 slot (pausando) e o formulário já está pronto, auto-cria e avança.
+    if (!supabaseAutoCreateAfterFreeSlot) return;
+    if (supabaseMode !== 'create') return;
+    if (supabaseUiStep !== 'project') return;
+    if (!supabaseOrgHasFreeSlot) return;
+    if (!supabaseCreateReady) return;
+    if (supabaseCreating) return;
+
+    const handle = setTimeout(() => {
+      void createSupabaseProject();
+    }, 700);
+    setSupabaseAutoCreateAfterFreeSlot(false);
+    return () => clearTimeout(handle);
+  }, [
+    supabaseAutoCreateAfterFreeSlot,
+    supabaseMode,
+    supabaseUiStep,
+    supabaseOrgHasFreeSlot,
+    supabaseCreateReady,
+    supabaseCreating,
+  ]);
+
   const selectSupabaseProject = (ref: string) => {
     const selected = supabaseProjects.find((p) => p.ref === ref) || null;
     if (!selected) return;
@@ -829,13 +873,17 @@ export default function InstallWizardPage() {
     setSupabaseCreateError(null);
     setSupabaseCreating(true);
     try {
+      const organizationSlug = (supabaseCreateOrgSlug.trim() || supabaseSelectedOrgSlug.trim()).trim();
+      if (!organizationSlug) {
+        throw new Error('Selecione uma organização para criar o projeto.');
+      }
       const res = await fetch('/api/installer/supabase/create-project', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           installerToken: installerToken.trim() || undefined,
           accessToken: supabaseAccessToken.trim(),
-          organizationSlug: supabaseCreateOrgSlug.trim(),
+          organizationSlug,
           name: supabaseCreateName.trim(),
           dbPass: supabaseCreateDbPass,
           regionSmartGroup: supabaseCreateRegion,
@@ -859,14 +907,7 @@ export default function InstallWizardPage() {
       setSupabaseUiStep('final');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Falha ao criar projeto';
-      // Better troubleshooting for Free plan limit
-      if (String(message).toLowerCase().includes('limit of 2 active projects')) {
-        setSupabaseCreateError(
-          'Você já atingiu o limite do Free: 2 projetos ativos. Escolha um projeto existente, pause um projeto antigo, ou faça upgrade no Supabase.'
-        );
-      } else {
-        setSupabaseCreateError(message);
-      }
+      setSupabaseCreateError(humanizeSupabaseCreateError(message));
     } finally {
       setSupabaseCreating(false);
     }
@@ -1399,20 +1440,7 @@ export default function InstallWizardPage() {
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={loadSupabaseOrgs}
-                              disabled={supabaseOrgsLoading || !supabaseAccessToken.trim()}
-                              className="px-3 py-2 rounded-lg text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
-                            >
-                              {supabaseOrgsLoading ? 'Buscando…' : 'Buscar minhas orgs'}
-                            </button>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
-                              (necessário para criar)
-                            </span>
-                          </div>
-
+                          {/* Orgs já são carregadas automaticamente no passo PAT; aqui só mostramos erro se houver. */}
                           {supabaseOrgsError ? (
                             <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-900/20 p-3 text-amber-700 dark:text-amber-300 text-sm">
                               <AlertCircle size={16} className="mt-0.5" />
@@ -1420,123 +1448,137 @@ export default function InstallWizardPage() {
                             </div>
                           ) : null}
 
-                          <div className="space-y-2">
-                            <label className="text-sm text-slate-600 dark:text-slate-300">
-                              Organization
-                            </label>
-                            <select
-                              value={supabaseCreateOrgSlug}
-                              onChange={(e) => setSupabaseCreateOrgSlug(e.target.value)}
-                              className="w-full bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
-                            >
-                              <option value="">Selecione…</option>
-                              {supabaseOrgs.map((o) => (
-                                <option key={o.slug} value={o.slug}>
-                                  {o.name} — {o.slug}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                          {/* iPhone-style: se não há slot no Free, vira uma tela única de decisão (sem formulário). */}
+                          {supabaseOrgIsFreePlan && !supabaseOrgHasFreeSlot && supabaseActiveProjects.length > 0 ? (
+                            <div className="rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-900/20 p-4 space-y-3">
+                              <div className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                                Sem espaço nesta organização (Free: 2 projetos ativos)
+                              </div>
+                              <div className="text-xs text-amber-800/80 dark:text-amber-200/80">
+                                Para criar o <b>{supabaseCreateName || 'nossocrm'}</b>, você precisa liberar <b>1 slot</b>.
+                              </div>
 
-                          {supabaseActiveCount >= 2 ? (
-                            <div className="rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-900/20 p-3 text-amber-700 dark:text-amber-300 text-sm space-y-1">
-                              <div className="font-semibold">
-                                Atenção: {supabaseActiveCount} projetos ativos detectados.
-                              </div>
-                              <div className="text-xs">
-                                {supabaseOrgIsFreePlan ? (
-                                  <>
-                                    Plano da org: <b>free</b>. Limite típico: <b>2 ativos</b>. Para criar um novo, você precisa pausar ou deletar um antigo.
-                                  </>
-                                ) : (
-                                  <>
-                                    Plano da org: <b>{supabaseSelectedOrgPlan || 'desconhecido'}</b>. Se a criação falhar, mostraremos o erro real aqui.
-                                  </>
-                                )}
-                              </div>
-                              <div className="pt-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setSupabaseFreeWallExpanded((v) => !v)}
+                                  className={`px-3 py-2 rounded-xl text-sm font-semibold text-white ${TEAL.solid}`}
+                                >
+                                  Liberar 1 slot
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => setSupabaseMode('existing')}
-                                  className="px-2 py-1 rounded-md text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800"
+                                  className="px-3 py-2 rounded-xl text-sm font-semibold border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/5"
                                 >
-                                  Quero escolher um existente
+                                  Usar existente
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    // Mantém o aluno na mesma tela, mas reforça que pode trocar org ali em cima.
+                                    setSupabaseFreeWallExpanded(false);
+                                  }}
+                                  className="px-3 py-2 rounded-xl text-sm font-semibold border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/5"
+                                >
+                                  Trocar org
                                 </button>
                               </div>
-                            </div>
-                          ) : null}
 
-                          {supabaseOrgIsFreePlan && !supabaseOrgHasFreeSlot && supabaseActiveProjects.length > 0 ? (
-                            <div className="rounded-lg border border-amber-200 dark:border-amber-500/20 bg-white/70 dark:bg-slate-900/30 p-3 space-y-2">
-                              <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                                Sem slot no Free (2 ativos). Libere 1 slot:
-                              </div>
-                              <div className="text-xs text-slate-600 dark:text-slate-300">
-                                - <b>Pausar</b> é reversível (você pode restaurar depois no dashboard).<br />
-                                - <b>Deletar</b> é permanente. Para deletar, digite o <code>ref</code> do projeto no campo abaixo.
-                              </div>
-
-                              <div className="space-y-2">
-                                <label className="text-xs text-slate-600 dark:text-slate-300">
-                                  Confirmação para deletar (digite o <code>project ref</code> exato)
-                                </label>
-                                <input
-                                  value={supabaseDeleteConfirmRef}
-                                  onChange={(e) => setSupabaseDeleteConfirmRef(e.target.value)}
-                                  className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
-                                  placeholder="cole o ref aqui para liberar o botão Deletar"
-                                />
-                              </div>
-
-                              <div className="pt-1 space-y-2">
-                                <div className="max-h-64 overflow-auto space-y-2 pr-1">
-                                {supabaseActiveProjects.map((p) => (
-                                  <div
-                                    key={p.ref}
-                                    className="flex items-center justify-between gap-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-900/30 p-2"
-                                  >
-                                    <div className="min-w-0">
-                                      <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                                        {p.name}
-                                      </div>
-                                      <div className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
-                                        <span className="font-mono">{p.ref}</span>
-                                        {p.status ? ` · ${p.status}` : ''}
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <a
-                                        href={`https://supabase.com/dashboard/project/${encodeURIComponent(p.ref)}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs underline underline-offset-2"
-                                      >
-                                        abrir
-                                      </a>
-                                      <button
-                                        type="button"
-                                        onClick={() => void pauseSupabaseProject(p.ref)}
-                                        disabled={!supabaseAccessToken.trim() || !!supabaseProjectActionRef}
-                                        className="px-2 py-1 rounded-md text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
-                                      >
-                                        {supabaseProjectActionRef === p.ref ? '...' : 'Pausar'}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => void deleteSupabaseProject(p.ref)}
-                                        disabled={!supabaseAccessToken.trim() || !!supabaseProjectActionRef}
-                                        className="px-2 py-1 rounded-md text-xs font-semibold bg-red-600 text-white hover:bg-red-500 disabled:opacity-50"
-                                      >
-                                        {supabaseProjectActionRef === p.ref ? '...' : 'Deletar'}
-                                      </button>
-                                    </div>
+                              {supabaseFreeWallExpanded ? (
+                                <div className="pt-1 space-y-2">
+                                  <div className="text-xs text-amber-800/80 dark:text-amber-200/80">
+                                    Recomendado: <b>Pausar</b> (reversível). Depois de pausar 1 projeto, vamos criar e continuar automaticamente.
                                   </div>
-                                ))}
+                                  <div className="max-h-56 overflow-auto space-y-2 pr-1">
+                                    {supabaseActiveProjects.map((p) => (
+                                      <div
+                                        key={p.ref}
+                                        className="flex items-center justify-between gap-2 rounded-md border border-amber-200/60 dark:border-amber-500/20 bg-white/60 dark:bg-slate-900/30 p-2"
+                                      >
+                                        <div className="min-w-0">
+                                          <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                            {p.name}
+                                          </div>
+                                          <div className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
+                                            <span className="font-mono">{p.ref}</span>
+                                            {p.status ? ` · ${p.status}` : ''}
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                          <a
+                                            href={`https://supabase.com/dashboard/project/${encodeURIComponent(p.ref)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs underline underline-offset-2"
+                                          >
+                                            abrir
+                                          </a>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setSupabaseAutoCreateAfterFreeSlot(true);
+                                              void pauseSupabaseProject(p.ref);
+                                            }}
+                                            disabled={!supabaseAccessToken.trim() || !!supabaseProjectActionRef || !supabaseCreateReady}
+                                            className="px-2 py-1 rounded-md text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+                                          >
+                                            {supabaseProjectActionRef === p.ref ? '...' : 'Pausar'}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  <details className="pt-2">
+                                    <summary className="cursor-pointer text-xs text-amber-800/90 dark:text-amber-200/90 underline underline-offset-2">
+                                      Opções avançadas (destrutivas)
+                                    </summary>
+                                    <div className="mt-2 rounded-lg border border-amber-200/60 dark:border-amber-500/20 bg-white/60 dark:bg-slate-900/30 p-3 space-y-2">
+                                      <div className="text-xs text-slate-700 dark:text-slate-300">
+                                        <b>Deletar</b> é permanente. Para habilitar, digite o <code>ref</code> exato:
+                                      </div>
+                                      <input
+                                        value={supabaseDeleteConfirmRef}
+                                        onChange={(e) => setSupabaseDeleteConfirmRef(e.target.value)}
+                                        className={`w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 ${TEAL.ring}`}
+                                        placeholder="cole o ref aqui"
+                                      />
+                                      <div className="max-h-48 overflow-auto space-y-2 pr-1">
+                                        {supabaseActiveProjects.map((p) => (
+                                          <div
+                                            key={`del-${p.ref}`}
+                                            className="flex items-center justify-between gap-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-900/30 p-2"
+                                          >
+                                            <div className="min-w-0">
+                                              <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                                {p.name}
+                                              </div>
+                                              <div className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
+                                                <span className="font-mono">{p.ref}</span>
+                                              </div>
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => void deleteSupabaseProject(p.ref)}
+                                              disabled={!supabaseAccessToken.trim() || !!supabaseProjectActionRef}
+                                              className="px-2 py-1 rounded-md text-xs font-semibold bg-red-600 text-white hover:bg-red-500 disabled:opacity-50"
+                                            >
+                                              {supabaseProjectActionRef === p.ref ? '...' : 'Deletar'}
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </details>
                                 </div>
-                              </div>
+                              ) : null}
                             </div>
                           ) : null}
 
+                          {/* Se está sem slot no Free, escondemos o formulário (fica 1 CTA só). */}
+                          {supabaseOrgIsFreePlan && !supabaseOrgHasFreeSlot ? null : (
+                            <>
                           <div className="space-y-2">
                             <label className="text-sm text-slate-600 dark:text-slate-300">
                               Nome do projeto
@@ -1621,7 +1663,7 @@ export default function InstallWizardPage() {
                             disabled={
                               supabaseCreating ||
                               !supabaseAccessToken.trim() ||
-                              !supabaseCreateOrgSlug.trim() ||
+                              !(supabaseCreateOrgSlug.trim() || supabaseSelectedOrgSlug.trim()) ||
                               !supabaseCreateName.trim() ||
                               supabaseCreateDbPass.length < 12 ||
                               (supabaseOrgIsFreePlan && !supabaseOrgHasFreeSlot)
@@ -1641,9 +1683,11 @@ export default function InstallWizardPage() {
                           {supabaseCreateError ? (
                             <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-900/20 p-3 text-amber-700 dark:text-amber-300 text-sm">
                               <AlertCircle size={16} className="mt-0.5" />
-                              <span>{supabaseCreateError}</span>
+                              <span>{humanizeSupabaseCreateError(supabaseCreateError)}</span>
                             </div>
                           ) : null}
+                            </>
+                          )}
                         </div>
                       )}
                     </div>

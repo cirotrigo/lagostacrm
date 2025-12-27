@@ -64,6 +64,9 @@
     - Fix (Supabase org projects): corrigida paginação para respeitar o limite da API (`limit <= 100`), evitando erro **400** e loop de “Buscando…”.
     - UX (Supabase criar projeto): gerador de `db_pass` compatível (>= 12) com botão **gerar + copiar**, e nome do projeto vem por padrão como **`nossocrm`** (com sufixo sugerido se já existir).
     - UX (Supabase espaço): o resumo do PAT vira um **pill compacto** na etapa “Destino”, liberando área útil na tela.
+    - UX/Fix (Supabase org duplicada): removido seletor duplicado de organização (e label em inglês) no modo “Criar novo”; a criação agora usa a org selecionada no topo.
+    - UX (Supabase Free): erro do limite de 2 projetos ativos agora é exibido em pt‑BR com instruções claras (usar existente / pausar / deletar / upgrade).
+    - UX (Supabase Free — iPhone setup): quando a org está sem slot, o wizard vira uma **tela única de decisão** com CTA “Liberar 1 slot” (pausar → auto-criar e continuar) e “Opções avançadas” só para deleção.
     - UX (zero fricção): ao colar um PAT válido, o Supabase step tenta listar orgs automaticamente e **auto-avança** para “Destino” quando a verificação passa; se houver apenas 1 org, ela é selecionada automaticamente e o sistema já carrega os projetos.
 
 - **Build (fix)**:
