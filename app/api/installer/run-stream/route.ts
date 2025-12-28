@@ -44,45 +44,48 @@ const RunSchema = z
   .strict();
 
 // Mapeamento cinematográfico Interstellar
-const CINEMA_PHASES = {
-  coordinates: {
-    id: 'coordinates',
-    title: 'Calibrando coordenadas',
-    subtitle: 'Definindo rota para o destino...',
-  },
-  signal: {
-    id: 'signal',
-    title: 'Aguardando sinal',
-    subtitle: 'Confirmando conexão com o destino...',
-  },
-  station: {
-    id: 'station',
-    title: 'Construindo a estação',
-    subtitle: 'Preparando infraestrutura...',
-  },
-  comms: {
-    id: 'comms',
-    title: 'Ativando comunicadores',
-    subtitle: 'Estabelecendo canais de comunicação...',
-  },
-  contact: {
-    id: 'contact',
-    title: 'Primeiro contato',
-    subtitle: 'Criando sua identidade no novo mundo...',
-  },
-  landing: {
-    id: 'landing',
-    title: 'Preparando pouso',
-    subtitle: 'Finalizando a jornada...',
-  },
-  complete: {
-    id: 'complete',
-    title: 'Missão cumprida',
-    subtitle: 'Bem-vindo ao novo mundo.',
-  },
-} as const;
+// Função para criar fases com nome personalizado
+function createCinemaPhases(firstName: string) {
+  return {
+    coordinates: {
+      id: 'coordinates',
+      title: 'Calibrando coordenadas',
+      subtitle: 'Definindo rota para o destino...',
+    },
+    signal: {
+      id: 'signal',
+      title: 'Aguardando sinal',
+      subtitle: 'Confirmando conexão com o destino...',
+    },
+    station: {
+      id: 'station',
+      title: 'Construindo a estação',
+      subtitle: 'Preparando infraestrutura...',
+    },
+    comms: {
+      id: 'comms',
+      title: 'Ativando comunicadores',
+      subtitle: 'Estabelecendo canais de comunicação...',
+    },
+    contact: {
+      id: 'contact',
+      title: 'Primeiro contato',
+      subtitle: 'Criando sua identidade no novo mundo...',
+    },
+    landing: {
+      id: 'landing',
+      title: 'Preparando pouso',
+      subtitle: 'Finalizando a jornada...',
+    },
+    complete: {
+      id: 'complete',
+      title: `Missão cumprida, ${firstName}!`,
+      subtitle: 'Bem-vindo ao novo mundo.',
+    },
+  } as const;
+}
 
-type PhaseId = keyof typeof CINEMA_PHASES;
+type PhaseId = 'coordinates' | 'signal' | 'station' | 'comms' | 'contact' | 'landing' | 'complete';
 
 interface StreamEvent {
   type: 'phase' | 'progress' | 'error' | 'complete';
@@ -116,6 +119,10 @@ export async function POST(req: Request) {
 
   const { vercel, supabase, admin } = parsed.data;
   const envTargets = vercel.targets;
+  
+  // Extrai primeiro nome para personalização
+  const firstName = admin.companyName.split(' ')[0] || 'você';
+  const PHASES = createCinemaPhases(firstName);
 
   // Create SSE stream
   const encoder = new TextEncoder();
@@ -127,7 +134,7 @@ export async function POST(req: Request) {
   };
 
   const sendPhase = async (phase: PhaseId, progress: number) => {
-    const p = CINEMA_PHASES[phase];
+    const p = PHASES[phase];
     await sendEvent({ type: 'phase', phase, title: p.title, subtitle: p.subtitle, progress });
   };
 

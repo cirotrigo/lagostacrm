@@ -35,6 +35,10 @@ type PreflightOrg = {
 const STORAGE_TOKEN = 'crm_install_token';
 const STORAGE_PROJECT = 'crm_install_project';
 const STORAGE_INSTALLER_TOKEN = 'crm_install_installer_token';
+const STORAGE_USER_NAME = 'crm_install_user_name';
+const STORAGE_USER_EMAIL = 'crm_install_user_email';
+const STORAGE_USER_PASS_HASH = 'crm_install_user_pass_hash';
+const STORAGE_SUPABASE_TOKEN = 'crm_install_supabase_token';
 
 function generateStrongPassword(length = 20) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*_-+=';
@@ -127,12 +131,13 @@ export default function InstallWizardPage() {
   const resolveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resolveAttemptsRef = useRef(0);
   
-  // Admin
-  const [companyName, setCompanyName] = useState('');
+  // Admin (carregado do localStorage - coletado no /install/start)
+  const [userName, setUserName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [confirmTouched, setConfirmTouched] = useState(false);
+  
+  // Primeiro nome para personalização
+  const firstName = useMemo(() => userName.split(' ')[0] || 'você', [userName]);
   
   // Wizard - começa no passo 1 (Supabase), pois Vercel já foi validada no /install/start
   const [currentStep, setCurrentStep] = useState(1);
@@ -168,11 +173,10 @@ export default function InstallWizardPage() {
   const sceneTransition = { type: 'tween', ease: [0.22, 1, 0.36, 1], duration: 0.4 };
   
   // Derived state
-  const passwordValid = adminPassword.length >= 6;
-  const passwordsMatch = adminPassword === confirmPassword;
   const vercelReady = Boolean(vercelToken.trim() && project?.id);
   const supabaseReady = Boolean(supabaseUrl.trim() && supabaseResolvedOk && !supabaseProvisioning);
-  const adminReady = Boolean(companyName.trim() && adminEmail.trim() && passwordValid && passwordsMatch);
+  // Admin já foi coletado no /install/start - userName serve como "companyName"
+  const adminReady = Boolean(userName.trim() && adminEmail.trim() && adminPassword.length >= 6);
   const canInstall = Boolean(meta?.enabled && vercelReady && supabaseReady && adminReady);
   
   const allFreeActiveProjects = useMemo(() => {
@@ -206,8 +210,12 @@ export default function InstallWizardPage() {
     const savedToken = localStorage.getItem(STORAGE_TOKEN);
     const savedProject = localStorage.getItem(STORAGE_PROJECT);
     const savedInstallerToken = localStorage.getItem(STORAGE_INSTALLER_TOKEN);
+    const savedUserName = localStorage.getItem(STORAGE_USER_NAME);
+    const savedUserEmail = localStorage.getItem(STORAGE_USER_EMAIL);
+    const savedSupabaseToken = localStorage.getItem(STORAGE_SUPABASE_TOKEN);
 
-    if (!savedToken || !savedProject) {
+    // Precisa ter completado o /install/start
+    if (!savedToken || !savedProject || !savedUserName || !savedUserEmail) {
       router.replace('/install/start');
       return;
     }
@@ -216,6 +224,19 @@ export default function InstallWizardPage() {
       setVercelToken(savedToken);
       setProject(JSON.parse(savedProject));
       if (savedInstallerToken) setInstallerToken(savedInstallerToken);
+      
+      // Dados do usuário (coletados no /install/start)
+      setUserName(savedUserName);
+      setAdminEmail(savedUserEmail);
+      // A senha real é recuperada do sessionStorage ou pedimos de novo
+      const sessionPass = sessionStorage.getItem('crm_install_user_pass');
+      if (sessionPass) setAdminPassword(sessionPass);
+      
+      // Se já tem token Supabase, preenche e auto-avança
+      if (savedSupabaseToken) {
+        setSupabaseAccessToken(savedSupabaseToken);
+      }
+      
       setIsHydrated(true);
     } catch {
       router.replace('/install/start');
@@ -524,11 +545,25 @@ export default function InstallWizardPage() {
     setResult(null);
     setShowInstallOverlay(true);
     setCinePhase('preparing');
-    setCineMessage('Preparando a decolagem…');
-    setCineSubtitle('Verificando sistemas...');
+    setCineMessage('Preparando sistemas');
+    setCineSubtitle('Verificando conexões...');
     setCineProgress(0);
     
+    // Contagem regressiva épica
+    await new Promise((r) => setTimeout(r, 1000));
+    setCineMessage('3');
+    setCineSubtitle('Motores acionados');
+    await new Promise((r) => setTimeout(r, 1000));
+    setCineMessage('2');
+    setCineSubtitle('Sistemas online');
+    await new Promise((r) => setTimeout(r, 1000));
+    setCineMessage('1');
+    setCineSubtitle('Ignição');
     await new Promise((r) => setTimeout(r, 800));
+    setCineMessage('Decolagem!');
+    setCineSubtitle('');
+    await new Promise((r) => setTimeout(r, 600));
+    
     setCinePhase('running');
     
     try {
@@ -547,7 +582,7 @@ export default function InstallWizardPage() {
             projectRef: supabaseProjectRef.trim() || undefined,
             deployEdgeFunctions: supabaseDeployEdgeFunctions,
           },
-          admin: { companyName: companyName.trim(), email: adminEmail.trim(), password: adminPassword },
+          admin: { companyName: userName.trim(), email: adminEmail.trim(), password: adminPassword },
         }),
       });
       
@@ -580,10 +615,12 @@ export default function InstallWizardPage() {
               setCineSubtitle(event.subtitle || '');
               setCineProgress(event.progress || 0);
             } else if (event.type === 'complete' && event.ok) {
-              setCinePhase('success');
-              setCineMessage('Missão cumprida');
-              setCineSubtitle('Bem-vindo ao novo mundo.');
               setCineProgress(100);
+              setCineMessage(event.title || `Missão cumprida, ${firstName}!`);
+              setCineSubtitle('Aterrissagem confirmada');
+              await new Promise((r) => setTimeout(r, 800));
+              setCinePhase('success');
+              setCineSubtitle(event.subtitle || 'Bem-vindo ao novo mundo.');
               setResult({ ok: true, steps: [] });
             } else if (event.type === 'error') {
               throw new Error(event.error || 'Erro durante a instalação');
@@ -612,8 +649,8 @@ export default function InstallWizardPage() {
     );
   }
   
-  const goNext = () => setCurrentStep((s) => Math.min(s + 1, 3));
-  const goBack = () => setCurrentStep((s) => Math.max(s - 1, 1));
+  const goNext = () => setCurrentStep((s) => Math.min(s + 1, 2));
+  const goBack = () => router.push('/install/start');
 
   return (
     <div
@@ -635,7 +672,7 @@ export default function InstallWizardPage() {
 
       <div className="w-full max-w-lg relative z-10 px-4">
         <div className="flex justify-center gap-2 mb-8">
-          {[1, 2, 3].map((i) => (
+          {[1, 2].map((i) => (
             <div
               key={i}
               className={`h-2 rounded-full transition-all duration-300 ${
@@ -756,36 +793,21 @@ export default function InstallWizardPage() {
           )}
           
           {currentStep === 2 && (
-            <motion.div key="step-admin" variants={sceneVariants} initial="initial" animate="animate" exit="exit" transition={sceneTransition}>
-              <h1 className="text-2xl font-bold text-white mb-2 text-center">Criar administrador</h1>
-              <p className="text-slate-400 mb-6 text-center">Configure o primeiro acesso ao sistema.</p>
-              <div className="space-y-4">
-                <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50" placeholder="Nome da empresa" />
-                <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50" placeholder="Email do administrador" />
-                <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50" placeholder="Senha (mínimo 6 caracteres)" />
-                <input type="password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setConfirmTouched(true); }} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50" placeholder="Confirmar senha" />
-                {confirmTouched && !passwordsMatch && confirmPassword.length > 0 && <p className="text-red-400 text-sm">As senhas não conferem.</p>}
-                        </div>
-              <button onClick={goNext} disabled={!adminReady} className="w-full mt-6 py-4 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-white font-semibold text-lg transition-all shadow-lg shadow-cyan-500/25 disabled:opacity-50">Continuar</button>
-            </motion.div>
-          )}
-          
-          {currentStep === 3 && (
             <motion.div key="step-launch" variants={sceneVariants} initial="initial" animate="animate" exit="exit" transition={sceneTransition} className="text-center">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-teal-400 mb-6"><Sparkles className="w-10 h-10 text-white" /></div>
-              <h1 className="text-3xl font-bold text-white mb-2">Tudo pronto!</h1>
-              <p className="text-slate-400 mb-8">Clique para iniciar a instalação do seu CRM.</p>
+              <h1 className="text-3xl font-bold text-white mb-2">Tudo pronto, {firstName}!</h1>
+              <p className="text-slate-400 mb-8">Sua jornada está prestes a começar.</p>
               <button onClick={runInstaller} disabled={!canInstall || installing} className="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-bold text-xl transition-all shadow-xl shadow-cyan-500/30 disabled:opacity-50">
-                {installing ? <span className="flex items-center justify-center gap-3"><Loader2 className="w-6 h-6 animate-spin" />Instalando…</span> : '🚀 Lançar'}
-                        </button>
+                {installing ? <span className="flex items-center justify-center gap-3"><Loader2 className="w-6 h-6 animate-spin" />Iniciando…</span> : '🚀 Iniciar viagem'}
+              </button>
               {runError && !showInstallOverlay && <div className="mt-4 rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-red-400 text-sm">{runError}</div>}
             </motion.div>
           )}
         </AnimatePresence>
         
-        {currentStep > 1 && currentStep < 3 && supabaseUiStep !== 'creating' && supabaseUiStep !== 'deciding' && (
+        {currentStep === 1 && supabaseUiStep === 'pat' && (
           <button onClick={goBack} className="mt-6 w-full py-3 text-slate-400 hover:text-white transition-colors">← Voltar</button>
-                      )}
+        )}
                     </div>
       
       <AnimatePresence>
@@ -822,87 +844,132 @@ export default function InstallWizardPage() {
             </div>
             
             <div className="relative text-center px-4 max-w-md">
-              {/* Ícone central */}
-              <div className="relative inline-flex items-center justify-center w-32 h-32 mb-8">
-                {cinePhase === 'preparing' || cinePhase === 'running' ? (
-                  <>
-                    {/* Anéis pulsantes estilo radar */}
-                    <motion.div 
-                      className="absolute inset-0 rounded-full border border-cyan-400/20" 
-                      animate={{ scale: [1, 2, 2], opacity: [0.6, 0, 0] }} 
-                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut' }} 
-                    />
-                    <motion.div 
-                      className="absolute inset-0 rounded-full border border-cyan-400/20" 
-                      animate={{ scale: [1, 2, 2], opacity: [0.6, 0, 0] }} 
-                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut', delay: 0.8 }} 
-                    />
-                    <motion.div 
-                      className="absolute inset-0 rounded-full border border-cyan-400/20" 
-                      animate={{ scale: [1, 2, 2], opacity: [0.6, 0, 0] }} 
-                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut', delay: 1.6 }} 
-                    />
-                    {/* Círculo central com spinner */}
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-cyan-500/20 to-teal-500/20 border border-cyan-400/30 flex items-center justify-center backdrop-blur-sm">
-                      <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
-                    </div>
-                  </>
-                ) : cinePhase === 'success' ? (
-                  <>
-                    {/* Explosão de partículas no sucesso */}
-                    <motion.div className="absolute inset-0 pointer-events-none">
-                      {Array.from({ length: 24 }).map((_, i) => {
-                        const angle = (Math.PI * 2 * i) / 24;
-                        const distance = 120 + Math.random() * 80;
-                        return (
-                          <motion.div 
-                            key={i} 
-                            className="absolute left-1/2 top-1/2 w-2 h-2 rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400" 
-                            initial={{ x: 0, y: 0, opacity: 1, scale: 1 }} 
-                            animate={{ 
-                              x: Math.cos(angle) * distance, 
-                              y: Math.sin(angle) * distance, 
-                              opacity: 0,
-                              scale: 0.5
-                            }} 
-                            transition={{ duration: 1.2, delay: i * 0.03, ease: 'easeOut' }} 
-                          />
-                        );
-                      })}
-                    </motion.div>
-                    <motion.div 
-                      initial={{ scale: 0, rotate: -180 }} 
-                      animate={{ scale: 1, rotate: 0 }} 
-                      transition={{ type: 'spring', stiffness: 200, damping: 15 }} 
-                      className="w-32 h-32 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center shadow-lg shadow-emerald-500/30"
-                    >
-                      <CheckCircle2 className="w-16 h-16 text-white" />
-                    </motion.div>
-                  </>
-                ) : (
-                  <motion.div 
-                    initial={{ scale: 0.8 }} 
-                    animate={{ scale: 1 }}
-                    className="w-32 h-32 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center"
+              {/* Contagem regressiva - números gigantes */}
+              {cinePhase === 'preparing' && ['3', '2', '1', 'Decolagem!'].includes(cineMessage) && (
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={cineMessage}
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 1.5, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-8"
                   >
-                    <AlertCircle className="w-16 h-16 text-red-400" />
+                    <span className={`font-bold text-transparent bg-clip-text bg-gradient-to-b from-white to-cyan-400 ${
+                      cineMessage === 'Decolagem!' ? 'text-6xl' : 'text-[120px] leading-none'
+                    }`}>
+                      {cineMessage}
+                    </span>
                   </motion.div>
-                )}
-              </div>
+                </AnimatePresence>
+              )}
               
-              {/* Título principal */}
-              <AnimatePresence mode="wait">
-                <motion.h1 
-                  key={cineMessage} 
-                  initial={{ opacity: 0, y: 20 }} 
-                  animate={{ opacity: 1, y: 0 }} 
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.4 }}
-                  className="text-3xl font-bold text-white mb-3"
-                >
-                  {cineMessage}
-                </motion.h1>
-              </AnimatePresence>
+              {/* Ícone central - só mostra quando não é contagem */}
+              {!(cinePhase === 'preparing' && ['3', '2', '1', 'Decolagem!'].includes(cineMessage)) && (
+                <div className="relative inline-flex items-center justify-center w-32 h-32 mb-8">
+                  {cinePhase === 'preparing' || cinePhase === 'running' ? (
+                    <>
+                      {/* Anéis pulsantes estilo radar */}
+                      <motion.div 
+                        className="absolute inset-0 rounded-full border border-cyan-400/20" 
+                        animate={{ scale: [1, 2, 2], opacity: [0.6, 0, 0] }} 
+                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut' }} 
+                      />
+                      <motion.div 
+                        className="absolute inset-0 rounded-full border border-cyan-400/20" 
+                        animate={{ scale: [1, 2, 2], opacity: [0.6, 0, 0] }} 
+                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut', delay: 0.8 }} 
+                      />
+                      <motion.div 
+                        className="absolute inset-0 rounded-full border border-cyan-400/20" 
+                        animate={{ scale: [1, 2, 2], opacity: [0.6, 0, 0] }} 
+                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut', delay: 1.6 }} 
+                      />
+                      {/* Círculo central com spinner */}
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-cyan-500/20 to-teal-500/20 border border-cyan-400/30 flex items-center justify-center backdrop-blur-sm">
+                        <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
+                      </div>
+                    </>
+                  ) : cinePhase === 'success' ? (
+                    <>
+                      {/* Explosão de partículas no sucesso */}
+                      <motion.div className="absolute inset-0 pointer-events-none">
+                        {Array.from({ length: 32 }).map((_, i) => {
+                          const angle = (Math.PI * 2 * i) / 32;
+                          const distance = 100 + Math.random() * 120;
+                          return (
+                            <motion.div 
+                              key={i} 
+                              className="absolute left-1/2 top-1/2 w-2 h-2 rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400" 
+                              initial={{ x: 0, y: 0, opacity: 1, scale: 1 }} 
+                              animate={{ 
+                                x: Math.cos(angle) * distance, 
+                                y: Math.sin(angle) * distance, 
+                                opacity: 0,
+                                scale: 0.3
+                              }} 
+                              transition={{ duration: 1.5, delay: i * 0.02, ease: 'easeOut' }} 
+                            />
+                          );
+                        })}
+                      </motion.div>
+                      {/* Segundo anel de partículas */}
+                      <motion.div className="absolute inset-0 pointer-events-none">
+                        {Array.from({ length: 16 }).map((_, i) => {
+                          const angle = (Math.PI * 2 * i) / 16 + 0.2;
+                          const distance = 80 + Math.random() * 60;
+                          return (
+                            <motion.div 
+                              key={`inner-${i}`} 
+                              className="absolute left-1/2 top-1/2 w-3 h-3 rounded-full bg-gradient-to-r from-emerald-300 to-teal-300" 
+                              initial={{ x: 0, y: 0, opacity: 1, scale: 1 }} 
+                              animate={{ 
+                                x: Math.cos(angle) * distance, 
+                                y: Math.sin(angle) * distance, 
+                                opacity: 0,
+                                scale: 0.2
+                              }} 
+                              transition={{ duration: 1.2, delay: 0.1 + i * 0.03, ease: 'easeOut' }} 
+                            />
+                          );
+                        })}
+                      </motion.div>
+                      <motion.div 
+                        initial={{ scale: 0, rotate: -180 }} 
+                        animate={{ scale: 1, rotate: 0 }} 
+                        transition={{ type: 'spring', stiffness: 200, damping: 15 }} 
+                        className="w-32 h-32 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center shadow-2xl shadow-emerald-500/40"
+                      >
+                        <CheckCircle2 className="w-16 h-16 text-white" />
+                      </motion.div>
+                    </>
+                  ) : (
+                    <motion.div 
+                      initial={{ scale: 0.8 }} 
+                      animate={{ scale: 1 }}
+                      className="w-32 h-32 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center"
+                    >
+                      <AlertCircle className="w-16 h-16 text-red-400" />
+                    </motion.div>
+                  )}
+                </div>
+              )}
+              
+              {/* Título principal - esconde durante contagem */}
+              {!(cinePhase === 'preparing' && ['3', '2', '1', 'Decolagem!'].includes(cineMessage)) && (
+                <AnimatePresence mode="wait">
+                  <motion.h1 
+                    key={cineMessage} 
+                    initial={{ opacity: 0, y: 20 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.4 }}
+                    className={`font-bold text-white mb-3 ${cinePhase === 'success' ? 'text-4xl' : 'text-3xl'}`}
+                  >
+                    {cineMessage}
+                  </motion.h1>
+                </AnimatePresence>
+              )}
               
               {/* Subtítulo */}
               <AnimatePresence mode="wait">
@@ -911,7 +978,7 @@ export default function InstallWizardPage() {
                   initial={{ opacity: 0 }} 
                   animate={{ opacity: 1 }} 
                   exit={{ opacity: 0 }}
-                  className="text-slate-400 mb-6 h-6"
+                  className={`mb-6 h-6 ${cinePhase === 'success' ? 'text-emerald-400 text-lg' : 'text-slate-400'}`}
                 >
                   {cineSubtitle}
                 </motion.p>
@@ -934,13 +1001,34 @@ export default function InstallWizardPage() {
               
               {/* Botões de ação */}
               {cinePhase === 'success' && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-                  <p className="text-slate-400 mb-6">Seu CRM está pronto. Aguarde o redeploy e faça login.</p>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.8 }}
+                  className="space-y-6"
+                >
+                  <p className="text-slate-300">
+                    Seu novo mundo está pronto.<br />
+                    <span className="text-slate-500 text-sm">Aguarde alguns segundos para o deploy finalizar.</span>
+                  </p>
                   <button 
-                    onClick={() => setShowInstallOverlay(false)} 
-                    className="px-8 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-semibold text-lg shadow-lg shadow-cyan-500/30 transition-all"
+                    onClick={() => {
+                      // Limpa dados do instalador
+                      localStorage.removeItem('crm_install_token');
+                      localStorage.removeItem('crm_install_project');
+                      localStorage.removeItem('crm_install_installer_token');
+                      localStorage.removeItem('crm_install_user_name');
+                      localStorage.removeItem('crm_install_user_email');
+                      localStorage.removeItem('crm_install_user_pass_hash');
+                      localStorage.removeItem('crm_install_supabase_token');
+                      localStorage.removeItem('crm_install_session_locked');
+                      sessionStorage.removeItem('crm_install_user_pass');
+                      // Redireciona pro login
+                      window.location.href = '/login';
+                    }} 
+                    className="px-10 py-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-bold text-xl shadow-2xl shadow-emerald-500/30 transition-all transform hover:scale-105"
                   >
-                    Concluir
+                    🌍 Explorar o novo mundo
                   </button>
                 </motion.div>
               )}
