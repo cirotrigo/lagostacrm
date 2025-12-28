@@ -51,6 +51,14 @@ const STORAGE_USER_EMAIL = 'crm_install_user_email';
 const STORAGE_USER_PASS_HASH = 'crm_install_user_pass_hash';
 const STORAGE_SUPABASE_TOKEN = 'crm_install_supabase_token';
 
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + '_crm_salt_2024');
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 function generateStrongPassword(length = 20) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*_-+=';
   const bytes = new Uint8Array(Math.max(12, Math.min(64, length)));
@@ -160,6 +168,13 @@ export default function InstallWizardPage() {
   const [userName, setUserName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+
+  // Trocar senha (garante compatibilidade com policy nova + evita travar no login)
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
   
   // Primeiro nome para personalização
   const firstName = useMemo(() => userName.split(' ')[0] || 'você', [userName]);
@@ -856,6 +871,32 @@ export default function InstallWizardPage() {
   const goNext = () => setCurrentStep((s) => Math.min(s + 1, 2));
   const goBack = () => router.push('/install/start');
 
+  const applyNewInstallerPassword = useCallback(async () => {
+    const pass = newPassword;
+    const confirm = newPasswordConfirm;
+
+    setChangePasswordError(null);
+
+    const check = validateInstallerPassword(pass);
+    if (!check.ok) {
+      setChangePasswordError(check.error);
+      return;
+    }
+    if (pass !== confirm) {
+      setChangePasswordError('As senhas não conferem');
+      return;
+    }
+
+    const hash = await hashPassword(pass);
+    localStorage.setItem(STORAGE_USER_PASS_HASH, hash);
+    sessionStorage.setItem('crm_install_user_pass', pass);
+    setAdminPassword(pass);
+    setNewPassword('');
+    setNewPasswordConfirm('');
+    setShowNewPassword(false);
+    setShowChangePasswordModal(false);
+  }, [newPassword, newPasswordConfirm]);
+
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-slate-950 relative overflow-hidden"
@@ -1123,6 +1164,34 @@ export default function InstallWizardPage() {
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-teal-400 mb-6"><Sparkles className="w-10 h-10 text-white" /></div>
               <h1 className="text-3xl font-bold text-white mb-2">Tudo pronto, {firstName}!</h1>
               <p className="text-slate-400 mb-8">Sua jornada está prestes a começar.</p>
+              {!validateInstallerPassword(adminPassword).ok && (
+                <div className="mb-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-left">
+                  <div className="text-amber-200 font-medium">Só falta fortalecer sua senha</div>
+                  <div className="text-slate-400 text-sm mt-1">Use 8+ caracteres com pelo menos 1 letra e 1 número.</div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const p = generateStrongPassword(16);
+                        setNewPassword(p);
+                        setNewPasswordConfirm(p);
+                        setShowChangePasswordModal(true);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold"
+                    >
+                      Gerar senha sugerida
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowChangePasswordModal(true)}
+                      className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm"
+                    >
+                      Ajustar senha
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <button onClick={runInstaller} disabled={!canInstall || installing} className="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-bold text-xl transition-all shadow-xl shadow-cyan-500/30 disabled:opacity-50">
                 {installing ? <span className="flex items-center justify-center gap-3"><Loader2 className="w-6 h-6 animate-spin" />Iniciando…</span> : '🚀 Iniciar viagem'}
               </button>
@@ -1396,6 +1465,89 @@ export default function InstallWizardPage() {
         )}
       </AnimatePresence>
       
+      {/* Modal: Trocar senha */}
+      <AnimatePresence>
+        {showChangePasswordModal && (
+          <motion.div
+            key="change-password-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[62] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-slate-900/95 border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
+                  <Sparkles className="w-8 h-8 text-cyan-300" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">Trocar senha</h2>
+                <p className="text-slate-400">Vamos garantir seu acesso antes de concluir a missão.</p>
+              </div>
+
+              <div className="space-y-3">
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-center text-lg placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-transparent"
+                  placeholder="Nova senha"
+                  autoFocus
+                />
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={newPasswordConfirm}
+                  onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void applyNewInstallerPassword();
+                  }}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-center text-lg placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-transparent"
+                  placeholder="Confirmar senha"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((v) => !v)}
+                  className="w-full py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-200 text-sm transition-all"
+                >
+                  {showNewPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                </button>
+
+                {changePasswordError && (
+                  <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4 text-red-300 text-sm text-center">
+                    {changePasswordError}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowChangePasswordModal(false);
+                      setChangePasswordError(null);
+                    }}
+                    className="flex-1 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void applyNewInstallerPassword()}
+                    className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-semibold transition-all"
+                  >
+                    Salvar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Modal de Resumir Instalação */}
       <AnimatePresence>
         {showResumeModal && installState && (

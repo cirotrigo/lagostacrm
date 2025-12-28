@@ -16,6 +16,13 @@ const STORAGE_USER_EMAIL = 'crm_install_user_email';
 const STORAGE_USER_PASS_HASH = 'crm_install_user_pass_hash';
 const STORAGE_SESSION_LOCKED = 'crm_install_session_locked';
 
+function generateStrongPassword(length = 16) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*_-+=';
+  const bytes = new Uint8Array(Math.max(12, Math.min(64, length)));
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => chars[b % chars.length]).join('');
+}
+
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(password + '_crm_salt_2024');
@@ -90,6 +97,15 @@ export default function InstallStartPage() {
   };
   
   const firstName = userName.split(' ')[0] || '';
+
+  const passwordChecks = (() => {
+    const p = String(userPassword || '');
+    return {
+      minLen: p.length >= 8,
+      hasLetter: /[A-Za-z]/.test(p),
+      hasNumber: /\d/.test(p),
+    };
+  })();
   
   // Carrega meta do instalador
   useEffect(() => {
@@ -492,7 +508,52 @@ export default function InstallStartPage() {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                
+
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const p = generateStrongPassword(16);
+                      setUserPassword(p);
+                      setConfirmPassword(p);
+                      setError('');
+                    }}
+                    className="text-violet-300/90 hover:text-violet-200 underline underline-offset-4"
+                  >
+                    Usar senha sugerida
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        if (!userPassword) return;
+                        await navigator.clipboard.writeText(userPassword);
+                        setError('');
+                      } catch {
+                        // noop
+                      }
+                    }}
+                    className="text-slate-400 hover:text-slate-200"
+                  >
+                    Copiar
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: passwordChecks.minLen ? 'rgba(16,185,129,0.9)' : 'rgba(148,163,184,0.5)' }} />
+                    <span>8+ caracteres</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: passwordChecks.hasLetter ? 'rgba(16,185,129,0.9)' : 'rgba(148,163,184,0.5)' }} />
+                    <span>1 letra</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: passwordChecks.hasNumber ? 'rgba(16,185,129,0.9)' : 'rgba(148,163,184,0.5)' }} />
+                    <span>1 número</span>
+                  </div>
+                </div>
+
                 <div>
                   <input
                     type={showPassword ? 'text' : 'password'}

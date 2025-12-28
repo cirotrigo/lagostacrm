@@ -13,6 +13,11 @@
   - **Login verificado antes do final**: o `run-stream` valida `email+senha` via `/auth/v1/token` e só conclui se o login funcionar
 
 
+- **Installer — Senha (UX) Apple-like + recuperação**:
+  - `/install/start`: checklist (8+/1 letra/1 número), botão **"Usar senha sugerida"** e **Copiar**
+  - `/install/wizard`: modal **Trocar senha** (gera/ajusta), atualiza `localStorage` (hash) + `sessionStorage` e destrava o botão de iniciar
+
+
 - **Installer — Nome de projeto já existe (retry/F5)**:
   - **`create-project` agora é resiliente**: se o Supabase responder "already exists", o backend lista projetos da org e **reaproveita** o projeto existente em vez de travar
 
