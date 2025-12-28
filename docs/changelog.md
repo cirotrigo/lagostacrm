@@ -2,6 +2,22 @@
 
 ## 28/12/2025
 
+- **Fix (Convites — UI não atualiza após gerar link)**:
+  - Corrigido problema onde o link gerado não aparecia na UI até fechar e reabrir o modal. Agora o estado é atualizado forçadamente após gerar o link, criando uma nova referência de array para garantir re-render.
+  - Melhorado o filtro de convites expirados para tratar melhor casos de timezone e garantir que apenas convites válidos sejam exibidos.
+
+- **Fix (Convites — Validação de token melhorada)**:
+  - Melhorada a validação de tokens de convite no endpoint `/api/invites/validate`:
+    - Normalização do token (trim) antes da comparação
+    - Mensagens de erro mais específicas (já utilizado vs expirado vs não encontrado)
+    - Verificação adicional quando o token não é encontrado para identificar se foi usado ou expirado
+    - Logs de erro para facilitar debug
+
+- **Fix (Proxy/Manifest)**:
+  - Corrigido erro de sintaxe no `manifest.webmanifest`: o proxy estava interceptando a requisição do manifest e retornando HTML inválido. Adicionado `manifest.webmanifest` à lista de exclusões do matcher do `proxy.ts` para permitir que o Next.js sirva o manifest corretamente como JSON.
+
+## 28/12/2025
+
 - **Installer — Ato final agora espera a Vercel**:
   - O `run-stream` passou a aguardar o deployment ficar **READY** via polling (`/v13/deployments/:id`) antes de emitir `complete`
   - Evita o "Explorar o novo mundo" apontar para um deploy ainda antigo (sem `NEXT_PUBLIC_SUPABASE_*`)

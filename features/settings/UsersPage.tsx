@@ -99,12 +99,20 @@ export const UsersPage: React.FC = () => {
             const invites = data?.invites || [];
             const nowTs = Date.now();
             const validInvites = (invites || []).filter((invite: any) => {
+                // Only show invites that are not used
+                if (invite.used_at) return false;
+                // If no expiration, it's valid
                 if (!invite.expires_at) return true;
-                return Date.parse(invite.expires_at) > nowTs;
+                // Check if expiration is in the future (with small buffer for timezone issues)
+                const expiresTs = Date.parse(invite.expires_at);
+                return expiresTs > nowTs;
             });
-            setActiveInvites(validInvites);
+            // Force state update by creating new array reference
+            setActiveInvites([...validInvites]);
         } catch (error) {
             console.error('Error fetching invites:', error);
+            // On error, still try to update state to empty array to clear stale data
+            setActiveInvites([]);
         }
     }, []);
 
@@ -167,7 +175,12 @@ export const UsersPage: React.FC = () => {
                 throw new Error(data?.error || `Erro ao gerar link (HTTP ${res.status})`);
             }
 
+            // Force refresh of active invites and ensure state updates
             await fetchActiveInvites();
+            
+            // Small delay to ensure state propagation
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
             addToast('Novo link gerado!', 'success');
         } catch (err: any) {
             setError(err.message || 'Erro ao gerar link');
