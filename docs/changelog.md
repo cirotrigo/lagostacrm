@@ -660,3 +660,11 @@
   - Aviso destacado: "⚠️ Esta ação não pode ser desfeita"
   - Botões: "Cancelar" (cinza) e "Sim, deletar" (vermelho)
   - Backdrop blur com animação suave (framer-motion)
+
+### 29/12/2025 — Supabase: Auto-criar novo projeto (sem deleção no wizard)
+
+- **UX/Fluxo**: Removida a necessidade de deletar projetos pelo wizard
+  - Agora, quando o nome `nossocrm` já existe, o instalador tenta automaticamente `nossocrmv2`, `nossocrmv3`, etc.
+  - Mantém apenas a ação de **pausar** projetos ativos quando o plano Free estiver sem slots
+- **Técnico**: `createProjectInOrg` passou a fazer retry automático ao receber `PROJECT_EXISTS` (HTTP 409)
+  - Evita travas e elimina os erros recorrentes do fluxo de deleção

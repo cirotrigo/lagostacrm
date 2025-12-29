@@ -71,19 +71,16 @@ function suggestProjectName(existingNames: string[]) {
   const lower = new Set(existingNames.map((n) => (n || '').toLowerCase().trim()).filter(Boolean));
   if (!lower.has(base)) return base;
   for (let i = 2; i < 50; i++) {
-    const candidate = `${base}-${i}`;
+    const candidate = `${base}v${i}`;
     if (!lower.has(candidate)) return candidate;
   }
-  return `${base}-${Math.floor(Date.now() / 1000)}`;
+  return `${base}v${Math.floor(Date.now() / 1000)}`;
 }
 
 function humanizeError(message: string) {
   const lower = String(message || '').toLowerCase();
   if (lower.includes('maximum limits') || lower.includes('2 project limit') || lower.includes('limit of 2 active projects')) {
     return 'Limite do plano Free atingido. Pause um projeto existente para continuar.';
-  }
-  if (lower.includes('already exists')) {
-    return 'Projeto com este nome já existe. Delete o projeto antigo no Supabase ou aguarde alguns minutos e tente novamente.';
   }
   return message;
 }
@@ -505,126 +502,120 @@ export default function InstallWizardPage() {
     setSupabaseUiStep('done');
     setSupabaseProvisioning(true);
     setSupabaseProvisioningStatus('PREPARING');
-    
-    const projectName = suggestProjectName(existingNames);
+
     const createStart = Date.now();
-    
-    console.log('🚀 [SUPABASE] Criando projeto:', projectName, 'na org:', orgSlug);
-    console.log('⏱️ [SUPABASE] Início:', new Date().toLocaleTimeString());
-    
+
     try {
-      const res = await fetch('/api/installer/supabase/create-project', {
+      const names = new Set(existingNames);
+      let ref = '';
+      let url = '';
+      let lastErr = '';
+
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const projectName = suggestProjectName(Array.from(names));
+
+        console.log('🚀 [SUPABASE] Criando projeto:', projectName, 'na org:', orgSlug);
+        console.log('⏱️ [SUPABASE] Início:', new Date().toLocaleTimeString());
+
+        const res = await fetch('/api/installer/supabase/create-project', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             installerToken: installerToken.trim() || undefined,
             accessToken: supabaseAccessToken.trim(),
-          organizationSlug: orgSlug,
-          name: projectName,
-          dbPass: supabaseCreateDbPass,
-          regionSmartGroup: 'americas',
+            organizationSlug: orgSlug,
+            name: projectName,
+            dbPass: supabaseCreateDbPass,
+            regionSmartGroup: 'americas',
           }),
         });
-      const data = await res.json();
-      
-      console.log('📦 [SUPABASE] Resposta create-project:', JSON.stringify(data));
-      console.log('⏱️ [SUPABASE] create-project levou:', ((Date.now() - createStart) / 1000).toFixed(1), 'segundos');
-      
-      if (!res.ok) {
-        // If it's a conflict error, throw the full data object as JSON string
-        if (data?.code === 'PROJECT_EXISTS') {
-          throw new Error(JSON.stringify(data));
+
+        const data = await res.json().catch(() => ({}));
+
+        console.log('📦 [SUPABASE] Resposta create-project:', JSON.stringify(data));
+        console.log('⏱️ [SUPABASE] create-project levou:', ((Date.now() - createStart) / 1000).toFixed(1), 'segundos');
+
+        if (res.ok) {
+          ref = String(data?.projectRef || '');
+          url = String(data?.supabaseUrl || '');
+          break;
         }
-        throw new Error(data?.error || 'Erro');
+
+        lastErr = String(data?.error || data?.details?.message || 'Erro');
+
+        // Nome já existe: tenta automaticamente o próximo (nossocrm -> nossocrmv2 -> ...)
+        if (res.status === 409 && String(data?.code || '') === 'PROJECT_EXISTS') {
+          const existingName = String(data?.existingProject?.name || '').trim();
+          if (existingName) names.add(existingName);
+          names.add(projectName);
+          continue;
+        }
+
+        if (lastErr.toLowerCase().includes('already exists')) {
+          names.add(projectName);
+          continue;
+        }
+
+        throw new Error(lastErr);
       }
-      
-      const ref = String(data?.projectRef || '');
-      const url = String(data?.supabaseUrl || '');
-      
-      if (ref) {
-        setSupabaseProjectRef(ref);
-        setSupabaseUrl(url || `https://${ref}.supabase.co`);
-        setSupabaseDbUrl(buildDbUrl(ref, supabaseCreateDbPass, 'us-east-1'));
-        
-        setSupabaseProvisioning(true);
-        setSupabaseProvisioningStatus('COMING_UP');
-        
-        let pollCount = 0;
-        const poll = async () => {
-          pollCount++;
-          try {
-            const st = await fetch('/api/installer/supabase/project-status', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ installerToken: installerToken.trim() || undefined, accessToken: supabaseAccessToken.trim(), projectRef: ref }),
-            });
-            const stData = await st.json().catch(() => null);
-            const status = stData?.status || '';
-            setSupabaseProvisioningStatus(status);
-            
-            console.log(`📊 [SUPABASE] Poll #${pollCount}: ${status} (${((Date.now() - createStart) / 1000).toFixed(0)}s)`);
-            
-            if (status.toUpperCase().startsWith('ACTIVE')) {
-              const totalTime = ((Date.now() - createStart) / 1000).toFixed(1);
-              console.log('✅ [SUPABASE] Projeto ATIVO!');
-              console.log('⏱️ [SUPABASE] TEMPO TOTAL:', totalTime, 'segundos');
-              
-              setSupabaseProvisioning(false);
-              if (provisioningTimerRef.current) clearInterval(provisioningTimerRef.current);
-              if (provisioningTimeoutRef.current) clearTimeout(provisioningTimeoutRef.current);
-              setSupabaseUiStep('done');
-              void resolveKeys('auto');
-            }
-          } catch {}
-        };
-        
-        void poll();
-        provisioningTimerRef.current = setInterval(poll, 4000);
-        provisioningTimeoutRef.current = setTimeout(() => {
-          setSupabaseProvisioning(false);
-          setSupabaseResolveError('Projeto ainda está subindo. Aguarde.');
-          if (provisioningTimerRef.current) clearInterval(provisioningTimerRef.current);
-        }, 210_000);
-      }
-    } catch (err) {
-      console.error('❌ [SUPABASE] Erro:', err);
-      
-      // Check if it's a conflict error with existing project details
-      if (err instanceof Error) {
+
+      if (!ref) throw new Error(lastErr || 'Erro');
+
+      setSupabaseProjectRef(ref);
+      setSupabaseUrl(url || `https://${ref}.supabase.co`);
+      setSupabaseDbUrl(buildDbUrl(ref, supabaseCreateDbPass, 'us-east-1'));
+
+      setSupabaseProvisioning(true);
+      setSupabaseProvisioningStatus('COMING_UP');
+
+      let pollCount = 0;
+      const poll = async () => {
+        pollCount++;
         try {
-          const errorData = JSON.parse(err.message);
-          if (errorData.code === 'PROJECT_EXISTS' && errorData.existingProject) {
-            const existingProj = errorData.existingProject;
-            setConflictingProject(existingProj);
-            setSupabaseUiStep('needspace'); // Will show conflict modal
-            
-            // Se o projeto está PAUSING, inicia polling imediatamente
-            if (existingProj.status?.toUpperCase().includes('PAUSING')) {
-              console.log('[CONFLICT] Projeto está PAUSING, iniciando polling...');
-              setPausePolling(true);
-              pollProjectStatus(existingProj.ref, 'pausing')
-                .then(({ finalStatus, paused }) => {
-                  console.log('[CONFLICT] Polling completo, status:', finalStatus, 'paused:', paused);
-                  setConflictingProject((prev) => (prev ? { ...prev, status: paused ? 'INACTIVE' : finalStatus } : null));
-                })
-                .catch((pollErr) => {
-                  console.error('[CONFLICT] Erro no polling:', pollErr);
-                  setSupabaseCreateError(pollErr instanceof Error ? pollErr.message : 'Timeout');
-                })
-                .finally(() => {
-                  setPausePolling(false);
-                });
-            }
-            return;
+          const st = await fetch('/api/installer/supabase/project-status', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              installerToken: installerToken.trim() || undefined,
+              accessToken: supabaseAccessToken.trim(),
+              projectRef: ref,
+            }),
+          });
+          const stData = await st.json().catch(() => null);
+          const status = stData?.status || '';
+          setSupabaseProvisioningStatus(status);
+
+          console.log(`📊 [SUPABASE] Poll #${pollCount}: ${status} (${((Date.now() - createStart) / 1000).toFixed(0)}s)`);
+
+          if (status.toUpperCase().startsWith('ACTIVE')) {
+            const totalTime = ((Date.now() - createStart) / 1000).toFixed(1);
+            console.log('✅ [SUPABASE] Projeto ATIVO!');
+            console.log('⏱️ [SUPABASE] TEMPO TOTAL:', totalTime, 'segundos');
+
+            setSupabaseProvisioning(false);
+            if (provisioningTimerRef.current) clearInterval(provisioningTimerRef.current);
+            if (provisioningTimeoutRef.current) clearTimeout(provisioningTimeoutRef.current);
+            setSupabaseUiStep('done');
+            void resolveKeys('auto');
           }
         } catch {}
-      }
-      
+      };
+
+      void poll();
+      provisioningTimerRef.current = setInterval(poll, 4000);
+      provisioningTimeoutRef.current = setTimeout(() => {
+        setSupabaseProvisioning(false);
+        setSupabaseResolveError('Projeto ainda está subindo. Aguarde.');
+        if (provisioningTimerRef.current) clearInterval(provisioningTimerRef.current);
+      }, 210_000);
+    } catch (err) {
+      console.error('❌ [SUPABASE] Erro:', err);
       setSupabaseCreateError(humanizeError(err instanceof Error ? err.message : 'Erro'));
       setSupabaseUiStep('needspace');
     } finally {
       setSupabaseCreating(false);
     }
+
   };
   
   const fetchProjectStatus = async (projectRef: string): Promise<{ rawStatus: string; normalized: string }> => {
