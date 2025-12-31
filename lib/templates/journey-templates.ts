@@ -1,5 +1,5 @@
 import { JourneyDefinition } from '@/types';
-import { BOARD_TEMPLATES } from '@/board-templates';
+import { BOARD_TEMPLATES } from '@/lib/templates/board-templates';
 
 export const OFFICIAL_JOURNEYS: Record<
   string,

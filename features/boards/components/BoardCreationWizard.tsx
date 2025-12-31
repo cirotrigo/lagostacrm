@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Sparkles, Loader2, Send, MessageSquare, LayoutTemplate, AlertCircle, Settings, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { BOARD_TEMPLATES, BoardTemplateType } from '@/board-templates';
+import { BOARD_TEMPLATES, BoardTemplateType } from '@/lib/templates/board-templates';
 import {
   generateBoardStructure,
   generateBoardStrategy,
@@ -12,7 +12,7 @@ import { Board, BoardStage } from '@/types';
 import { AIProcessingModal, ProcessingStep, SimulatorPhase } from './Modals/AIProcessingModal';
 import { fetchRegistry, fetchTemplateJourney } from '@/services/registryService';
 import { RegistryIndex, RegistryTemplate, JourneyDefinition } from '@/types';
-import { OFFICIAL_JOURNEYS } from '@/journey-templates';
+import { OFFICIAL_JOURNEYS } from '@/lib/templates/journey-templates';
 import { MODAL_OVERLAY_CLASS } from '@/components/ui/modalStyles';
 
 interface BoardCreationWizardProps {

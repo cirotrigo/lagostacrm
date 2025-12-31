@@ -1,4 +1,4 @@
-import { BoardStage, AgentPersona, BoardGoal } from './types';
+import { BoardStage, AgentPersona, BoardGoal } from '@/types';
 
 export type BoardTemplateType = 'PRE_SALES' | 'SALES' | 'ONBOARDING' | 'CS' | 'CUSTOM';
 

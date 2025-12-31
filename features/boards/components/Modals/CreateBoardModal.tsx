@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useId } from 'react';
 import { Plus, GripVertical, Trash2, ChevronDown, Settings, Copy } from 'lucide-react';
 import { Board, BoardStage, ContactStage } from '@/types';
-import { BOARD_TEMPLATES, BoardTemplateType } from '@/board-templates';
+import { BOARD_TEMPLATES, BoardTemplateType } from '@/lib/templates/board-templates';
 import { LifecycleSettingsModal } from '@/features/settings/components/LifecycleSettingsModal';
 import { useCRM } from '@/context/CRMContext';
 import { useToast } from '@/context/ToastContext';
