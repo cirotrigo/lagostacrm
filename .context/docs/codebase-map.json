@@ -1,0 +1,1948 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-01-25T00:04:08.769Z",
+  "stack": {
+    "primaryLanguage": "typescript",
+    "languages": [
+      "javascript",
+      "typescript"
+    ],
+    "frameworks": [
+      "nextjs"
+    ],
+    "buildTools": [],
+    "testFrameworks": [
+      "vitest"
+    ],
+    "packageManager": "npm",
+    "isMonorepo": false,
+    "hasDocker": false,
+    "hasCI": false
+  },
+  "structure": {
+    "totalFiles": 418,
+    "topDirectories": [
+      {
+        "name": "AGENTS.md",
+        "fileCount": 1
+      },
+      {
+        "name": "app",
+        "fileCount": 101
+      },
+      {
+        "name": "components",
+        "fileCount": 43
+      },
+      {
+        "name": "context",
+        "fileCount": 12
+      },
+      {
+        "name": "docs",
+        "fileCount": 3
+      },
+      {
+        "name": "eslint.config.mjs",
+        "fileCount": 1
+      },
+      {
+        "name": "features",
+        "fileCount": 106
+      },
+      {
+        "name": "hooks",
+        "fileCount": 8
+      },
+      {
+        "name": "lib",
+        "fileCount": 101
+      },
+      {
+        "name": "next-env.d.ts",
+        "fileCount": 1
+      },
+      {
+        "name": "next.config.ts",
+        "fileCount": 1
+      },
+      {
+        "name": "package-lock.json",
+        "fileCount": 1
+      },
+      {
+        "name": "package.json",
+        "fileCount": 1
+      },
+      {
+        "name": "postcss.config.mjs",
+        "fileCount": 1
+      },
+      {
+        "name": "proxy.ts",
+        "fileCount": 1
+      },
+      {
+        "name": "public",
+        "fileCount": 8
+      },
+      {
+        "name": "README.md",
+        "fileCount": 1
+      },
+      {
+        "name": "supabase",
+        "fileCount": 4
+      },
+      {
+        "name": "tailwind.config.js",
+        "fileCount": 1
+      },
+      {
+        "name": "test",
+        "fileCount": 16
+      },
+      {
+        "name": "tsconfig.json",
+        "fileCount": 1
+      },
+      {
+        "name": "types",
+        "fileCount": 4
+      },
+      {
+        "name": "vitest.config.ts",
+        "fileCount": 1
+      }
+    ],
+    "languageDistribution": [
+      {
+        "extension": ".ts",
+        "count": 218
+      },
+      {
+        "extension": ".tsx",
+        "count": 176
+      },
+      {
+        "extension": ".svg",
+        "count": 7
+      },
+      {
+        "extension": ".md",
+        "count": 5
+      },
+      {
+        "extension": ".json",
+        "count": 3
+      },
+      {
+        "extension": ".js",
+        "count": 2
+      },
+      {
+        "extension": ".mjs",
+        "count": 2
+      },
+      {
+        "extension": ".sql",
+        "count": 2
+      },
+      {
+        "extension": ".toml",
+        "count": 1
+      },
+      {
+        "extension": ".css",
+        "count": 1
+      }
+    ]
+  },
+  "architecture": {
+    "layers": [
+      {
+        "name": "Config",
+        "description": "Configuration and constants",
+        "directories": [
+          ".",
+          "features/settings",
+          "context/settings"
+        ],
+        "symbolCount": 2,
+        "dependsOn": []
+      },
+      {
+        "name": "Controllers",
+        "description": "Request handling and routing",
+        "directories": [
+          "test",
+          "lib/public-api",
+          "features/settings/hooks",
+          "features/inbox/hooks",
+          "features/contacts/hooks",
+          "features/boards/hooks",
+          "features/activities/hooks",
+          "app/api/setup-instance",
+          "app/api/mcp",
+          "app/api/chat",
+          "app/auth/callback",
+          "app/api/settings/cockpit",
+          "app/api/settings/ai-prompts",
+          "app/api/settings/ai",
+          "app/api/settings/ai-features",
+          "app/api/invites/validate",
+          "app/api/invites/accept",
+          "app/api/installer/unlock",
+          "app/api/installer/run",
+          "app/api/installer/rollback",
+          "app/api/installer/run-stream",
+          "app/api/installer/meta",
+          "app/api/installer/health-check",
+          "app/api/installer/finalize",
+          "app/api/installer/bootstrap",
+          "app/api/installer/check-initialized",
+          "app/api/contacts/import",
+          "app/api/contacts/export",
+          "app/api/ai/test",
+          "app/api/ai/chat",
+          "app/api/ai/actions",
+          "app/api/admin/users",
+          "app/api/admin/invites",
+          "app/api/settings/ai-prompts/[key]",
+          "app/api/public/v1/me",
+          "app/api/public/v1/openapi.json",
+          "app/api/public/v1/docs",
+          "app/api/public/v1/deals",
+          "app/api/public/v1/contacts",
+          "app/api/public/v1/companies",
+          "app/api/public/v1/boards",
+          "app/api/public/v1/activities",
+          "app/api/installer/vercel/lookup",
+          "app/api/installer/supabase/resolve",
+          "app/api/installer/supabase/projects",
+          "app/api/installer/supabase/project-status",
+          "app/api/installer/supabase/preflight",
+          "app/api/installer/supabase/pause-project",
+          "app/api/installer/supabase/organizations",
+          "app/api/installer/supabase/organization-projects",
+          "app/api/installer/supabase/functions",
+          "app/api/installer/supabase/delete-project",
+          "app/api/installer/supabase/create-project",
+          "app/api/admin/users/[id]",
+          "app/api/admin/invites/[id]",
+          "app/api/public/v1/deals/move-stage-by-identity",
+          "app/api/public/v1/deals/move-stage",
+          "app/api/public/v1/deals/[dealId]",
+          "app/api/public/v1/contacts/[contactId]",
+          "app/api/public/v1/companies/[companyId]",
+          "app/api/public/v1/boards/[boardKeyOrId]",
+          "app/api/ai/tasks/inbox/sales-script",
+          "app/api/ai/tasks/inbox/daily-briefing",
+          "app/api/ai/tasks/deals/objection-responses",
+          "app/api/ai/tasks/deals/email-draft",
+          "app/api/ai/tasks/deals/analyze",
+          "app/api/ai/tasks/boards/refine",
+          "app/api/ai/tasks/boards/generate-structure",
+          "app/api/ai/tasks/boards/generate-strategy",
+          "app/api/public/v1/deals/[dealId]/move-stage",
+          "app/api/public/v1/deals/[dealId]/mark-won",
+          "app/api/public/v1/deals/[dealId]/mark-lost",
+          "app/api/public/v1/boards/[boardKeyOrId]/stages",
+          "features/settings/components"
+        ],
+        "symbolCount": 192,
+        "dependsOn": []
+      },
+      {
+        "name": "Utils",
+        "description": "Shared utilities and helpers",
+        "directories": [
+          "lib",
+          "test/helpers",
+          "lib/validations",
+          "lib/utils",
+          "lib/templates",
+          "lib/stores",
+          "lib/supabase",
+          "lib/security",
+          "lib/realtime",
+          "lib/query",
+          "lib/mcp",
+          "lib/installer",
+          "lib/forms",
+          "lib/debug",
+          "lib/a11y",
+          "lib/ai",
+          "features/boards",
+          "lib/query/__tests__",
+          "lib/query/hooks",
+          "lib/a11y/test",
+          "lib/a11y/hooks",
+          "lib/ai/features",
+          "lib/ai/prompts",
+          "lib/ai/tasks",
+          "features/reports/utils",
+          "lib/a11y/components"
+        ],
+        "symbolCount": 320,
+        "dependsOn": [
+          "Models"
+        ]
+      },
+      {
+        "name": "Models",
+        "description": "Data structures and domain objects",
+        "directories": [
+          "lib/validations",
+          "lib/mcp",
+          "lib/ai/tasks"
+        ],
+        "symbolCount": 8,
+        "dependsOn": []
+      },
+      {
+        "name": "Services",
+        "description": "Business logic and orchestration",
+        "directories": [
+          "lib/templates",
+          "lib/consent",
+          "features/decisions/services",
+          "components/pwa"
+        ],
+        "symbolCount": 9,
+        "dependsOn": [
+          "Components"
+        ]
+      },
+      {
+        "name": "Components",
+        "description": "UI components and views",
+        "directories": [
+          "components/ui",
+          "components/navigation",
+          "components",
+          "features/reports",
+          "features/profile",
+          "features/settings",
+          "features/decisions",
+          "features/inbox",
+          "features/dashboard",
+          "features/activities",
+          "features/ai-hub",
+          "features/boards",
+          "features/contacts",
+          "app/login",
+          "app/join",
+          "app/install",
+          "app/(protected)",
+          "components/pwa",
+          "components/notifications",
+          "components/debug",
+          "components/filters",
+          "components/charts",
+          "components/ai",
+          "features/settings/components",
+          "features/decisions/components",
+          "features/inbox/components",
+          "features/dashboard/components",
+          "features/activities/components",
+          "features/boards/components",
+          "features/contacts/components",
+          "app/install/wizard",
+          "app/install/start",
+          "app/(protected)/setup",
+          "app/(protected)/settings",
+          "app/(protected)/reports",
+          "app/(protected)/profile",
+          "app/(protected)/pipeline",
+          "app/(protected)/inbox",
+          "app/(protected)/decisions",
+          "app/(protected)/dashboard",
+          "app/(protected)/contacts",
+          "app/(protected)/boards",
+          "app/(protected)/ai-test",
+          "app/(protected)/ai",
+          "app/(protected)/activities",
+          "features/boards/components/Kanban",
+          "features/boards/components/Modals",
+          "app/(protected)/settings/products",
+          "app/(protected)/settings/integracoes",
+          "app/(protected)/settings/ai",
+          "app/(protected)/labs/deal-jobs-mock",
+          "app/(protected)/labs/deal-cockpit-mock",
+          "app/(protected)/deals/[dealId]/cockpit-v2",
+          "app/(protected)/deals/[dealId]/cockpit"
+        ],
+        "symbolCount": 149,
+        "dependsOn": []
+      }
+    ],
+    "patterns": [
+      {
+        "name": "Service Layer",
+        "confidence": 0.85,
+        "description": "Encapsulates business logic in service classes",
+        "occurrences": 1
+      }
+    ],
+    "entryPoints": [
+      "types/index.ts",
+      "lib/index.ts",
+      "context/index.ts",
+      "lib/stores/index.ts",
+      "lib/supabase/server.ts",
+      "lib/supabase/index.ts",
+      "lib/realtime/index.ts",
+      "lib/debug/index.ts",
+      "lib/a11y/index.ts",
+      "components/navigation/index.ts",
+      "supabase/functions/webhook-in/index.ts",
+      "lib/query/hooks/index.ts",
+      "lib/ai/features/server.ts",
+      "lib/ai/prompts/server.ts",
+      "lib/ai/tasks/server.ts",
+      "features/decisions/analyzers/index.ts",
+      "lib/query/index.tsx",
+      "components/charts/index.tsx"
+    ]
+  },
+  "symbols": {
+    "classes": [
+      {
+        "name": "AITaskHttpError",
+        "kind": "class",
+        "file": "lib/ai/tasks/server.ts",
+        "line": 27,
+        "exported": true
+      },
+      {
+        "name": "AuthAdminUnavailableError",
+        "kind": "class",
+        "file": "test/helpers/salesTeamFixtures.ts",
+        "line": 53,
+        "exported": true
+      },
+      {
+        "name": "ConsentService",
+        "kind": "class",
+        "file": "lib/consent/consentService.ts",
+        "line": 107,
+        "exported": false,
+        "description": "Serviço de gerenciamento de consentimentos LGPD."
+      }
+    ],
+    "interfaces": [
+      {
+        "name": "ActionPayload",
+        "kind": "interface",
+        "file": "features/decisions/types.ts",
+        "line": 105,
+        "exported": true
+      },
+      {
+        "name": "ActionPreview",
+        "kind": "interface",
+        "file": "features/decisions/types.ts",
+        "line": 129,
+        "exported": true
+      },
+      {
+        "name": "ActivitiesFilters",
+        "kind": "interface",
+        "file": "lib/query/hooks/useActivitiesQuery.ts",
+        "line": 18,
+        "exported": true
+      },
+      {
+        "name": "Activity",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 258,
+        "exported": true
+      },
+      {
+        "name": "AgentMessage",
+        "kind": "interface",
+        "file": "features/ai-hub/hooks/useCRMAgent.ts",
+        "line": 8,
+        "exported": true
+      },
+      {
+        "name": "AgentPersona",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 307,
+        "exported": true
+      },
+      {
+        "name": "AIAnalysis",
+        "kind": "interface",
+        "file": "features/inbox/hooks/useAIDealAnalysis.ts",
+        "line": 9,
+        "exported": true
+      },
+      {
+        "name": "AIChatContext",
+        "kind": "interface",
+        "file": "context/AIChatContext.tsx",
+        "line": 8,
+        "exported": true
+      },
+      {
+        "name": "AIConfigLegacy",
+        "kind": "interface",
+        "file": "lib/ai/actionsClient.ts",
+        "line": 13,
+        "exported": true
+      },
+      {
+        "name": "AIProxyResponse",
+        "kind": "interface",
+        "file": "lib/supabase/ai-proxy.ts",
+        "line": 73,
+        "exported": true
+      },
+      {
+        "name": "AISuggestion",
+        "kind": "interface",
+        "file": "features/inbox/hooks/useInboxController.ts",
+        "line": 29,
+        "exported": true
+      },
+      {
+        "name": "AISuggestionInteraction",
+        "kind": "interface",
+        "file": "lib/supabase/aiSuggestions.ts",
+        "line": 10,
+        "exported": true
+      },
+      {
+        "name": "AnalyzerConfig",
+        "kind": "interface",
+        "file": "features/decisions/types.ts",
+        "line": 141,
+        "exported": true
+      },
+      {
+        "name": "AnalyzerRegistry",
+        "kind": "interface",
+        "file": "features/decisions/analyzers/index.ts",
+        "line": 12,
+        "exported": true
+      },
+      {
+        "name": "AnalyzerResult",
+        "kind": "interface",
+        "file": "features/decisions/types.ts",
+        "line": 155,
+        "exported": true
+      },
+      {
+        "name": "BadgeProps",
+        "kind": "interface",
+        "file": "components/ui/badge.tsx",
+        "line": 26,
+        "exported": true
+      },
+      {
+        "name": "Board",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 314,
+        "exported": true
+      },
+      {
+        "name": "BoardGoal",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 298,
+        "exported": true
+      },
+      {
+        "name": "BoardStage",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 288,
+        "exported": true
+      },
+      {
+        "name": "BoardTemplate",
+        "kind": "interface",
+        "file": "lib/templates/board-templates.ts",
+        "line": 14,
+        "exported": true
+      },
+      {
+        "name": "BottomNavProps",
+        "kind": "interface",
+        "file": "components/navigation/BottomNav.tsx",
+        "line": 7,
+        "exported": true
+      },
+      {
+        "name": "ButtonProps",
+        "kind": "interface",
+        "file": "components/ui/button.tsx",
+        "line": 36,
+        "exported": true
+      },
+      {
+        "name": "CallLogData",
+        "kind": "interface",
+        "file": "features/inbox/components/CallModal.tsx",
+        "line": 14,
+        "exported": true
+      },
+      {
+        "name": "CallOptions",
+        "kind": "interface",
+        "file": "types/ai.ts",
+        "line": 46,
+        "exported": true
+      },
+      {
+        "name": "ConsentRecord",
+        "kind": "interface",
+        "file": "lib/consent/consentService.ts",
+        "line": 54,
+        "exported": true
+      },
+      {
+        "name": "Contact",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 152,
+        "exported": true
+      },
+      {
+        "name": "ContactsFilters",
+        "kind": "interface",
+        "file": "lib/query/hooks/useContactsQuery.ts",
+        "line": 53,
+        "exported": true
+      },
+      {
+        "name": "ContactsServerFilters",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 470,
+        "exported": true
+      },
+      {
+        "name": "CreateScriptInput",
+        "kind": "interface",
+        "file": "lib/supabase/quickScripts.ts",
+        "line": 21,
+        "exported": true
+      },
+      {
+        "name": "CRMCompany",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 137,
+        "exported": true
+      },
+      {
+        "name": "CustomFieldDefinition",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 200,
+        "exported": true
+      },
+      {
+        "name": "DashboardStats",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 280,
+        "exported": true
+      },
+      {
+        "name": "DbActivity",
+        "kind": "interface",
+        "file": "lib/supabase/activities.ts",
+        "line": 34,
+        "exported": true
+      },
+      {
+        "name": "DbContact",
+        "kind": "interface",
+        "file": "lib/supabase/contacts.ts",
+        "line": 29,
+        "exported": true
+      },
+      {
+        "name": "DbCRMCompany",
+        "kind": "interface",
+        "file": "lib/supabase/contacts.ts",
+        "line": 77,
+        "exported": true
+      },
+      {
+        "name": "DbDeal",
+        "kind": "interface",
+        "file": "lib/supabase/deals.ts",
+        "line": 58,
+        "exported": true
+      },
+      {
+        "name": "DbDealItem",
+        "kind": "interface",
+        "file": "lib/supabase/deals.ts",
+        "line": 110,
+        "exported": true
+      },
+      {
+        "name": "DbLifecycleStage",
+        "kind": "interface",
+        "file": "lib/supabase/settings.ts",
+        "line": 30,
+        "exported": true
+      },
+      {
+        "name": "DbUserSettings",
+        "kind": "interface",
+        "file": "lib/supabase/settings.ts",
+        "line": 9,
+        "exported": true
+      },
+      {
+        "name": "Deal",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 209,
+        "exported": true
+      },
+      {
+        "name": "DealFile",
+        "kind": "interface",
+        "file": "lib/supabase/dealFiles.ts",
+        "line": 7,
+        "exported": true
+      },
+      {
+        "name": "DealItem",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 188,
+        "exported": true
+      },
+      {
+        "name": "DealNote",
+        "kind": "interface",
+        "file": "lib/supabase/dealNotes.ts",
+        "line": 7,
+        "exported": true
+      },
+      {
+        "name": "DealsFilters",
+        "kind": "interface",
+        "file": "lib/query/hooks/useDealsQuery.ts",
+        "line": 18,
+        "exported": true
+      },
+      {
+        "name": "DealSheetProps",
+        "kind": "interface",
+        "file": "features/boards/components/DealSheet.tsx",
+        "line": 5,
+        "exported": true
+      },
+      {
+        "name": "DealView",
+        "kind": "interface",
+        "file": "types/types.ts",
+        "line": 247,
+        "exported": true
+      },
+      {
+        "name": "Decision",
+        "kind": "interface",
+        "file": "features/decisions/types.ts",
+        "line": 10,
+        "exported": true
+      },
+      {
+        "name": "DecisionCardProps",
+        "kind": "interface",
+        "file": "features/decisions/types.ts",
+        "line": 192,
+        "exported": true
+      },
+      {
+        "name": "DecisionQueueState",
+        "kind": "interface",
+        "file": "features/decisions/types.ts",
+        "line": 171,
+        "exported": true
+      },
+      {
+        "name": "DecisionQueueViewProps",
+        "kind": "interface",
+        "file": "features/decisions/types.ts",
+        "line": 201,
+        "exported": true
+      }
+    ],
+    "functions": [
+      {
+        "name": "AIChatContextProvider",
+        "kind": "function",
+        "file": "context/AIChatContext.tsx",
+        "line": 31,
+        "exported": true
+      },
+      {
+        "name": "AITestPage",
+        "kind": "function",
+        "file": "app/(protected)/ai-test/page.tsx",
+        "line": 8,
+        "exported": true
+      },
+      {
+        "name": "analyzeLead",
+        "kind": "function",
+        "file": "lib/ai/tasksClient.ts",
+        "line": 68,
+        "exported": true
+      },
+      {
+        "name": "analyzeLead",
+        "kind": "function",
+        "file": "lib/ai/actionsClient.ts",
+        "line": 40,
+        "exported": true
+      },
+      {
+        "name": "analyzeOverdueActivities",
+        "kind": "function",
+        "file": "features/decisions/analyzers/overdueActivitiesAnalyzer.ts",
+        "line": 130,
+        "exported": true
+      },
+      {
+        "name": "analyzeStagnantDeals",
+        "kind": "function",
+        "file": "features/decisions/analyzers/stagnantDealsAnalyzer.ts",
+        "line": 180,
+        "exported": true
+      },
+      {
+        "name": "assertNoSupabaseError",
+        "kind": "function",
+        "file": "test/helpers/supabaseAdmin.ts",
+        "line": 61,
+        "exported": true
+      },
+      {
+        "name": "authPublicApi",
+        "kind": "function",
+        "file": "lib/public-api/auth.ts",
+        "line": 14,
+        "exported": true
+      },
+      {
+        "name": "bootstrapInstance",
+        "kind": "function",
+        "file": "lib/installer/supabase.ts",
+        "line": 48,
+        "exported": true
+      },
+      {
+        "name": "buildCrmMcpRegistry",
+        "kind": "function",
+        "file": "lib/mcp/crmRegistry.ts",
+        "line": 49,
+        "exported": true
+      },
+      {
+        "name": "callAIProxy",
+        "kind": "function",
+        "file": "lib/supabase/ai-proxy.ts",
+        "line": 99,
+        "exported": true
+      },
+      {
+        "name": "callTool",
+        "kind": "function",
+        "file": "test/helpers/toolHarness.ts",
+        "line": 14,
+        "exported": true
+      },
+      {
+        "name": "canResumeInstallation",
+        "kind": "function",
+        "file": "lib/installer/installState.ts",
+        "line": 197,
+        "exported": true
+      },
+      {
+        "name": "canRetryStep",
+        "kind": "function",
+        "file": "lib/installer/installState.ts",
+        "line": 174,
+        "exported": true
+      },
+      {
+        "name": "cleanupFixtures",
+        "kind": "function",
+        "file": "test/helpers/fixtures.ts",
+        "line": 235,
+        "exported": true
+      },
+      {
+        "name": "cleanupSalesTeamFixtures",
+        "kind": "function",
+        "file": "test/helpers/salesTeamFixtures.ts",
+        "line": 439,
+        "exported": true
+      },
+      {
+        "name": "clearInstallState",
+        "kind": "function",
+        "file": "lib/installer/installState.ts",
+        "line": 95,
+        "exported": true
+      },
+      {
+        "name": "cn",
+        "kind": "function",
+        "file": "lib/utils.ts",
+        "line": 10,
+        "exported": true
+      },
+      {
+        "name": "cn",
+        "kind": "function",
+        "file": "lib/utils/cn.ts",
+        "line": 50,
+        "exported": true
+      },
+      {
+        "name": "ContactsImportExportModal",
+        "kind": "function",
+        "file": "features/contacts/components/ContactsImportExportModal.tsx",
+        "line": 48,
+        "exported": true
+      },
+      {
+        "name": "createAdminClient",
+        "kind": "function",
+        "file": "lib/supabase/server.ts",
+        "line": 40,
+        "exported": true
+      },
+      {
+        "name": "createClient",
+        "kind": "function",
+        "file": "lib/supabase/server.ts",
+        "line": 9,
+        "exported": true
+      },
+      {
+        "name": "createClient",
+        "kind": "function",
+        "file": "lib/supabase/client.ts",
+        "line": 21,
+        "exported": true
+      },
+      {
+        "name": "createCRMAgent",
+        "kind": "function",
+        "file": "lib/ai/crmAgent.ts",
+        "line": 449,
+        "exported": true
+      },
+      {
+        "name": "createExtendedQueryKeys",
+        "kind": "function",
+        "file": "lib/query/createQueryKeys.ts",
+        "line": 99,
+        "exported": true
+      },
+      {
+        "name": "createInstallState",
+        "kind": "function",
+        "file": "lib/installer/installState.ts",
+        "line": 103,
+        "exported": true
+      },
+      {
+        "name": "createMinimalFixtures",
+        "kind": "function",
+        "file": "test/helpers/fixtures.ts",
+        "line": 174,
+        "exported": true
+      },
+      {
+        "name": "createProvider",
+        "kind": "function",
+        "file": "lib/ai/provider.ts",
+        "line": 8,
+        "exported": true
+      },
+      {
+        "name": "createQueryKeys",
+        "kind": "function",
+        "file": "lib/query/createQueryKeys.ts",
+        "line": 66,
+        "exported": true
+      },
+      {
+        "name": "createSalesTeamFixtures",
+        "kind": "function",
+        "file": "test/helpers/salesTeamFixtures.ts",
+        "line": 285,
+        "exported": true
+      },
+      {
+        "name": "createStaticAdminClient",
+        "kind": "function",
+        "file": "lib/supabase/staticAdminClient.ts",
+        "line": 9,
+        "exported": true
+      },
+      {
+        "name": "createStaticAdminClient",
+        "kind": "function",
+        "file": "lib/supabase/server.ts",
+        "line": 73,
+        "exported": true
+      },
+      {
+        "name": "createSupabaseProject",
+        "kind": "function",
+        "file": "lib/installer/edgeFunctions.ts",
+        "line": 395,
+        "exported": true
+      },
+      {
+        "name": "Dashboard",
+        "kind": "function",
+        "file": "app/(protected)/dashboard/page.tsx",
+        "line": 19,
+        "exported": true
+      },
+      {
+        "name": "DealCockpitFocusClient",
+        "kind": "function",
+        "file": "features/deals/cockpit/DealCockpitFocusClient.tsx",
+        "line": 17,
+        "exported": true
+      },
+      {
+        "name": "DealCockpitMockPage",
+        "kind": "function",
+        "file": "app/(protected)/labs/deal-cockpit-mock/page.tsx",
+        "line": 9,
+        "exported": true
+      },
+      {
+        "name": "DealCockpitPage",
+        "kind": "function",
+        "file": "app/(protected)/deals/[dealId]/cockpit/page.tsx",
+        "line": 7,
+        "exported": true
+      },
+      {
+        "name": "DealCockpitV2Page",
+        "kind": "function",
+        "file": "app/(protected)/deals/[dealId]/cockpit-v2/page.tsx",
+        "line": 7,
+        "exported": true
+      },
+      {
+        "name": "DealJobsMockPage",
+        "kind": "function",
+        "file": "app/(protected)/labs/deal-jobs-mock/page.tsx",
+        "line": 8,
+        "exported": true
+      },
+      {
+        "name": "DealSheet",
+        "kind": "function",
+        "file": "features/boards/components/DealSheet.tsx",
+        "line": 18,
+        "exported": true
+      },
+      {
+        "name": "decodeOffsetCursor",
+        "kind": "function",
+        "file": "lib/public-api/cursor.ts",
+        "line": 11,
+        "exported": true
+      },
+      {
+        "name": "DELETE",
+        "kind": "function",
+        "file": "app/api/settings/ai-prompts/[key]/route.ts",
+        "line": 57,
+        "exported": true
+      },
+      {
+        "name": "DELETE",
+        "kind": "function",
+        "file": "app/api/admin/users/[id]/route.ts",
+        "line": 18,
+        "exported": true
+      },
+      {
+        "name": "DELETE",
+        "kind": "function",
+        "file": "app/api/admin/invites/[id]/route.ts",
+        "line": 18,
+        "exported": true
+      },
+      {
+        "name": "deleteSupabaseProject",
+        "kind": "function",
+        "file": "lib/installer/edgeFunctions.ts",
+        "line": 462,
+        "exported": true
+      },
+      {
+        "name": "deployAllSupabaseEdgeFunctions",
+        "kind": "function",
+        "file": "lib/installer/edgeFunctions.ts",
+        "line": 899,
+        "exported": true
+      },
+      {
+        "name": "deploySupabaseEdgeFunction",
+        "kind": "function",
+        "file": "lib/installer/edgeFunctions.ts",
+        "line": 846,
+        "exported": true
+      },
+      {
+        "name": "deriveHealthFromProbability",
+        "kind": "function",
+        "file": "features/inbox/hooks/useAIDealAnalysis.ts",
+        "line": 70,
+        "exported": true
+      },
+      {
+        "name": "detectCsvDelimiter",
+        "kind": "function",
+        "file": "lib/utils/csv.ts",
+        "line": 20,
+        "exported": true
+      },
+      {
+        "name": "encodeOffsetCursor",
+        "kind": "function",
+        "file": "lib/public-api/cursor.ts",
+        "line": 22,
+        "exported": true
+      }
+    ],
+    "types": [
+      {
+        "name": "ActionType",
+        "kind": "type",
+        "file": "features/decisions/types.ts",
+        "line": 95,
+        "exported": true
+      },
+      {
+        "name": "ActivityFormData",
+        "kind": "type",
+        "file": "lib/validations/schemas.ts",
+        "line": 181,
+        "exported": true
+      },
+      {
+        "name": "AgentOptions",
+        "kind": "type",
+        "file": "types/ai.ts",
+        "line": 33,
+        "exported": true
+      },
+      {
+        "name": "AIAction",
+        "kind": "type",
+        "file": "lib/supabase/ai-proxy.ts",
+        "line": 47,
+        "exported": true
+      },
+      {
+        "name": "AIConfigFormData",
+        "kind": "type",
+        "file": "lib/validations/schemas.ts",
+        "line": 211,
+        "exported": true
+      },
+      {
+        "name": "AIProvider",
+        "kind": "type",
+        "file": "lib/ai/config.ts",
+        "line": 20,
+        "exported": true
+      },
+      {
+        "name": "AISuggestionType",
+        "kind": "type",
+        "file": "features/inbox/hooks/useInboxController.ts",
+        "line": 27,
+        "exported": true
+      },
+      {
+        "name": "AITaskContext",
+        "kind": "type",
+        "file": "lib/ai/tasks/server.ts",
+        "line": 7,
+        "exported": true
+      },
+      {
+        "name": "AnalyzeLeadResult",
+        "kind": "type",
+        "file": "lib/ai/tasksClient.ts",
+        "line": 5,
+        "exported": true
+      },
+      {
+        "name": "AnalyzeLeadResult",
+        "kind": "type",
+        "file": "lib/ai/actionsClient.ts",
+        "line": 22,
+        "exported": true
+      },
+      {
+        "name": "BoardFormData",
+        "kind": "type",
+        "file": "lib/validations/schemas.ts",
+        "line": 190,
+        "exported": true
+      },
+      {
+        "name": "BoardTemplateType",
+        "kind": "type",
+        "file": "lib/templates/board-templates.ts",
+        "line": 3,
+        "exported": true
+      },
+      {
+        "name": "ClientCompanyId",
+        "kind": "type",
+        "file": "types/types.ts",
+        "line": 67,
+        "exported": true
+      },
+      {
+        "name": "Company",
+        "kind": "type",
+        "file": "types/types.ts",
+        "line": 127,
+        "exported": true
+      },
+      {
+        "name": "CompanyFormData",
+        "kind": "type",
+        "file": "lib/validations/schemas.ts",
+        "line": 138,
+        "exported": true
+      },
+      {
+        "name": "ConsentType",
+        "kind": "type",
+        "file": "lib/supabase/consent.ts",
+        "line": 19,
+        "exported": true
+      },
+      {
+        "name": "ConsentType",
+        "kind": "type",
+        "file": "lib/consent/consentService.ts",
+        "line": 19,
+        "exported": true
+      },
+      {
+        "name": "ContactFormData",
+        "kind": "type",
+        "file": "lib/validations/schemas.ts",
+        "line": 118,
+        "exported": true
+      },
+      {
+        "name": "ContactsExportParams",
+        "kind": "type",
+        "file": "features/contacts/components/ContactsImportExportModal.tsx",
+        "line": 9,
+        "exported": true
+      },
+      {
+        "name": "ContactSortableColumn",
+        "kind": "type",
+        "file": "types/types.ts",
+        "line": 490,
+        "exported": true
+      },
+      {
+        "name": "CreateDealInput",
+        "kind": "type",
+        "file": "lib/query/hooks/useDealsQuery.ts",
+        "line": 215,
+        "exported": true
+      },
+      {
+        "name": "CRMAgentType",
+        "kind": "type",
+        "file": "lib/ai/crmAgent.ts",
+        "line": 588,
+        "exported": true
+      },
+      {
+        "name": "CRMCallOptions",
+        "kind": "type",
+        "file": "types/ai.ts",
+        "line": 106,
+        "exported": true
+      },
+      {
+        "name": "CrmInternalToolKey",
+        "kind": "type",
+        "file": "lib/mcp/crmToolCatalog.ts",
+        "line": 203,
+        "exported": true
+      },
+      {
+        "name": "CrmMcpRegistry",
+        "kind": "type",
+        "file": "lib/mcp/crmRegistry.ts",
+        "line": 30,
+        "exported": true
+      },
+      {
+        "name": "CrmToolCatalogEntry",
+        "kind": "type",
+        "file": "lib/mcp/crmToolCatalog.ts",
+        "line": 1,
+        "exported": true
+      },
+      {
+        "name": "CsvDelimiter",
+        "kind": "type",
+        "file": "lib/utils/csv.ts",
+        "line": 12,
+        "exported": true
+      },
+      {
+        "name": "CustomFieldType",
+        "kind": "type",
+        "file": "types/types.ts",
+        "line": 198,
+        "exported": true
+      },
+      {
+        "name": "DealFormData",
+        "kind": "type",
+        "file": "lib/validations/schemas.ts",
+        "line": 155,
+        "exported": true
+      },
+      {
+        "name": "DecisionCategory",
+        "kind": "type",
+        "file": "features/decisions/types.ts",
+        "line": 60,
+        "exported": true
+      },
+      {
+        "name": "DecisionPriority",
+        "kind": "type",
+        "file": "features/decisions/types.ts",
+        "line": 58,
+        "exported": true
+      },
+      {
+        "name": "DecisionStatus",
+        "kind": "type",
+        "file": "features/decisions/types.ts",
+        "line": 67,
+        "exported": true
+      },
+      {
+        "name": "DecisionType",
+        "kind": "type",
+        "file": "features/decisions/types.ts",
+        "line": 46,
+        "exported": true
+      },
+      {
+        "name": "ErrorCode",
+        "kind": "type",
+        "file": "lib/validations/errorCodes.ts",
+        "line": 56,
+        "exported": true
+      },
+      {
+        "name": "LifecycleStageFormData",
+        "kind": "type",
+        "file": "lib/validations/schemas.ts",
+        "line": 199,
+        "exported": true
+      },
+      {
+        "name": "McpToolDraft",
+        "kind": "type",
+        "file": "lib/mcp/crmRegistry.ts",
+        "line": 15,
+        "exported": true
+      },
+      {
+        "name": "MessageChannel",
+        "kind": "type",
+        "file": "features/inbox/components/MessageComposerModal.tsx",
+        "line": 8,
+        "exported": true
+      },
+      {
+        "name": "MessageExecutedEvent",
+        "kind": "type",
+        "file": "features/inbox/components/MessageComposerModal.tsx",
+        "line": 10,
+        "exported": true
+      },
+      {
+        "name": "MoveStageTarget",
+        "kind": "type",
+        "file": "lib/public-api/dealsMoveStage.ts",
+        "line": 6,
+        "exported": true
+      },
+      {
+        "name": "NotificationRow",
+        "kind": "type",
+        "file": "hooks/useSystemNotifications.ts",
+        "line": 40,
+        "exported": true
+      },
+      {
+        "name": "OpenApiDocument",
+        "kind": "type",
+        "file": "lib/public-api/openapi.ts",
+        "line": 7,
+        "exported": true
+      },
+      {
+        "name": "OrganizationId",
+        "kind": "type",
+        "file": "types/types.ts",
+        "line": 46,
+        "exported": true
+      },
+      {
+        "name": "ParsedActionType",
+        "kind": "type",
+        "file": "types/aiActions.ts",
+        "line": 1,
+        "exported": true
+      },
+      {
+        "name": "PeriodFilter",
+        "kind": "type",
+        "file": "features/dashboard/hooks/useDashboardMetrics.ts",
+        "line": 6,
+        "exported": true
+      },
+      {
+        "name": "PrimaryNavId",
+        "kind": "type",
+        "file": "components/navigation/navConfig.ts",
+        "line": 14,
+        "exported": true
+      },
+      {
+        "name": "ProcessingStep",
+        "kind": "type",
+        "file": "features/boards/components/Modals/AIProcessingModal.tsx",
+        "line": 4,
+        "exported": true
+      },
+      {
+        "name": "PromptCatalogItem",
+        "kind": "type",
+        "file": "lib/ai/prompts/catalog.ts",
+        "line": 1,
+        "exported": true
+      },
+      {
+        "name": "PromptResolution",
+        "kind": "type",
+        "file": "lib/ai/prompts/server.ts",
+        "line": 6,
+        "exported": true
+      },
+      {
+        "name": "PublicApiAuthResult",
+        "kind": "type",
+        "file": "lib/public-api/auth.ts",
+        "line": 3,
+        "exported": true
+      },
+      {
+        "name": "RealtimePreset",
+        "kind": "type",
+        "file": "lib/realtime/presets.ts",
+        "line": 34,
+        "exported": true
+      }
+    ],
+    "enums": [
+      {
+        "name": "ContactStage",
+        "kind": "enum",
+        "file": "types/types.ts",
+        "line": 84,
+        "exported": true
+      },
+      {
+        "name": "DealStatus",
+        "kind": "enum",
+        "file": "types/types.ts",
+        "line": 28,
+        "exported": true
+      }
+    ]
+  },
+  "publicAPI": [
+    {
+      "name": "ActionPayload",
+      "kind": "interface",
+      "file": "features/decisions/types.ts",
+      "line": 105,
+      "exported": true
+    },
+    {
+      "name": "ActionPreview",
+      "kind": "interface",
+      "file": "features/decisions/types.ts",
+      "line": 129,
+      "exported": true
+    },
+    {
+      "name": "ActionType",
+      "kind": "type",
+      "file": "features/decisions/types.ts",
+      "line": 95,
+      "exported": true
+    },
+    {
+      "name": "ActivitiesFilters",
+      "kind": "interface",
+      "file": "lib/query/hooks/useActivitiesQuery.ts",
+      "line": 18,
+      "exported": true
+    },
+    {
+      "name": "Activity",
+      "kind": "interface",
+      "file": "types/types.ts",
+      "line": 258,
+      "exported": true
+    },
+    {
+      "name": "ActivityFormData",
+      "kind": "type",
+      "file": "lib/validations/schemas.ts",
+      "line": 181,
+      "exported": true
+    },
+    {
+      "name": "AgentMessage",
+      "kind": "interface",
+      "file": "features/ai-hub/hooks/useCRMAgent.ts",
+      "line": 8,
+      "exported": true
+    },
+    {
+      "name": "AgentOptions",
+      "kind": "type",
+      "file": "types/ai.ts",
+      "line": 33,
+      "exported": true
+    },
+    {
+      "name": "AgentPersona",
+      "kind": "interface",
+      "file": "types/types.ts",
+      "line": 307,
+      "exported": true
+    },
+    {
+      "name": "AIAction",
+      "kind": "type",
+      "file": "lib/supabase/ai-proxy.ts",
+      "line": 47,
+      "exported": true
+    },
+    {
+      "name": "AIAnalysis",
+      "kind": "interface",
+      "file": "features/inbox/hooks/useAIDealAnalysis.ts",
+      "line": 9,
+      "exported": true
+    },
+    {
+      "name": "AIChatContext",
+      "kind": "interface",
+      "file": "context/AIChatContext.tsx",
+      "line": 8,
+      "exported": true
+    },
+    {
+      "name": "AIChatContextProvider",
+      "kind": "function",
+      "file": "context/AIChatContext.tsx",
+      "line": 31,
+      "exported": true
+    },
+    {
+      "name": "AIConfigFormData",
+      "kind": "type",
+      "file": "lib/validations/schemas.ts",
+      "line": 211,
+      "exported": true
+    },
+    {
+      "name": "AIConfigLegacy",
+      "kind": "interface",
+      "file": "lib/ai/actionsClient.ts",
+      "line": 13,
+      "exported": true
+    },
+    {
+      "name": "AIProvider",
+      "kind": "type",
+      "file": "lib/ai/config.ts",
+      "line": 20,
+      "exported": true
+    },
+    {
+      "name": "AIProxyResponse",
+      "kind": "interface",
+      "file": "lib/supabase/ai-proxy.ts",
+      "line": 73,
+      "exported": true
+    },
+    {
+      "name": "AISuggestion",
+      "kind": "interface",
+      "file": "features/inbox/hooks/useInboxController.ts",
+      "line": 29,
+      "exported": true
+    },
+    {
+      "name": "AISuggestionInteraction",
+      "kind": "interface",
+      "file": "lib/supabase/aiSuggestions.ts",
+      "line": 10,
+      "exported": true
+    },
+    {
+      "name": "AISuggestionType",
+      "kind": "type",
+      "file": "features/inbox/hooks/useInboxController.ts",
+      "line": 27,
+      "exported": true
+    },
+    {
+      "name": "AITaskContext",
+      "kind": "type",
+      "file": "lib/ai/tasks/server.ts",
+      "line": 7,
+      "exported": true
+    },
+    {
+      "name": "AITaskHttpError",
+      "kind": "class",
+      "file": "lib/ai/tasks/server.ts",
+      "line": 27,
+      "exported": true
+    },
+    {
+      "name": "AITestPage",
+      "kind": "function",
+      "file": "app/(protected)/ai-test/page.tsx",
+      "line": 8,
+      "exported": true
+    },
+    {
+      "name": "analyzeLead",
+      "kind": "function",
+      "file": "lib/ai/tasksClient.ts",
+      "line": 68,
+      "exported": true
+    },
+    {
+      "name": "analyzeLead",
+      "kind": "function",
+      "file": "lib/ai/actionsClient.ts",
+      "line": 40,
+      "exported": true
+    },
+    {
+      "name": "AnalyzeLeadResult",
+      "kind": "type",
+      "file": "lib/ai/tasksClient.ts",
+      "line": 5,
+      "exported": true
+    },
+    {
+      "name": "AnalyzeLeadResult",
+      "kind": "type",
+      "file": "lib/ai/actionsClient.ts",
+      "line": 22,
+      "exported": true
+    },
+    {
+      "name": "analyzeOverdueActivities",
+      "kind": "function",
+      "file": "features/decisions/analyzers/overdueActivitiesAnalyzer.ts",
+      "line": 130,
+      "exported": true
+    },
+    {
+      "name": "AnalyzerConfig",
+      "kind": "interface",
+      "file": "features/decisions/types.ts",
+      "line": 141,
+      "exported": true
+    },
+    {
+      "name": "AnalyzerRegistry",
+      "kind": "interface",
+      "file": "features/decisions/analyzers/index.ts",
+      "line": 12,
+      "exported": true
+    },
+    {
+      "name": "AnalyzerResult",
+      "kind": "interface",
+      "file": "features/decisions/types.ts",
+      "line": 155,
+      "exported": true
+    },
+    {
+      "name": "analyzeStagnantDeals",
+      "kind": "function",
+      "file": "features/decisions/analyzers/stagnantDealsAnalyzer.ts",
+      "line": 180,
+      "exported": true
+    },
+    {
+      "name": "assertNoSupabaseError",
+      "kind": "function",
+      "file": "test/helpers/supabaseAdmin.ts",
+      "line": 61,
+      "exported": true
+    },
+    {
+      "name": "AuthAdminUnavailableError",
+      "kind": "class",
+      "file": "test/helpers/salesTeamFixtures.ts",
+      "line": 53,
+      "exported": true
+    },
+    {
+      "name": "authPublicApi",
+      "kind": "function",
+      "file": "lib/public-api/auth.ts",
+      "line": 14,
+      "exported": true
+    },
+    {
+      "name": "BadgeProps",
+      "kind": "interface",
+      "file": "components/ui/badge.tsx",
+      "line": 26,
+      "exported": true
+    },
+    {
+      "name": "Board",
+      "kind": "interface",
+      "file": "types/types.ts",
+      "line": 314,
+      "exported": true
+    },
+    {
+      "name": "BoardFormData",
+      "kind": "type",
+      "file": "lib/validations/schemas.ts",
+      "line": 190,
+      "exported": true
+    },
+    {
+      "name": "BoardGoal",
+      "kind": "interface",
+      "file": "types/types.ts",
+      "line": 298,
+      "exported": true
+    },
+    {
+      "name": "BoardStage",
+      "kind": "interface",
+      "file": "types/types.ts",
+      "line": 288,
+      "exported": true
+    },
+    {
+      "name": "BoardTemplate",
+      "kind": "interface",
+      "file": "lib/templates/board-templates.ts",
+      "line": 14,
+      "exported": true
+    },
+    {
+      "name": "BoardTemplateType",
+      "kind": "type",
+      "file": "lib/templates/board-templates.ts",
+      "line": 3,
+      "exported": true
+    },
+    {
+      "name": "bootstrapInstance",
+      "kind": "function",
+      "file": "lib/installer/supabase.ts",
+      "line": 48,
+      "exported": true
+    },
+    {
+      "name": "BottomNavProps",
+      "kind": "interface",
+      "file": "components/navigation/BottomNav.tsx",
+      "line": 7,
+      "exported": true
+    },
+    {
+      "name": "buildCrmMcpRegistry",
+      "kind": "function",
+      "file": "lib/mcp/crmRegistry.ts",
+      "line": 49,
+      "exported": true
+    },
+    {
+      "name": "ButtonProps",
+      "kind": "interface",
+      "file": "components/ui/button.tsx",
+      "line": 36,
+      "exported": true
+    },
+    {
+      "name": "callAIProxy",
+      "kind": "function",
+      "file": "lib/supabase/ai-proxy.ts",
+      "line": 99,
+      "exported": true
+    },
+    {
+      "name": "CallLogData",
+      "kind": "interface",
+      "file": "features/inbox/components/CallModal.tsx",
+      "line": 14,
+      "exported": true
+    },
+    {
+      "name": "CallOptions",
+      "kind": "interface",
+      "file": "types/ai.ts",
+      "line": 46,
+      "exported": true
+    },
+    {
+      "name": "callTool",
+      "kind": "function",
+      "file": "test/helpers/toolHarness.ts",
+      "line": 14,
+      "exported": true
+    }
+  ],
+  "dependencies": {
+    "mostImported": [
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/lib/supabase/client.ts",
+        "importedBy": 12
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/features/decisions/types.ts",
+        "importedBy": 7
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/context/AuthContext.tsx",
+        "importedBy": 7
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/features/inbox/hooks/useInboxController.ts",
+        "importedBy": 6
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/lib/supabase/utils.ts",
+        "importedBy": 5
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/lib/query/index.tsx",
+        "importedBy": 5
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/test/helpers/env.ts",
+        "importedBy": 4
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/lib/ai/tools.ts",
+        "importedBy": 3
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/test/helpers/runId.ts",
+        "importedBy": 3
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/components/navigation/navConfig.ts",
+        "importedBy": 3
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/features/settings/components/SettingsSection.tsx",
+        "importedBy": 3
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/test/helpers/fixtures.ts",
+        "importedBy": 2
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/test/helpers/supabaseAdmin.ts",
+        "importedBy": 2
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/lib/query/queryKeys.ts",
+        "importedBy": 2
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/features/decisions/services/decisionQueueService.ts",
+        "importedBy": 2
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/features/dashboard/hooks/useDashboardMetrics.ts",
+        "importedBy": 2
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/features/contacts/components/ContactsStageTabs.tsx",
+        "importedBy": 2
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/features/inbox/components/InboxZeroState.tsx",
+        "importedBy": 2
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/features/boards/components/Modals/DealDetailModal.tsx",
+        "importedBy": 2
+      },
+      {
+        "file": "/Users/cirotrigo/Documents/lagostacrm/features/boards/components/Kanban/ActivityStatusIcon.tsx",
+        "importedBy": 2
+      }
+    ]
+  },
+  "stats": {
+    "totalSymbols": 817,
+    "exportedSymbols": 465,
+    "analysisTimeMs": 1145
+  }
+}
