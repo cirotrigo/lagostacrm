@@ -1,14 +1,19 @@
 /**
- * Import Products from XLSX Service
+ * Import Products from XLSX Service - JucãoCRM
  *
  * Serviço para importar produtos parseados do XLSX para o banco de dados.
+ * Este é um serviço placeholder que será expandido na Phase 3.
  *
- * TODO: Implementar após extrair código do repositório origem
+ * Na versão final, usará:
+ * - importJobService para criar/atualizar jobs
+ * - stagingService para inserir dados no staging
+ * - webhookService para disparar processamento no N8N
  */
 
 import { productsService } from '@/lib/supabase';
 import type { Product } from '@/types';
-import type { ImportCallbacks, ImportResult, XlsxProductRow } from '../types';
+import type { ImportCallbacks, ImportResult, ImportProgress, XlsxProductRow } from '../types';
+import { normalizePrice as normalizeParserPrice } from '../parser/normalizers';
 
 /**
  * Importa produtos do XLSX para o banco de dados
@@ -20,7 +25,7 @@ import type { ImportCallbacks, ImportResult, XlsxProductRow } from '../types';
  * @example
  * ```typescript
  * const result = await importProductsFromXlsx(parsedRows, {
- *   onProgress: (current, total) => console.log(`${current}/${total}`),
+ *   onProgress: (progress) => console.log(`${progress.processedRows} processados`),
  *   onComplete: (result) => console.log(`Importados: ${result.imported}`),
  * });
  * ```
@@ -34,7 +39,6 @@ export async function importProductsFromXlsx(
     imported: 0,
     skipped: 0,
     errors: [],
-    products: [],
   };
 
   if (!rows.length) {
@@ -46,13 +50,12 @@ export async function importProductsFromXlsx(
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const rowIndex = i + 1; // 1-based para mensagens de erro
+    const rowIndex = i + 1;
 
     try {
       const product = await createProductFromRow(row);
 
       if (product) {
-        result.products.push(product);
         result.imported++;
       } else {
         result.skipped++;
@@ -65,12 +68,17 @@ export async function importProductsFromXlsx(
       });
     }
 
-    callbacks?.onProgress?.(i + 1, rows.length);
+    const progress: ImportProgress = {
+      processedRows: i + 1,
+      createdCount: result.imported,
+      updatedCount: 0,
+      errorCount: result.errors.length,
+    };
+    callbacks?.onProgress?.(progress);
   }
 
   result.success = result.imported > 0;
 
-  // Notificar app para atualizar listas de produtos
   if (result.success && typeof window !== 'undefined') {
     window.dispatchEvent(new Event('crm:products-updated'));
   }
@@ -82,13 +90,9 @@ export async function importProductsFromXlsx(
 
 /**
  * Cria um produto no banco a partir de uma linha do XLSX
- *
- * @param row - Dados da linha
- * @returns Produto criado ou null se falhou
  */
 async function createProductFromRow(row: XlsxProductRow): Promise<Product | null> {
-  // Normalizar preço (pode vir como string com vírgula)
-  const price = normalizePrice(row.price);
+  const price = normalizeParserPrice(row.price);
 
   if (!row.name || row.name.trim().length < 2) {
     throw new Error('Nome inválido');
@@ -113,28 +117,7 @@ async function createProductFromRow(row: XlsxProductRow): Promise<Product | null
 }
 
 /**
- * Normaliza o valor do preço para número
- */
-function normalizePrice(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') {
-    // Remove R$, pontos de milhar e converte vírgula para ponto
-    const cleaned = value
-      .replace(/R\$\s*/gi, '')
-      .replace(/\./g, '')
-      .replace(',', '.')
-      .trim();
-    return parseFloat(cleaned) || 0;
-  }
-  return 0;
-}
-
-/**
  * Verifica se um produto com mesmo SKU já existe
- * Útil para evitar duplicatas
- *
- * @param sku - SKU a verificar
- * @returns true se já existe
  */
 export async function checkSkuExists(sku: string): Promise<boolean> {
   if (!sku) return false;
@@ -147,11 +130,6 @@ export async function checkSkuExists(sku: string): Promise<boolean> {
 
 /**
  * Importa produtos com verificação de duplicatas por SKU
- *
- * @param rows - Linhas parseadas do XLSX
- * @param skipDuplicates - Pular produtos com SKU existente
- * @param callbacks - Callbacks para progresso
- * @returns Resultado da importação
  */
 export async function importProductsWithDedup(
   rows: XlsxProductRow[],
@@ -162,7 +140,6 @@ export async function importProductsWithDedup(
     return importProductsFromXlsx(rows, callbacks);
   }
 
-  // Buscar SKUs existentes
   const existingRes = await productsService.getAll();
   const existingSkus = new Set(
     (existingRes.data || [])
@@ -170,9 +147,8 @@ export async function importProductsWithDedup(
       .filter(Boolean)
   );
 
-  // Filtrar linhas com SKU duplicado
   const uniqueRows = rows.filter((row) => {
-    if (!row.sku) return true; // Sem SKU = sempre importa
+    if (!row.sku) return true;
     return !existingSkus.has(row.sku.toString().toLowerCase());
   });
 

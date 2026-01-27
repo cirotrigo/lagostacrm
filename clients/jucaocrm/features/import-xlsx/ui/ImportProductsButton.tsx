@@ -1,56 +1,33 @@
 'use client';
 
 /**
- * Import Products Button Component
+ * Import Products Button Component - JucãoCRM
  *
  * Botão e modal para importação de produtos via XLSX.
  * Componente isolado do cliente JucãoCRM.
- *
- * TODO: Finalizar implementação após extrair código do repositório origem
  */
 
 import React, { useCallback, useRef, useState } from 'react';
 import { FileSpreadsheet, Upload, X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { parseXlsx, isValidXlsxFile } from '../parser/parseXlsx';
+import { parseXlsxToProducts, isValidXlsxFile, type ParsedProducts } from '../parser/parseXlsx';
 import { importProductsFromXlsx } from '../services/importProductsFromXlsx';
-import type { ImportState, ParseXlsxResult, ImportResult } from '../types';
+import type { ImportResult, XlsxProductRow } from '../types';
+
+interface ImportState {
+  step: 'idle' | 'parsing' | 'preview' | 'importing' | 'done' | 'error';
+  file: File | null;
+  parsedProducts: ParsedProducts | null;
+  importResult: ImportResult | null;
+  error: string | null;
+}
 
 interface ImportProductsButtonProps {
-  /**
-   * Callback chamado após importação bem-sucedida
-   */
   onImportComplete?: (result: ImportResult) => void;
-
-  /**
-   * Texto do botão
-   * @default "Importar XLSX"
-   */
   label?: string;
-
-  /**
-   * Variante visual do botão
-   * @default "secondary"
-   */
   variant?: 'primary' | 'secondary' | 'ghost';
-
-  /**
-   * Desabilitar o botão
-   */
   disabled?: boolean;
 }
 
-/**
- * Botão para importar produtos de arquivo XLSX
- *
- * @example
- * ```tsx
- * <ImportProductsButton
- *   onImportComplete={(result) => {
- *     toast.success(`${result.imported} produtos importados!`);
- *   }}
- * />
- * ```
- */
 export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
   onImportComplete,
   label = 'Importar XLSX',
@@ -61,7 +38,7 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
   const [state, setState] = useState<ImportState>({
     step: 'idle',
     file: null,
-    parseResult: null,
+    parsedProducts: null,
     importResult: null,
     error: null,
   });
@@ -72,7 +49,7 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
     setState({
       step: 'idle',
       file: null,
-      parseResult: null,
+      parsedProducts: null,
       importResult: null,
       error: null,
     });
@@ -102,13 +79,13 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
     setState((prev) => ({ ...prev, step: 'parsing', file, error: null }));
 
     try {
-      const result = await parseXlsx(file);
+      const result = await parseXlsxToProducts(file);
 
-      if (!result.success || result.validRows === 0) {
+      if (result.products.length === 0) {
         setState((prev) => ({
           ...prev,
           step: 'error',
-          parseResult: result,
+          parsedProducts: result,
           error: result.errors[0]?.message || 'Nenhum produto válido encontrado no arquivo',
         }));
         return;
@@ -117,7 +94,7 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
       setState((prev) => ({
         ...prev,
         step: 'preview',
-        parseResult: result,
+        parsedProducts: result,
       }));
     } catch (error) {
       setState((prev) => ({
@@ -129,12 +106,12 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
   }, []);
 
   const handleImport = useCallback(async () => {
-    if (!state.parseResult?.data.length) return;
+    if (!state.parsedProducts?.products.length) return;
 
     setState((prev) => ({ ...prev, step: 'importing' }));
 
     try {
-      const result = await importProductsFromXlsx(state.parseResult.data, {
+      const result = await importProductsFromXlsx(state.parsedProducts.products, {
         onComplete: (res) => {
           setState((prev) => ({
             ...prev,
@@ -160,7 +137,7 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
         error: error instanceof Error ? error.message : 'Erro durante importação',
       }));
     }
-  }, [state.parseResult, onImportComplete]);
+  }, [state.parsedProducts, onImportComplete]);
 
   const variantClasses = {
     primary: 'bg-primary-600 text-white hover:bg-primary-500',
@@ -168,9 +145,11 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
     ghost: 'hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300',
   };
 
+  const validCount = state.parsedProducts?.products.length ?? 0;
+  const errorCount = state.parsedProducts?.errors.length ?? 0;
+
   return (
     <>
-      {/* Trigger Button */}
       <button
         type="button"
         onClick={() => setIsOpen(true)}
@@ -181,18 +160,14 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
         {label}
       </button>
 
-      {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={handleClose}
           />
 
-          {/* Modal Content */}
           <div className="relative w-full max-w-lg mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl">
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                 <FileSpreadsheet className="h-5 w-5" />
@@ -207,7 +182,6 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
               </button>
             </div>
 
-            {/* Body */}
             <div className="px-6 py-5">
               {state.step === 'idle' && (
                 <div className="text-center">
@@ -243,18 +217,18 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
                 </div>
               )}
 
-              {state.step === 'preview' && state.parseResult && (
+              {state.step === 'preview' && state.parsedProducts && (
                 <div>
                   <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/40 rounded-xl px-4 py-3 mb-4">
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
                       <CheckCircle className="h-5 w-5" />
                       <span className="font-medium">
-                        {state.parseResult.validRows} produto(s) encontrado(s)
+                        {validCount} produto(s) encontrado(s)
                       </span>
                     </div>
-                    {state.parseResult.errors.length > 0 && (
+                    {errorCount > 0 && (
                       <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                        {state.parseResult.errors.length} linha(s) com erro serão ignoradas
+                        {errorCount} linha(s) com erro serão ignoradas
                       </p>
                     )}
                   </div>
@@ -262,7 +236,7 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
                   <div className="text-sm text-slate-600 dark:text-slate-300 mb-4">
                     <p className="font-medium mb-2">Preview dos primeiros itens:</p>
                     <div className="max-h-40 overflow-y-auto space-y-1">
-                      {state.parseResult.data.slice(0, 5).map((row, i) => (
+                      {state.parsedProducts.products.slice(0, 5).map((row, i) => (
                         <div
                           key={i}
                           className="px-3 py-2 bg-slate-50 dark:bg-white/5 rounded-lg text-xs"
@@ -275,9 +249,9 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
                           )}
                         </div>
                       ))}
-                      {state.parseResult.data.length > 5 && (
+                      {state.parsedProducts.products.length > 5 && (
                         <p className="text-xs text-slate-400 px-3">
-                          + {state.parseResult.data.length - 5} mais...
+                          + {state.parsedProducts.products.length - 5} mais...
                         </p>
                       )}
                     </div>
@@ -329,7 +303,6 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
               )}
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200 dark:border-white/10">
               {state.step === 'preview' && (
                 <>
@@ -345,7 +318,7 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
                     onClick={handleImport}
                     className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 rounded-xl"
                   >
-                    Importar {state.parseResult?.validRows} produto(s)
+                    Importar {validCount} produto(s)
                   </button>
                 </>
               )}

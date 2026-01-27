@@ -16,8 +16,42 @@
 // Types
 export * from './types';
 
+// Constants
+export {
+  EXPECTED_HEADERS,
+  POSITIONAL_COLUMN_INDEXES,
+  PROCESSADO_HEADER,
+  COLUMN_MAPPING,
+  HEADER_INDEX,
+  REQUIRED_FIELDS,
+  OPTIONAL_FIELDS,
+  type ProductField,
+  type ExpectedHeader,
+} from './constants';
+
+// Normalizers
+export {
+  normalizeCell,
+  normalizeRowCell,
+  normalizeHeaderLabel,
+  hasValue,
+  normalizePrice,
+  normalizeSku,
+  findBestHeaderMatch,
+  detectFieldFromHeader,
+  buildExpectedHeaderMap,
+} from './parser/normalizers';
+
 // Parser
-export { parseXlsx, isValidXlsxFile, detectColumnMapping, validateRow } from './parser/parseXlsx';
+export {
+  parseImportXlsxBuffer,
+  parseImportXlsx,
+  parseXlsxToProducts,
+  convertToProducts,
+  isValidXlsxFile,
+  type ParsedSheet,
+  type ParsedProducts,
+} from './parser/parseXlsx';
 
 // Services
 export {
@@ -25,6 +59,10 @@ export {
   importProductsWithDedup,
   checkSkuExists,
 } from './services/importProductsFromXlsx';
+
+export { importJobService } from './services/importJobService';
+export { stagingService } from './services/stagingService';
+export { webhookService, type WebhookPayload, type WebhookResponse } from './services/webhookService';
 
 // UI Components
 export { ImportProductsButton } from './ui/ImportProductsButton';
@@ -37,6 +75,6 @@ export const IMPORT_XLSX_FEATURE = {
   id: 'import-xlsx',
   name: 'Importação XLSX',
   description: 'Importar produtos de planilhas Excel (.xlsx)',
-  version: '0.1.0',
+  version: '0.2.0',
   status: 'development' as const,
 } as const;

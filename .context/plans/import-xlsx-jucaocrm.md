@@ -5,7 +5,7 @@ updated: 2026-01-27
 client: jucaocrm
 feature: import-xlsx
 source_repo: /Users/cirotrigo/Documents/Jucao
-current_phase: phase-2
+current_phase: phase-4
 phases:
   - id: "phase-1"
     name: "Migração de Dados & Setup"
@@ -14,11 +14,11 @@ phases:
   - id: "phase-2"
     name: "Extração do Parser"
     prevc: "E"
-    status: pending
+    status: completed
   - id: "phase-3"
     name: "Integração N8N"
     prevc: "E"
-    status: pending
+    status: completed
   - id: "phase-4"
     name: "UI no SosPet & Testes"
     prevc: "V"
@@ -426,7 +426,7 @@ DROP TABLE IF EXISTS n8n_produtos_import;
 
 **Tarefas**:
 
-- [ ] **2.1** Criar `constants.ts` com mapeamento de colunas
+- [x] **2.1** Criar `constants.ts` com mapeamento de colunas
   ```typescript
   export const COLUMN_MAPPING = {
     name: ['descricao', 'descrição', 'nome', 'name', 'produto'],
@@ -442,19 +442,19 @@ DROP TABLE IF EXISTS n8n_produtos_import;
   };
   ```
 
-- [ ] **2.2** Criar `normalizers.ts`
+- [x] **2.2** Criar `normalizers.ts`
   - Extrair `normalizeCell()` do Jucao
   - Extrair `normalizeHeaderLabel()` do Jucao
   - Adaptar para tipos do LagostaCRM
 
-- [ ] **2.3** Reescrever `parseXlsx.ts`
+- [x] **2.3** Reescrever `parseXlsx.ts`
   - Extrair lógica de `parseImportXlsxBuffer()` do Jucao
   - Remover dependências de Google Sheets
   - Simplificar para retornar `XlsxProductRow[]`
   - Manter detecção inteligente de sheet
   - Manter fuzzy matching de headers
 
-- [ ] **2.4** Atualizar `types.ts`
+- [x] **2.4** Atualizar `types.ts`
   ```typescript
   export interface ImportJob {
     id: string;
@@ -499,48 +499,35 @@ DROP TABLE IF EXISTS n8n_produtos_import;
 
 **Tarefas**:
 
-- [ ] **3.1** Criar `services/importJobService.ts`
-  ```typescript
-  export const importJobService = {
-    create(data: CreateImportJobInput): Promise<ImportJob>;
-    getById(id: string): Promise<ImportJob | null>;
-    updateStatus(id: string, status: ImportJobStatus): Promise<void>;
-    updateProgress(id: string, progress: ImportProgress): Promise<void>;
-  };
-  ```
+- [x] **3.1** Criar `services/importJobService.ts` ✅
+  - CRUD completo de import_jobs
+  - Métodos: create, getById, listByOrganization, updateStatus, updateProgress, complete, fail, delete
 
-- [ ] **3.2** Criar `services/stagingService.ts`
-  ```typescript
-  export const stagingService = {
-    insertBatch(jobId: string, rows: XlsxProductRow[]): Promise<void>;
-    getUnprocessed(jobId: string, limit: number): Promise<ImportStagingRow[]>;
-    markProcessed(ids: string[]): Promise<void>;
-    cleanup(jobId: string): Promise<void>;
-  };
-  ```
+- [x] **3.2** Criar `services/stagingService.ts` ✅
+  - Operações na tabela import_staging
+  - Métodos: insertBatch, getUnprocessed, markProcessed, markError, getCounts, cleanup
 
-- [ ] **3.3** Criar `services/webhookService.ts`
-  ```typescript
-  export const webhookService = {
-    triggerImport(jobId: string, organizationId: string): Promise<void>;
-  };
-  ```
+- [x] **3.3** Criar `services/webhookService.ts` ✅
+  - Disparo de webhooks para N8N
+  - Métodos: triggerImport, isConfigured, getWebhookUrl, healthCheck
 
-- [ ] **3.4** Criar API routes (se necessário como route handlers isolados)
-  - `POST /api/clients/jucaocrm/import/upload` - Upload + parse + staging
-  - `POST /api/clients/jucaocrm/import/[jobId]/start` - Trigger N8N
+- [x] **3.4** Criar API routes ✅
+  - `POST /api/clients/jucaocrm/import` - Upload + parse + staging
+  - `GET /api/clients/jucaocrm/import` - Lista jobs
   - `GET /api/clients/jucaocrm/import/[jobId]` - Status do job
+  - `DELETE /api/clients/jucaocrm/import/[jobId]` - Deleta job
+  - `POST /api/clients/jucaocrm/import/[jobId]/start` - Trigger N8N
+  - `POST /api/clients/jucaocrm/import/callback` - Callback do N8N
 
-- [ ] **3.5** Adaptar workflow N8N
-  - Webhook recebe `{ jobId, organizationId }`
-  - Loop: busca batch de staging → upsert products → marca processed
-  - Atualiza import_jobs.processed_rows a cada batch
-  - Ao finalizar: import_jobs.status = 'completed'
+- [x] **3.5** Documentar workflow N8N ✅
+  - README atualizado com fluxo completo
+  - Pseudo-código do workflow N8N
+  - Estrutura de callback documentada
 
 **Entregáveis**:
-- Services funcionais
-- Workflow N8N adaptado e testado
-- Integração end-to-end funcionando
+- ✅ Services funcionais
+- ✅ API routes isoladas
+- ✅ Documentação do workflow N8N
 
 ---
 

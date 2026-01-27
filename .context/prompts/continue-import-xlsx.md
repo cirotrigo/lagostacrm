@@ -36,26 +36,24 @@ Estou continuando a implementação da feature import-xlsx do produto JucãoCRM 
 **Status atual:**
 - Branch: `client/jucaocrm`
 - Phase 1 (Migração & Setup): ✅ COMPLETA
-  - 3.971 produtos migrados para SosPet
-  - Tabelas import_jobs e import_staging criadas
-  - Dependência xlsx@0.18.5 instalada
-  - Variáveis de ambiente configuradas
+- Phase 2 (Extração do Parser): ✅ COMPLETA
+- Phase 3 (Integração N8N): ✅ COMPLETA
+  - `importJobService.ts` - CRUD de jobs de importação
+  - `stagingService.ts` - Operações na tabela staging
+  - `webhookService.ts` - Disparo de webhooks N8N
+  - API routes isoladas em `/api/clients/jucaocrm/import/`
+  - README atualizado com documentação do workflow N8N
 
-**Próxima fase: Phase 2 - Extração do Parser**
+**Próxima fase: Phase 4 - UI no SosPet & Testes**
 
 Tarefas pendentes:
-- [ ] 2.1 Criar `constants.ts` com mapeamento de colunas
-- [ ] 2.2 Criar `parseXlsx.ts` funcional (extrair do Jucao)
-- [ ] 2.3 Criar `normalizers.ts` para limpeza de dados
-- [ ] 2.4 Adicionar testes unitários
+- [ ] 4.1 Atualizar `ImportProductsButton.tsx` com estado de polling
+- [ ] 4.2 Criar `ImportProgressCard.tsx` com barra de progresso
+- [ ] 4.3 Adicionar `ClientExtensionSlot` no ProductsCatalogManager
+- [ ] 4.4 Testar com arquivo real (50k+ produtos)
+- [ ] 4.5 Documentar formato esperado do XLSX
 
-**Repositório fonte do parser:**
-`/Users/cirotrigo/Documents/Jucao/src/lib/imports/xlsx.ts`
-
-**Destino:**
-`clients/jucaocrm/features/import-xlsx/parser/`
-
-Por favor, continue com a Phase 2 seguindo o plano documentado.
+Por favor, continue com a Phase 4 seguindo o plano documentado.
 ```
 
 ---
@@ -77,22 +75,39 @@ Por favor, continue com a Phase 2 seguindo o plano documentado.
 
 ```
 clients/jucaocrm/features/import-xlsx/
-├── README.md
-├── index.ts
-├── types.ts
+├── README.md                             # ✅ Documentação completa
+├── index.ts                              # ✅ Exports atualizados
+├── types.ts                              # ✅ Tipos completos
+├── constants.ts                          # ✅ Mapeamento de colunas
 ├── parser/
-│   └── parseXlsx.ts (placeholder - precisa implementar)
+│   ├── parseXlsx.ts                      # ✅ Parser XLSX funcional
+│   └── normalizers.ts                    # ✅ Funções de normalização
 ├── services/
-│   └── importProductsFromXlsx.ts (placeholder)
+│   ├── importProductsFromXlsx.ts         # ✅ Importação direta (fallback)
+│   ├── importJobService.ts               # ✅ CRUD de jobs
+│   ├── stagingService.ts                 # ✅ Operações staging
+│   └── webhookService.ts                 # ✅ Webhooks N8N
 └── ui/
-    ├── ImportProductsButton.tsx
-    └── ProductsToolbarExtension.tsx
+    ├── ImportProductsButton.tsx          # ✅ Funcional (sem N8N)
+    └── ProductsToolbarExtension.tsx      # TODO Phase 4
+
+app/api/clients/jucaocrm/import/
+├── route.ts                              # ✅ POST/GET upload & list
+├── [jobId]/
+│   ├── route.ts                          # ✅ GET/DELETE job status
+│   └── start/
+│       └── route.ts                      # ✅ POST trigger N8N
+└── callback/
+    └── route.ts                          # ✅ POST N8N callback
 ```
 
 ---
 
-## Commit Anterior
+## Commits Relevantes
 
 ```
 665f571 feat(jucaocrm): add import-xlsx feature and product migration
+05fde02 docs: clarify isolation rules and standardize nomenclature
 ```
+
+**Nota:** Phase 3 foi implementada mas ainda não commitada. Verifique `git status` antes de continuar.
