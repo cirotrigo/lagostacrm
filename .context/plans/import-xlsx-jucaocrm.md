@@ -33,14 +33,15 @@ phases:
 
 | Item | Valor |
 |------|-------|
-| **Cliente** | SosPet (via JucãoCRM) |
+| **Produto** | JucãoCRM (`NEXT_PUBLIC_CLIENT_ID=jucaocrm`) |
+| **Cliente/Org** | SosPet (`b859b986-4471-4354-bff4-07313a65c282`) |
+| **Repo Origem** | Jucao (`/Users/cirotrigo/Documents/Jucao`) |
 | **Feature** | Importação de Produtos via XLSX |
-| **Volume** | 50.000+ produtos |
+| **Volume** | ~4.000 produtos ativos (50k+ total) |
 | **Processamento** | N8N (self-hosted) |
-| **Staging** | Tabela Supabase |
+| **Staging** | Tabelas `import_jobs` e `import_staging` |
 | **Branch** | `client/jucaocrm` |
-| **Organization ID (SosPet)** | `b859b986-4471-4354-bff4-07313a65c282` |
-| **Organization ID (LagostaCRM)** | `d156b55f-256f-4f40-a273-5f5da5a9e882` |
+| **Org LagostaCRM** | `d156b55f-256f-4f40-a273-5f5da5a9e882` (separada) |
 
 ## Arquitetura dos Projetos
 
@@ -69,13 +70,51 @@ phases:
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-## Regras Absolutas
+## Glossário de Nomenclatura
 
-- **NÃO** copiar código para o core (`lib/`, `app/`, `services/` globais)
-- **NÃO** alterar fluxos centrais de criação de produtos
-- **NÃO** criar dependências diretas no core
-- **TODA** funcionalidade deve viver em: `clients/jucaocrm/features/import-xlsx/`
+| Termo | Significado |
+|-------|-------------|
+| **JucãoCRM** | Identificador do produto/feature (`CLIENT_ID=jucaocrm`) |
+| **SosPet** | Cliente/organização que usa o produto (`org: b859b986...`) |
+| **Jucao** | Repositório de origem (`/Users/cirotrigo/Documents/Jucao`) |
+| **LagostaCRM** | Codebase base (fork de nossocrm) |
+
+---
+
+## Regras de Isolamento
+
+### Código da Feature (PROIBIDO no core)
+
+- **NÃO** copiar código de feature para `app/`, `services/`, `components/` globais
+- **NÃO** alterar fluxos centrais de criação/edição de produtos
+- **NÃO** criar imports diretos do core para `clients/jucaocrm/`
+- **TODA** lógica de negócio deve viver em: `clients/jucaocrm/features/import-xlsx/`
 - **ATIVAÇÃO** somente quando: `NEXT_PUBLIC_CLIENT_ID=jucaocrm`
+
+### Infraestrutura Genérica (PERMITIDO em lib/)
+
+Código de **infraestrutura reutilizável** pode existir em `lib/` desde que:
+- Seja agnóstico a cliente (não mencione jucaocrm, sospet, etc.)
+- Não contenha lógica de negócio específica
+- Sirva como extensão point genérico
+
+**Arquivos autorizados em lib/:**
+| Arquivo | Propósito | Status |
+|---------|-----------|--------|
+| `lib/client-extensions.tsx` | Sistema de lazy-loading de extensões | ✅ Criado |
+
+### Exceções Autorizadas no Core
+
+> ⚠️ **REGRA**: Novas exceções requerem autorização explícita do owner.
+
+| Local | Tipo | Descrição | Autorizado |
+|-------|------|-----------|------------|
+| `features/settings/components/ProductsCatalogManager.tsx` | `<ClientExtensionSlot>` | 1 slot na toolbar de produtos | ✅ Pendente implementação |
+
+**Proibições:**
+- ❌ Novos `ClientExtensionSlot` sem autorização
+- ❌ Modificar componentes existentes além do slot autorizado
+- ❌ Adicionar condicionais `if (clientId === 'jucaocrm')` no core
 
 ---
 

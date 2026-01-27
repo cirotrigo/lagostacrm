@@ -4,19 +4,30 @@ Use este prompt para continuar a implementação da feature import-xlsx em uma n
 
 ---
 
+## Nomenclatura
+
+| Termo | Significado |
+|-------|-------------|
+| **JucãoCRM** | Produto/feature (`CLIENT_ID=jucaocrm`) |
+| **SosPet** | Cliente/organização que usa o produto |
+| **Jucao** | Repositório de origem do código |
+| **LagostaCRM** | Codebase base |
+
+---
+
 ## Contexto Obrigatório
 
 Antes de começar, leia os seguintes arquivos:
 
 1. `.context/AI_GUARDRAILS.md` - Regras obrigatórias para trabalhar neste repositório
-2. `.context/plans/import-xlsx-jucaocrm.md` - Plano completo da feature
+2. `.context/plans/import-xlsx-jucaocrm.md` - Plano completo da feature (inclui regras de isolamento)
 
 ---
 
 ## Prompt para Nova Conversa
 
 ```
-Estou continuando a implementação da feature import-xlsx para o SosPet.
+Estou continuando a implementação da feature import-xlsx do produto JucãoCRM (cliente SosPet).
 
 **LEIA PRIMEIRO:**
 - `.context/AI_GUARDRAILS.md` (regras obrigatórias, branch safety)
@@ -49,14 +60,16 @@ Por favor, continue com a Phase 2 seguindo o plano documentado.
 
 ---
 
-## IDs Importantes
+## IDs e Referências
 
 | Item | Valor |
 |------|-------|
-| Organization SosPet | `b859b986-4471-4354-bff4-07313a65c282` |
-| Organization LagostaCRM | `d156b55f-256f-4f40-a273-5f5da5a9e882` |
-| Branch de trabalho | `client/jucaocrm` |
-| Supabase Project | `abddatrjqytwyusiblxy` |
+| **Produto** | JucãoCRM (`NEXT_PUBLIC_CLIENT_ID=jucaocrm`) |
+| **Cliente (Org SosPet)** | `b859b986-4471-4354-bff4-07313a65c282` |
+| **Org LagostaCRM** | `d156b55f-256f-4f40-a273-5f5da5a9e882` |
+| **Branch** | `client/jucaocrm` |
+| **Supabase Project** | `abddatrjqytwyusiblxy` |
+| **Repo Origem (Jucao)** | `/Users/cirotrigo/Documents/Jucao` |
 
 ---
 
