@@ -101,7 +101,7 @@ git log --oneline -n 5
 
 ### ⚠️ Aviso sobre Vercel
 - **Todo push dispara um deploy automático no Vercel**
-- Antes de confirmar o push, lembre-se que as alterações irão para produção
+- Antes de dar push, confira a branch: pushes na Production Branch afetam produção; pushes em outras branches geram Preview Deployments.
 - Para branches diferentes de `main`, o Vercel cria um preview deployment
 
 ### Verificação Pós-Push
@@ -172,12 +172,43 @@ A Vercel faz deploy automático para qualquer push no repositório, porém com c
 2. Vá em **Settings** > **Git** > **Production Branch**
 3. Verifique qual branch está configurada
 
-> **Production Branch atual**: `main` _(editar conforme configuração do projeto)_
+> **Production Branch atual**: _(confirmar em Settings > Git > Production Branch)_
 
 ### Importante
 - Preview deployments recebem URLs únicas (ex: `projeto-abc123.vercel.app`)
 - Apenas a Production Branch afeta o domínio principal
 - Cada push gera um novo deployment (mesmo em preview)
+
+---
+
+## Deploy Hooks (Vercel)
+
+### O que são Deploy Hooks?
+
+Deploy Hooks são URLs únicas que permitem disparar um deploy manualmente ou via automação, sem precisar fazer push no repositório.
+
+### Características
+- Cada hook é vinculado a uma **branch específica**
+- Disparo via requisição HTTP POST para a URL do hook
+- Útil para integrações com CMS, CI/CD externo ou releases manuais
+
+### Status neste projeto
+- **Atualmente não utilizamos deploy hooks**
+- Deploys são feitos automaticamente via push no repositório
+
+### Quando faria sentido usar
+- Release manual controlado (ex: deploy em horário específico)
+- Integração com ferramentas externas (CMS headless, pipelines customizados)
+- Automação de deploy sem alterar código (ex: atualização de conteúdo)
+
+### Como criar (se necessário)
+1. Acesse o projeto na Vercel
+2. Vá em **Settings** > **Git** > **Deploy Hooks**
+3. Adicione um nome e selecione a branch
+4. Use a URL gerada para disparar deploys
+
+### Referência
+- [Vercel Deploy Hooks](https://vercel.com/docs/deployments/deploy-hooks)
 
 ---
 
