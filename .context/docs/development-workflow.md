@@ -157,9 +157,135 @@ Antes de submeter qualquer mudança:
 
 ---
 
+## Vercel: Production vs Preview Deployments
+
+A Vercel faz deploy automático para qualquer push no repositório, porém com comportamentos distintos:
+
+| Tipo de Push | Resultado |
+|--------------|-----------|
+| Push na **Production Branch** | **Production Deployment** (site principal) |
+| Push em outras branches | **Preview Deployment** (URL temporária) |
+
+### Como verificar a Production Branch
+
+1. Acesse o projeto na Vercel
+2. Vá em **Settings** > **Git** > **Production Branch**
+3. Verifique qual branch está configurada
+
+> **Production Branch atual**: `main` _(editar conforme configuração do projeto)_
+
+### Importante
+- Preview deployments recebem URLs únicas (ex: `projeto-abc123.vercel.app`)
+- Apenas a Production Branch afeta o domínio principal
+- Cada push gera um novo deployment (mesmo em preview)
+
+---
+
+## Sync Upstream (nossocrm) — Rotina de Atualização
+
+Para manter o projeto sincronizado com o repositório original (`nossocrm`), execute periodicamente:
+
+```bash
+# 1. Ir para main (apenas para sincronizar)
+git checkout main
+
+# 2. Buscar atualizações do upstream
+git fetch upstream
+
+# 3. Merge das atualizações
+git merge upstream/main
+
+# 4. Push para origin (seu fork)
+git push origin main
+
+# 5. Voltar para branch de trabalho
+git checkout project/lagostacrm
+
+# 6. Incorporar atualizações da main
+git merge main
+
+# 7. Push da branch de trabalho
+git push
+```
+
+### Observações
+- **Resolver conflitos** se aparecerem durante o merge
+- **NUNCA commitar diretamente em main** — usar apenas para sincronização
+- Configurar upstream (se ainda não estiver):
+  ```bash
+  git remote add upstream https://github.com/thaleslaray/nossocrm.git
+  ```
+
+---
+
+## Release Flow (Como Publicar em Produção)
+
+### Fluxo Recomendado
+
+```
+feature/* ou project/lagostacrm  ──►  PR para main  ──►  Merge  ──►  Deploy Produção
+```
+
+1. **Desenvolvimento**: Trabalhar em `project/lagostacrm` ou `feature/*`
+2. **Pull Request**: Abrir PR para `main` quando estiver pronto para publicar
+3. **Review**: Revisar código, garantir que CI passou
+4. **Merge**: Merge na `main` dispara deploy em produção (se `main` for Production Branch)
+
+### Checklist Antes do Merge
+
+```bash
+# Verificar build
+npm run build
+
+# Verificar lint
+npm run lint
+
+# Rodar testes
+npm run test
+
+# Verificar tipos (se disponível)
+npm run type-check
+```
+
+- [ ] Build passa sem erros
+- [ ] Lint sem warnings críticos
+- [ ] Testes passando
+- [ ] PR revisado e aprovado
+- [ ] Sem arquivos sensíveis no diff
+
+---
+
+## Proteções Recomendadas
+
+### GitHub Branch Protection (Recomendado)
+
+Configurar proteção para a branch `main`:
+
+1. **Settings** > **Branches** > **Add rule**
+2. Branch name pattern: `main`
+3. Habilitar:
+   - [x] Require a pull request before merging
+   - [x] Require approvals (1+)
+   - [x] Require status checks to pass
+   - [x] Require branches to be up to date
+
+### Vercel Deployment Protection (Opcional)
+
+Para ambientes de produção críticos:
+
+1. **Project Settings** > **Deployment Protection**
+2. Habilitar **Vercel Authentication** para previews
+3. Configurar **Password Protection** se necessário
+
+---
+
 ## Referências
 
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [Git Branching Strategies](https://git-scm.com/book/en/v2/Git-Branching-Branching-Workflows)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Vercel Deployment](https://vercel.com/docs)
+- [Vercel Git Configuration](https://vercel.com/docs/deployments/git)
+- [Vercel Production Deployments](https://vercel.com/docs/deployments/environments#production)
+- [GitHub Branch Protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+- [Vercel Deployment Protection](https://vercel.com/docs/security/deployment-protection)
