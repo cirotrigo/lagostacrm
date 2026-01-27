@@ -3,9 +3,19 @@
  *
  * Este módulo exporta todas as customizações do cliente JucãoCRM.
  * Carregado condicionalmente via CLIENT_ID=jucaocrm.
+ *
+ * @example
+ * ```typescript
+ * import { JUCAO_CONFIG, ImportProductsButton } from '@/clients/jucaocrm';
+ *
+ * if (JUCAO_CONFIG.features.xlsxImport) {
+ *   // Renderizar botão de importação
+ * }
+ * ```
  */
 
-export { JUCAO_CONFIG } from './config/client';
+// Client Configuration
+export { JUCAO_CONFIG, type JucaoConfig } from './config/client';
 
-// Features serão exportadas aqui conforme implementadas
-// export * from './features/xlsx-import';
+// Features
+export * from './features/import-xlsx';

@@ -6,49 +6,105 @@ Este diretório contém customizações específicas para o cliente **JucãoCRM*
 
 ```
 clients/jucaocrm/
-├── README.md          # Este arquivo
-├── features/          # Features exclusivas do JucãoCRM
-│   └── .gitkeep
-├── config/            # Configurações específicas do cliente
-│   └── client.ts      # Definição do cliente
-└── index.ts           # Entry point das customizações
+├── README.md                    # Este arquivo
+├── index.ts                     # Entry point das customizações
+├── config/
+│   └── client.ts                # Configuração e feature flags
+└── features/
+    └── import-xlsx/             # Feature de importação XLSX
+        ├── README.md
+        ├── index.ts
+        ├── types.ts
+        ├── parser/
+        │   └── parseXlsx.ts
+        ├── services/
+        │   └── importProductsFromXlsx.ts
+        └── ui/
+            ├── ImportProductsButton.tsx
+            └── ProductsToolbarExtension.tsx
 ```
 
-## Features Planejadas
+## Features
 
-- [ ] Importação de produtos via XLSX (baseado em https://github.com/cirotrigo/Jucao)
-- [ ] Customizações de UI específicas
-- [ ] Integrações exclusivas
+| Feature | Status | Descrição |
+|---------|--------|-----------|
+| `import-xlsx` | 🚧 Dev | Importação de produtos via XLSX |
+| `custom-branding` | ⏳ Planejado | Branding customizado |
 
-## Como usar
+## Como Funciona
 
-Este módulo é carregado condicionalmente via `CLIENT_ID=jucaocrm`.
+### 1. Sistema de Extensões
 
-### Ambiente de Desenvolvimento
+O código do cliente é **100% isolado** do core. A conexão acontece via `lib/client-extensions.tsx`:
+
+```tsx
+// No core, apenas UMA linha para habilitar extensões:
+import { ClientExtensionSlot } from '@/lib/client-extensions';
+
+<ClientExtensionSlot name="products-toolbar" props={{ ... }} />
+```
+
+### 2. Ativação por Ambiente
 
 ```bash
-# No .env.local
-CLIENT_ID=jucaocrm
+# .env ou .env.local
+NEXT_PUBLIC_CLIENT_ID=jucaocrm
 ```
 
-### Verificar cliente ativo
+### 3. Feature Flags
 
 ```typescript
-import { getClientId, isClient } from '@/lib/client';
+// clients/jucaocrm/config/client.ts
+export const JUCAO_CONFIG = {
+  features: {
+    xlsxImport: true,      // ✅ Habilitada
+    customBranding: false, // ❌ Desabilitada
+  },
+};
+```
 
-if (isClient('jucaocrm')) {
-  // Código específico do JucãoCRM
+## Uso no Código
+
+### Importar componentes do cliente
+
+```typescript
+import { ImportProductsButton, JUCAO_CONFIG } from '@/clients/jucaocrm';
+
+// Verificar se feature está ativa
+if (JUCAO_CONFIG.features.xlsxImport) {
+  // ...
 }
 ```
+
+### Verificar cliente ativo (no core)
+
+```typescript
+import { isClient, isJucaoCRM } from '@/lib/client';
+
+if (isJucaoCRM()) {
+  // Código específico do JucãoCRM
+}
+
+// ou
+if (isClient('jucaocrm')) {
+  // ...
+}
+```
+
+## Regras de Ouro
+
+1. ❌ **Nunca** modificar código do core (`lib/`, `features/`, `app/`)
+2. ❌ **Nunca** espalhar `if (CLIENT_ID === 'jucaocrm')` pelo código
+3. ✅ **Sempre** usar o sistema de extensões (`ClientExtensionSlot`)
+4. ✅ **Sempre** manter código isolado em `clients/jucaocrm/`
+5. ✅ **Sempre** usar feature flags em vez de hardcode
 
 ## Branch de Trabalho
 
 - **Branch**: `client/jucaocrm`
-- **Origem**: Fork de `main` (nossocrm upstream)
-- **Produção**: Vercel deployment específico
+- **Base**: `main` (nossocrm core)
+- **Deploy**: Vercel com `NEXT_PUBLIC_CLIENT_ID=jucaocrm`
 
-## Regras
+## Origem das Features
 
-1. Features aqui são EXCLUSIVAS do JucãoCRM
-2. Não misturar com código do LagostaCRM
-3. Manter compatibilidade com core (main)
+- **import-xlsx**: Baseado em https://github.com/cirotrigo/Jucao
