@@ -10,7 +10,7 @@
  * - webhookService para disparar processamento no N8N
  */
 
-import { productsService } from '@/lib/supabase';
+import { productsService } from '@/lib/supabase/products';
 import type { Product } from '@/types';
 import type { ImportCallbacks, ImportResult, ImportProgress, XlsxProductRow } from '../types';
 import { normalizePrice as normalizeParserPrice } from '../parser/normalizers';
