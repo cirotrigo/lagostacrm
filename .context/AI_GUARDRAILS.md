@@ -4,6 +4,18 @@ Este documento define regras operacionais obrigatórias para assistentes de IA t
 
 ---
 
+## Regra Zero (Obrigatória)
+
+Antes de QUALQUER ação técnica (editar arquivos, sugerir comandos, planejar commits ou deploys), a IA DEVE:
+
+1. Informar explicitamente a branch atual (`git branch --show-current`)
+2. Confirmar que a ação é permitida para essa branch
+3. **Parar e avisar** se estiver em `main`
+
+> ⚠️ Esta regra tem precedência sobre todas as outras.
+
+---
+
 ## Estrutura de Branches
 
 | Branch | Propósito | Ambiente |
@@ -38,9 +50,26 @@ git status
 - **NUNCA misturar features de um cliente no outro**
 - Features específicas de cliente ficam em `clients/<nome>/`
 
+**Detecção de vazamento de escopo:**
+Se a IA detectar que uma feature específica de cliente está sendo usada fora de `clients/<nome>/`, ela DEVE:
+1. **Parar** a execução
+2. **Avisar** sobre vazamento de escopo
+3. **Propor alternativa** por extensão ou feature flag (`CLIENT_ID`)
+
 ### 5. Execução de comandos
 - **Modo serial**: um comando por vez, mostrando output
 - Aguardar confirmação antes de operações destrutivas
+
+### 6. Padrão de Commits (Obrigatório)
+- Todos os commits DEVEM seguir [Conventional Commits](https://www.conventionalcommits.org/):
+  - `docs:` — Documentação
+  - `feat:` — Nova funcionalidade
+  - `fix:` — Correção de bug
+  - `chore:` — Manutenção/tarefas gerais
+  - `refactor:` — Refatoração de código
+  - `test:` — Testes
+  - `perf:` — Melhorias de performance
+- **Commits genéricos são PROIBIDOS** (ex: "update", "wip", "fix stuff")
 
 ---
 
@@ -71,6 +100,23 @@ git push
 
 - **Repositório upstream**: https://github.com/thaleslaray/nossocrm.git
 - **Repositório origin**: https://github.com/cirotrigo/lagostacrm.git
+
+---
+
+## Deploy Awareness (Vercel)
+
+Antes de qualquer `git push`, a IA DEVE:
+
+1. **Avisar** se o push pode disparar deploy
+2. **Informar** QUAL cliente/projeto será afetado
+3. **Nunca assumir** produção sem confirmação explícita
+
+| Branch | Impacto do Push |
+|--------|-----------------|
+| `main` | ⚠️ Produção principal (CUIDADO) |
+| `client/jucaocrm` | Deploy JucãoCRM |
+| `project/lagostacrm` | Deploy LagostaCRM |
+| `feature/*` | Preview deployment apenas |
 
 ---
 
