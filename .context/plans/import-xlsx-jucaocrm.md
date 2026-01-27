@@ -1,22 +1,28 @@
 ---
-status: ready
+status: in_progress
 generated: 2026-01-27
+updated: 2026-01-27
 client: jucaocrm
 feature: import-xlsx
 source_repo: /Users/cirotrigo/Documents/Jucao
+current_phase: phase-2
 phases:
   - id: "phase-1"
     name: "Migração de Dados & Setup"
     prevc: "P"
+    status: completed
   - id: "phase-2"
     name: "Extração do Parser"
     prevc: "E"
+    status: pending
   - id: "phase-3"
     name: "Integração N8N"
     prevc: "E"
+    status: pending
   - id: "phase-4"
-    name: "UI & Testes"
+    name: "UI no SosPet & Testes"
     prevc: "V"
+    status: pending
 ---
 
 # Plano: Importação XLSX para JucãoCRM
