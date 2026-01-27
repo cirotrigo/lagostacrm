@@ -1,10 +1,12 @@
 import type { MetadataRoute } from 'next';
+import { getBranding } from '@/lib/branding';
 
 export default function manifest(): MetadataRoute.Manifest {
+  const brand = getBranding();
   return {
-    name: 'NossoCRM',
-    short_name: 'NossoCRM',
-    description: 'CRM Inteligente para Gestão de Vendas',
+    name: brand.name,
+    short_name: brand.shortName,
+    description: brand.description,
     start_url: '/boards',
     display: 'standalone',
     background_color: '#ffffff',

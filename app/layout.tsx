@@ -3,12 +3,16 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister'
 import { InstallBanner } from '@/components/pwa/InstallBanner'
+import { getBranding } from '@/lib/branding'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
-export const metadata: Metadata = {
-  title: 'NossoCRM',
-  description: 'CRM Inteligente para Gestão de Vendas',
+export function generateMetadata(): Metadata {
+  const brand = getBranding();
+  return {
+    title: brand.name,
+    description: brand.description,
+  };
 }
 
 /**
