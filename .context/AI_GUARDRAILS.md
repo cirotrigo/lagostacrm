@@ -18,11 +18,54 @@ Antes de QUALQUER ação técnica (editar arquivos, sugerir comandos, planejar c
 
 ## Estrutura de Branches
 
-| Branch | Propósito | Ambiente |
-|--------|-----------|----------|
-| `main` | Espelho do upstream (nossocrm) | **NÃO USAR PARA DESENVOLVIMENTO** |
-| `project/lagostacrm` | Desenvolvimento LagostaCRM | Preview/Produção LagostaCRM |
-| `client/jucaocrm` | Desenvolvimento JucãoCRM | Preview/Produção JucãoCRM |
+| Branch | Propósito | Ambiente | Vercel |
+|--------|-----------|----------|--------|
+| `main` | Espelho do upstream (nossocrm) | **NÃO USAR** | ❌ Não faz deploy |
+| `project/lagostacrm` | Desenvolvimento LagostaCRM | Produção LagostaCRM | lagostacrm.vercel.app |
+| `client/jucaocrm` | Desenvolvimento SosPet/JucãoCRM | Produção SosPet | sospet-blue.vercel.app |
+
+> **Nota**: JucãoCRM é o nome do conjunto de features. SosPet é o nome do produto/cliente.
+
+---
+
+## Desenvolvimento Local (Ambientes)
+
+Cada cliente tem seu próprio banco de dados Supabase. Use o comando correto:
+
+| Cliente | Banco | Comando Local | Arquivo .env |
+|---------|-------|---------------|--------------|
+| **SosPet** | `ernsckhyavrmfgcgjadn` | `npm run dev:sospet` | `.env.sospet` |
+| **LagostaCRM** | `abddatrjqytwyusiblxy` | `npm run dev:lagosta` | `.env.lagostacrm` |
+
+### Fluxo Completo de Trabalho
+
+**Para SosPet:**
+```bash
+git checkout client/jucaocrm      # Branch correta
+npm run dev:sospet                 # Banco SosPet
+# ... desenvolve ...
+git add <arquivos>
+git commit -m "feat(jucaocrm): ..."
+git push origin client/jucaocrm   # Deploy em sospet-blue.vercel.app
+```
+
+**Para LagostaCRM:**
+```bash
+git checkout project/lagostacrm   # Branch correta
+npm run dev:lagosta               # Banco LagostaCRM
+# ... desenvolve ...
+git add <arquivos>
+git commit -m "feat: ..."
+git push origin project/lagostacrm # Deploy em lagostacrm.vercel.app
+```
+
+### Rodar ambos simultaneamente (portas diferentes)
+```bash
+npm run dev:sospet:3001   # http://localhost:3001
+npm run dev:lagosta:3002  # http://localhost:3002
+```
+
+> ⚠️ **ATENÇÃO**: Os arquivos `.env.sospet` e `.env.lagostacrm` são APENAS para desenvolvimento local. Em produção, cada projeto Vercel tem suas próprias variáveis configuradas no painel.
 
 ---
 
@@ -111,12 +154,14 @@ Antes de qualquer `git push`, a IA DEVE:
 2. **Informar** QUAL cliente/projeto será afetado
 3. **Nunca assumir** produção sem confirmação explícita
 
-| Branch | Impacto do Push |
-|--------|-----------------|
-| `main` | ⚠️ Produção principal (CUIDADO) |
-| `client/jucaocrm` | Deploy JucãoCRM |
-| `project/lagostacrm` | Deploy LagostaCRM |
-| `feature/*` | Preview deployment apenas |
+| Branch | Impacto do Push | URL |
+|--------|-----------------|-----|
+| `main` | ❌ NÃO FAZ DEPLOY (apenas sync) | — |
+| `client/jucaocrm` | ✅ Produção SosPet | sospet-blue.vercel.app |
+| `project/lagostacrm` | ✅ Produção LagostaCRM | lagostacrm.vercel.app |
+| `feature/*` | Preview deployment apenas | *.vercel.app |
+
+> **Importante**: A branch `main` está configurada no "Ignored Build Step" da Vercel e NÃO dispara deploys.
 
 ---
 

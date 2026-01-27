@@ -4,6 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:sospet": "dotenv -e .env.sospet -- next dev",
+    "dev:lagosta": "dotenv -e .env.lagostacrm -- next dev",
+    "dev:sospet:3001": "dotenv -e .env.sospet -- next dev -p 3001",
+    "dev:lagosta:3002": "dotenv -e .env.lagostacrm -- next dev -p 3002",
     "precheck": "npm run lint && npm run typecheck && npm run test:run && npm run build",
     "precheck:fast": "npm run lint && npm run typecheck && npm run test:run",
     "stories": "vitest run test/stories --reporter=dot",
@@ -75,6 +79,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.0.4",
     "axe-core": "^4.10.3",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.8",
     "happy-dom": "^20.0.11",
