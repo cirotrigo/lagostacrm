@@ -4,20 +4,45 @@
  * Import Products Button Component - JucãoCRM
  *
  * Botão e modal para importação de produtos via XLSX.
- * Componente isolado do cliente JucãoCRM.
+ * Suporta dois modos:
+ * - Direto: para arquivos pequenos (< 500 produtos)
+ * - Assíncrono: para arquivos grandes, via API + N8N
  */
 
-import React, { useCallback, useRef, useState } from 'react';
-import { FileSpreadsheet, Upload, X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { FileSpreadsheet, Upload, X, AlertCircle, CheckCircle, Loader2, Zap, Clock } from 'lucide-react';
 import { parseXlsxToProducts, isValidXlsxFile, type ParsedProducts } from '../parser/parseXlsx';
 import { importProductsFromXlsx } from '../services/importProductsFromXlsx';
-import type { ImportResult, XlsxProductRow } from '../types';
+import { ImportProgressCard } from './ImportProgressCard';
+import type { ImportResult, ImportJob } from '../types';
+
+/**
+ * Threshold para usar importação assíncrona
+ */
+const ASYNC_THRESHOLD = 500;
+
+/**
+ * Intervalo de polling em ms
+ */
+const POLL_INTERVAL = 2000;
+
+type ImportStep =
+  | 'idle'
+  | 'parsing'
+  | 'preview'
+  | 'uploading'
+  | 'starting'
+  | 'processing'
+  | 'importing-direct'
+  | 'done'
+  | 'error';
 
 interface ImportState {
-  step: 'idle' | 'parsing' | 'preview' | 'importing' | 'done' | 'error';
+  step: ImportStep;
   file: File | null;
   parsedProducts: ParsedProducts | null;
   importResult: ImportResult | null;
+  job: ImportJob | null;
   error: string | null;
 }
 
@@ -40,17 +65,33 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
     file: null,
     parsedProducts: null,
     importResult: null,
+    job: null,
     error: null,
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
 
   const reset = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
     setState({
       step: 'idle',
       file: null,
       parsedProducts: null,
       importResult: null,
+      job: null,
       error: null,
     });
     if (fileInputRef.current) {
@@ -105,10 +146,134 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
     }
   }, []);
 
-  const handleImport = useCallback(async () => {
+  /**
+   * Polls the job status until complete or failed
+   */
+  const startPolling = useCallback((jobId: string) => {
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/clients/jucaocrm/import/${jobId}`);
+        if (!res.ok) {
+          throw new Error('Falha ao buscar status');
+        }
+
+        const data = await res.json();
+        const job = data.job as ImportJob;
+
+        setState((prev) => ({ ...prev, job }));
+
+        if (job.status === 'completed') {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+
+          const result: ImportResult = {
+            success: true,
+            imported: job.createdCount + job.updatedCount,
+            skipped: 0,
+            errors: [],
+            jobId: job.id,
+          };
+
+          setState((prev) => ({
+            ...prev,
+            step: 'done',
+            importResult: result,
+          }));
+
+          // Dispatch event to refresh products list
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('crm:products-updated'));
+          }
+
+          onImportComplete?.(result);
+        } else if (job.status === 'failed') {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+
+          setState((prev) => ({
+            ...prev,
+            step: 'error',
+            error: job.lastError || 'Falha no processamento',
+          }));
+        }
+      } catch (error) {
+        console.error('[ImportProductsButton] Poll error:', error);
+      }
+    };
+
+    // Initial poll
+    poll();
+
+    // Start interval
+    pollIntervalRef.current = setInterval(poll, POLL_INTERVAL);
+  }, [onImportComplete]);
+
+  /**
+   * Async import via API
+   */
+  const handleAsyncImport = useCallback(async () => {
+    if (!state.file) return;
+
+    setState((prev) => ({ ...prev, step: 'uploading' }));
+
+    try {
+      // 1. Upload file and create job
+      const formData = new FormData();
+      formData.append('file', state.file);
+
+      const uploadRes = await fetch('/api/clients/jucaocrm/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        const errorData = await uploadRes.json();
+        throw new Error(errorData.error || 'Falha no upload');
+      }
+
+      const uploadData = await uploadRes.json();
+      const jobId = uploadData.jobId as string;
+
+      setState((prev) => ({ ...prev, step: 'starting' }));
+
+      // 2. Start processing via N8N
+      const startRes = await fetch(`/api/clients/jucaocrm/import/${jobId}/start`, {
+        method: 'POST',
+      });
+
+      if (!startRes.ok) {
+        const errorData = await startRes.json();
+        // If webhook not configured, show specific error
+        if (startRes.status === 503) {
+          throw new Error('N8N não configurado. Entre em contato com o suporte.');
+        }
+        throw new Error(errorData.error || 'Falha ao iniciar processamento');
+      }
+
+      setState((prev) => ({ ...prev, step: 'processing' }));
+
+      // 3. Start polling for progress
+      startPolling(jobId);
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        step: 'error',
+        error: error instanceof Error ? error.message : 'Erro durante importação',
+      }));
+    }
+  }, [state.file, startPolling]);
+
+  /**
+   * Direct import (synchronous, for small files)
+   */
+  const handleDirectImport = useCallback(async () => {
     if (!state.parsedProducts?.products.length) return;
 
-    setState((prev) => ({ ...prev, step: 'importing' }));
+    setState((prev) => ({ ...prev, step: 'importing-direct' }));
 
     try {
       const result = await importProductsFromXlsx(state.parsedProducts.products, {
@@ -139,6 +304,17 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
     }
   }, [state.parsedProducts, onImportComplete]);
 
+  const handleImport = useCallback(() => {
+    const productCount = state.parsedProducts?.products.length ?? 0;
+
+    // Use async import for large files
+    if (productCount >= ASYNC_THRESHOLD) {
+      handleAsyncImport();
+    } else {
+      handleDirectImport();
+    }
+  }, [state.parsedProducts, handleAsyncImport, handleDirectImport]);
+
   const variantClasses = {
     primary: 'bg-primary-600 text-white hover:bg-primary-500',
     secondary: 'border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200',
@@ -147,6 +323,7 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
 
   const validCount = state.parsedProducts?.products.length ?? 0;
   const errorCount = state.parsedProducts?.errors.length ?? 0;
+  const isLargeFile = validCount >= ASYNC_THRESHOLD;
 
   return (
     <>
@@ -183,6 +360,7 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
             </div>
 
             <div className="px-6 py-5">
+              {/* Idle - File selection */}
               {state.step === 'idle' && (
                 <div className="text-center">
                   <input
@@ -208,6 +386,7 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
                 </div>
               )}
 
+              {/* Parsing */}
               {state.step === 'parsing' && (
                 <div className="text-center py-8">
                   <Loader2 className="h-10 w-10 text-primary-500 animate-spin mx-auto mb-3" />
@@ -217,6 +396,7 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
                 </div>
               )}
 
+              {/* Preview */}
               {state.step === 'preview' && state.parsedProducts && (
                 <div>
                   <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/40 rounded-xl px-4 py-3 mb-4">
@@ -232,6 +412,23 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
                       </p>
                     )}
                   </div>
+
+                  {/* Import mode indicator */}
+                  {isLargeFile ? (
+                    <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      <span className="text-xs text-blue-700 dark:text-blue-300">
+                        Arquivo grande: importação será processada em segundo plano
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                      <Zap className="h-4 w-4 text-purple-600" />
+                      <span className="text-xs text-purple-700 dark:text-purple-300">
+                        Importação direta (mais rápido para arquivos pequenos)
+                      </span>
+                    </div>
+                  )}
 
                   <div className="text-sm text-slate-600 dark:text-slate-300 mb-4">
                     <p className="font-medium mb-2">Preview dos primeiros itens:</p>
@@ -259,7 +456,43 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
                 </div>
               )}
 
-              {state.step === 'importing' && (
+              {/* Uploading */}
+              {state.step === 'uploading' && (
+                <div className="text-center py-8">
+                  <Loader2 className="h-10 w-10 text-primary-500 animate-spin mx-auto mb-3" />
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    Enviando arquivo...
+                  </p>
+                </div>
+              )}
+
+              {/* Starting N8N */}
+              {state.step === 'starting' && (
+                <div className="text-center py-8">
+                  <Loader2 className="h-10 w-10 text-primary-500 animate-spin mx-auto mb-3" />
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    Iniciando processamento...
+                  </p>
+                </div>
+              )}
+
+              {/* Processing (async with job) */}
+              {state.step === 'processing' && state.job && (
+                <ImportProgressCard job={state.job} />
+              )}
+
+              {/* Processing (async without job yet - initial state) */}
+              {state.step === 'processing' && !state.job && (
+                <div className="text-center py-8">
+                  <Loader2 className="h-10 w-10 text-primary-500 animate-spin mx-auto mb-3" />
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    Aguardando resposta do servidor...
+                  </p>
+                </div>
+              )}
+
+              {/* Direct importing */}
+              {state.step === 'importing-direct' && (
                 <div className="text-center py-8">
                   <Loader2 className="h-10 w-10 text-primary-500 animate-spin mx-auto mb-3" />
                   <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -268,6 +501,7 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
                 </div>
               )}
 
+              {/* Done */}
               {state.step === 'done' && state.importResult && (
                 <div className="text-center py-4">
                   <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
@@ -290,6 +524,12 @@ export const ImportProductsButton: React.FC<ImportProductsButtonProps> = ({
                 </div>
               )}
 
+              {/* Done with job */}
+              {state.step === 'done' && state.job && !state.importResult && (
+                <ImportProgressCard job={state.job} onClose={handleClose} />
+              )}
+
+              {/* Error */}
               {state.step === 'error' && (
                 <div className="text-center py-4">
                   <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />

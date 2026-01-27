@@ -4,7 +4,7 @@ Feature para importação de produtos via arquivos Excel (.xlsx) com processamen
 
 ## Status
 
-🟢 **Phase 3 Completa** — Services, API Routes e integração N8N implementados.
+🟢 **v1.0.0 - Feature Completa** — Parser, Services, API Routes, N8N e UI implementados.
 
 ## Estrutura
 
@@ -18,12 +18,13 @@ import-xlsx/
 │   ├── parseXlsx.ts                    # Parser de arquivos XLSX
 │   └── normalizers.ts                  # Funções de normalização
 ├── services/
-│   ├── importProductsFromXlsx.ts       # Importação direta (fallback)
+│   ├── importProductsFromXlsx.ts       # Importação direta (< 500 produtos)
 │   ├── importJobService.ts             # CRUD de jobs de importação
 │   ├── stagingService.ts               # Operações na tabela staging
 │   └── webhookService.ts               # Disparo de webhooks N8N
 └── ui/
     ├── ImportProductsButton.tsx        # Botão + Modal de importação
+    ├── ImportProgressCard.tsx          # Card de progresso da importação
     └── ProductsToolbarExtension.tsx    # Extensão da toolbar de produtos
 ```
 

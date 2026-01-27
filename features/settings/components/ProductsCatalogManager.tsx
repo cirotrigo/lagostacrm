@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Package, Pencil, Plus, Save, Trash2, ToggleLeft, ToggleRight, X } from 'lucide-react';
 import { productsService } from '@/lib/supabase';
+import { ClientExtensionSlot } from '@/lib/client-extensions';
 import type { Product } from '@/types';
 
 function formatBRL(v: number) {
@@ -176,6 +177,10 @@ export const ProductsCatalogManager: React.FC = () => {
               Catálogo base da empresa. No deal você ainda pode adicionar itens personalizados quando precisar adaptar ao cliente.
             </p>
           </div>
+          <ClientExtensionSlot
+            name="products-toolbar"
+            props={{ onImportComplete: load, disabled: loading }}
+          />
         </div>
 
         {error && (

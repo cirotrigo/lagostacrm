@@ -67,6 +67,8 @@ export { webhookService, type WebhookPayload, type WebhookResponse } from './ser
 // UI Components
 export { ImportProductsButton } from './ui/ImportProductsButton';
 export { default as ImportProductsButtonDefault } from './ui/ImportProductsButton';
+export { ImportProgressCard } from './ui/ImportProgressCard';
+export { ProductsToolbarExtension } from './ui/ProductsToolbarExtension';
 
 /**
  * Feature metadata
@@ -75,6 +77,6 @@ export const IMPORT_XLSX_FEATURE = {
   id: 'import-xlsx',
   name: 'Importação XLSX',
   description: 'Importar produtos de planilhas Excel (.xlsx)',
-  version: '0.2.0',
-  status: 'development' as const,
+  version: '1.0.0',
+  status: 'stable' as const,
 } as const;

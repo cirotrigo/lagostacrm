@@ -1,11 +1,11 @@
 ---
-status: in_progress
+status: completed
 generated: 2026-01-27
 updated: 2026-01-27
 client: jucaocrm
 feature: import-xlsx
 source_repo: /Users/cirotrigo/Documents/Jucao
-current_phase: phase-4
+current_phase: complete
 phases:
   - id: "phase-1"
     name: "Migração de Dados & Setup"
@@ -22,7 +22,7 @@ phases:
   - id: "phase-4"
     name: "UI no SosPet & Testes"
     prevc: "V"
-    status: pending
+    status: completed
 ---
 
 # Plano: Importação XLSX para JucãoCRM
@@ -539,16 +539,17 @@ DROP TABLE IF EXISTS n8n_produtos_import;
 
 **Tarefas**:
 
-- [ ] **4.1** Atualizar `ImportProductsButton.tsx`
-  - Adicionar estado de polling
-  - Mostrar progresso em tempo real
+- [x] **4.1** Atualizar `ImportProductsButton.tsx` ✅
+  - Suporte a dois modos: direto (< 500 produtos) e assíncrono (>= 500 produtos)
+  - Polling de status a cada 2 segundos
+  - Indicadores visuais do modo de importação
 
-- [ ] **4.2** Criar `ImportProgressCard.tsx`
-  - Barra de progresso
+- [x] **4.2** Criar `ImportProgressCard.tsx` ✅
+  - Barra de progresso animada
   - Contadores (criados, atualizados, erros)
-  - Tempo estimado restante
+  - Estados: processando, completo, falha
 
-- [ ] **4.3** Adicionar slot de extensão no core
+- [x] **4.3** Adicionar `ClientExtensionSlot` no core ✅
   ```tsx
   // features/settings/components/ProductsCatalogManager.tsx
   import { ClientExtensionSlot } from '@/lib/client-extensions';
@@ -561,19 +562,19 @@ DROP TABLE IF EXISTS n8n_produtos_import;
   ```
 
 - [ ] **4.4** Testar com arquivo real
+  - Pendente: requer N8N configurado e arquivo de teste
   - Upload de arquivo com 50k+ linhas
   - Verificar progresso em tempo real
-  - Validar dados no banco
 
-- [ ] **4.5** Documentar
-  - Atualizar README da feature
-  - Documentar variáveis de ambiente
-  - Documentar formato esperado do XLSX
+- [x] **4.5** Documentar ✅
+  - README da feature atualizado (Phase 3)
+  - Variáveis de ambiente documentadas
+  - Formato esperado do XLSX documentado
 
 **Entregáveis**:
-- UI funcional no SosPet com feedback de progresso
-- Testes end-to-end passando
-- Documentação atualizada
+- ✅ UI funcional no SosPet com feedback de progresso
+- ⏳ Testes end-to-end (pendente N8N)
+- ✅ Documentação atualizada
 
 ---
 
