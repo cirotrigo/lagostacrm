@@ -80,5 +80,8 @@ docs/security/
 # Dev/debug scripts (not needed for app to run)
 scripts/
 
+# Workflows N8N/Make (local only - contém configs sensíveis)
+workflows/
+
 # Test documentation (test code stays, docs are local)
 test/*.md
