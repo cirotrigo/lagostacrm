@@ -15,10 +15,11 @@
 ### Branches de Trabalho Permitidas
 | Branch | Uso |
 |--------|-----|
-| `project/lagostacrm` | Branch principal de desenvolvimento |
+| `project/lagostacrm` | Branch principal de desenvolvimento do LagostaCRM |
 | `feature/<topic>` | Novas funcionalidades |
 | `fix/<topic>` | Correções de bugs |
 | `hotfix/<topic>` | Correções urgentes |
+| `client/<nome>` | Personalizações específicas de clientes |
 
 ### Verificação Obrigatória (antes de qualquer commit)
 ```bash
@@ -145,7 +146,12 @@ Este comportamento deve ser mantido durante **TODA a conversa**, inclusive:
 
 ## 7. Sincronização com Upstream
 
-### Rotina Permitida (única forma de tocar em main)
+### Configuração Inicial (uma vez)
+```bash
+git remote add upstream https://github.com/thaleslaray/nossocrm.git
+```
+
+### Rotina de Sync (única forma de tocar em main)
 ```bash
 git checkout main
 git fetch upstream
@@ -179,7 +185,7 @@ Antes de qualquer operação git:
 
 ### Permitido
 - Commits em `project/lagostacrm`
-- Commits em `feature/*`, `fix/*`, `hotfix/*`
+- Commits em `feature/*`, `fix/*`, `hotfix/*`, `client/*`
 - Push para remote (com aviso de deploy)
 - Sync de upstream (seguindo rotina específica)
 
@@ -195,5 +201,6 @@ Antes de qualquer operação git:
 
 ## Documentação Relacionada
 
+- [Project Context](.context/PROJECT_CONTEXT.md) - Contexto e arquitetura do projeto
 - [Development Workflow](.context/docs/development-workflow.md) - Fluxo completo de desenvolvimento
 - [Conventional Commits](https://www.conventionalcommits.org/)
