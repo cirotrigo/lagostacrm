@@ -102,14 +102,27 @@ git log --oneline -n 5
 
 ## 5. Deploy e Vercel
 
-### Aviso Obrigatório
-Antes de cada `git push`, lembrar:
-- Push na **Production Branch** → Deploy em **produção**
-- Push em outras branches → **Preview Deployment**
+### Configuração Atual
+```
+Production Branch: project/lagostacrm
+```
 
-### Production Branch
-- Verificar em: Vercel > Settings > Git > Production Branch
-- **NÃO assumir** qual é a Production Branch - sempre verificar
+### Comportamento de Deploy
+| Branch | Resultado do Push |
+|--------|------------------|
+| `project/lagostacrm` | **Deploy em PRODUÇÃO** |
+| `feature/*`, `fix/*`, `hotfix/*` | Preview deployment |
+| `main` | Preview deployment (não usar para deploy) |
+
+### Aviso Obrigatório
+Antes de cada `git push` em `project/lagostacrm`:
+- **CONFIRMAR** que as mudanças estão prontas para produção
+- Avisar o usuário: "Push nesta branch fará deploy em produção"
+
+### Por que `project/lagostacrm` é a Production Branch?
+- Permite deploy das customizações independente do upstream
+- A branch `main` fica reservada apenas para sync
+- Controle total sobre quando as mudanças vão para produção
 
 ---
 
@@ -195,7 +208,10 @@ Antes de qualquer operação git:
 - `git push --force`
 - `git clean -f`
 - `git checkout .` / `git restore .`
-- Assumir Production Branch
+
+### Lembrete de Deploy
+- Push em `project/lagostacrm` = **Deploy em Produção**
+- Sempre avisar o usuário antes do push
 
 ---
 

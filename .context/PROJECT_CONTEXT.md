@@ -45,8 +45,11 @@ LagostaCRM é um **fork personalizado** do projeto [NossoCRM](https://github.com
 
 ### Infraestrutura
 - **Hospedagem**: Vercel
+- **Production Branch**: `project/lagostacrm`
 - **Banco de Dados**: [verificar provider]
 - **Deploy**: Automático via Git push
+  - Push em `project/lagostacrm` → **Produção**
+  - Push em outras branches → Preview
 
 ---
 
