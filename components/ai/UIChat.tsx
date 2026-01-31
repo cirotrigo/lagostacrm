@@ -5,6 +5,7 @@ import { DefaultChatTransport } from 'ai';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Send, Loader2, Bot, User, Sparkles, Wrench, X, MessageCircle, Minimize2, Maximize2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAI } from '@/context/AIContext';
+import { getBrandName } from '@/lib/branding';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -553,7 +554,7 @@ export function UIChat({
                     <Sparkles className="w-5 h-5 text-primary-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h2 className="font-semibold text-white">NossoCRM Pilot</h2>
+                    <h2 className="font-semibold text-white">{getBrandName()} Pilot</h2>
                     <p className="text-xs text-slate-400 truncate">
                         {headerSubtitle}
                     </p>
