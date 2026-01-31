@@ -34,6 +34,7 @@ import {
   Bot,
   Tag as TagIcon,
   Plus,
+  MessageSquareText,
 } from 'lucide-react';
 import { StageProgressBar } from '../StageProgressBar';
 import { ActivityRow } from '@/features/activities/components/ActivityRow';
@@ -731,6 +732,20 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
                     )}
                   </div>
                 </div>
+
+                {/* CONVERSATION SUMMARY (AI) */}
+                {deal.aiSummary && (
+                  <div className="pt-4 border-t border-slate-100 dark:border-white/5">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-2">
+                      <MessageSquareText size={14} /> Resumo da Conversa
+                    </h3>
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-500/20 rounded-lg p-3">
+                      <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                        {deal.aiSummary}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* DYNAMIC CUSTOM FIELDS INPUTS */}
                 {customFieldDefinitions.length > 0 && (
