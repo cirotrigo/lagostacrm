@@ -42,10 +42,10 @@ const BRAND_CONFIG: Record<ClientId, BrandConfig> = {
     description: 'Sistema de Gestão para Pet Shops e Agropecuárias',
   },
   lagostacrm: {
-    name: 'LagostaCRM',
-    shortName: 'Lagosta',
-    initial: 'L',
-    description: 'CRM Inteligente para Gestão de Vendas',
+    name: 'CRM Coronel',
+    shortName: 'Coronel',
+    initial: 'C',
+    description: 'CRM Inteligente para Gestão de Atendimento',
   },
   default: {
     name: 'NossoCRM',
