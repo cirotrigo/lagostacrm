@@ -126,6 +126,7 @@ export async function moveStageByIdentity(opts: {
   email?: string | null;
   target: { to_stage_id?: string | null; to_stage_label?: string | null };
   mark?: 'won' | 'lost' | null;
+  aiSummary?: string | null;
 }) {
   const boardId = await resolveBoardId({
     organizationId: opts.organizationId,
@@ -200,6 +201,9 @@ export async function moveStageByIdentity(opts: {
 
   const now = new Date().toISOString();
   const updates: any = { stage_id: stageId, last_stage_change_date: now, updated_at: now };
+  if (opts.aiSummary) {
+    updates.ai_summary = opts.aiSummary;
+  }
   if (opts.mark === 'won' || (wonStageId && stageId === wonStageId)) {
     updates.is_won = true;
     updates.is_lost = false;
@@ -216,7 +220,7 @@ export async function moveStageByIdentity(opts: {
     .update(updates)
     .eq('organization_id', opts.organizationId)
     .eq('id', dealId)
-    .select('id,title,value,board_id,stage_id,contact_id,client_company_id,is_won,is_lost,loss_reason,closed_at,created_at,updated_at')
+    .select('id,title,value,board_id,stage_id,contact_id,client_company_id,is_won,is_lost,loss_reason,closed_at,created_at,updated_at,ai_summary')
     .maybeSingle();
   if (updateError) return { ok: false as const, status: 500, body: { error: updateError.message, code: 'DB_ERROR' } };
   if (!updated) return { ok: false as const, status: 404, body: { error: 'Deal not found', code: 'NOT_FOUND' } };
