@@ -27,7 +27,7 @@ export const SUPPORTED_CLIENTS: ClientId[] = ['jucaocrm', 'lagostacrm', 'default
 
 /**
  * Retorna o CLIENT_ID atual baseado na variável de ambiente
- * Fallback para 'default' se não definido
+ * Fallback para 'lagostacrm' neste fork dedicado
  */
 export function getClientId(): ClientId {
   const clientId = process.env.CLIENT_ID || process.env.NEXT_PUBLIC_CLIENT_ID;
@@ -36,7 +36,8 @@ export function getClientId(): ClientId {
     return clientId as ClientId;
   }
 
-  return 'default';
+  // Este fork é dedicado ao LagostaCRM (CRM Coronel)
+  return 'lagostacrm';
 }
 
 /**
