@@ -17,8 +17,11 @@
 
 ## Ambiente (env)
 - Use `.env.example` como base e copie para `.env.local`.
-- Obrigatórias no client/dev: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- Server-only: `SUPABASE_SERVICE_ROLE_KEY` (nunca expor no client; usado por scripts e por `lib/ai/tools.ts`).
+- Obrigatórias no client/dev: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (ou `NEXT_PUBLIC_SUPABASE_ANON_KEY` legado).
+- Server-only: `SUPABASE_SECRET_KEY` (ou `SUPABASE_SERVICE_ROLE_KEY` legado) — nunca expor no client; usado por scripts e por `lib/ai/tools.ts`.
+- **Novo formato de chaves (Nov 2025)**: Supabase introduziu `sb_publishable_...` e `sb_secret_...`. O código usa fallback para compatibilidade:
+  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → fallback → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SECRET_KEY` → fallback → `SUPABASE_SERVICE_ROLE_KEY`
 
 ## IA (padrão atual)
 - **Chat (AI SDK v6, streaming)**:

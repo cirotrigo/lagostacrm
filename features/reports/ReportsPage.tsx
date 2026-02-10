@@ -141,8 +141,9 @@ const ReportsPage: React.FC = () => {
     return profile?.first_name || profile?.email || 'Usuário';
   }, [profile?.email, profile?.first_name, profile?.last_name]);
 
-  const handleExportPDF = useCallback(() => {
-    generateReportPDF(
+  const handleExportPDF = useCallback(async () => {
+    // generateReportPDF usa dynamic imports para carregar jsPDF apenas quando necessário
+    await generateReportPDF(
       {
         pipelineValue,
         actualWinRate,

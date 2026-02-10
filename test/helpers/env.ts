@@ -69,10 +69,20 @@ export function getSupabaseUrl(): string {
 
 /**
  * Função pública `getServiceRoleKey` do projeto.
+ * Prefer new secret key format, fallback to legacy service_role key.
  * @returns {string} Retorna um valor do tipo `string`.
  */
 export function getServiceRoleKey(): string {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  return process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+}
+
+/**
+ * Função pública `getAnonKey` do projeto.
+ * Prefer new publishable key format, fallback to legacy anon key.
+ * @returns {string} Retorna um valor do tipo `string`.
+ */
+export function getAnonKey(): string {
+  return process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 }
 
 /**

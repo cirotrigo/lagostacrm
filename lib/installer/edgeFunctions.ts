@@ -830,6 +830,10 @@ export async function setSupabaseEdgeFunctionSecrets(params: {
         // Supabase Management API rejects secrets starting with `SUPABASE_` (reserved prefix).
         // We use CRM_* and our Edge Functions read these first (with fallback).
         { name: 'CRM_SUPABASE_URL', value: params.supabaseUrl },
+        // New key format (recommended)
+        { name: 'CRM_SUPABASE_PUBLISHABLE_KEY', value: params.anonKey },
+        { name: 'CRM_SUPABASE_SECRET_KEY', value: params.serviceRoleKey },
+        // Legacy key format (fallback)
         { name: 'CRM_SUPABASE_ANON_KEY', value: params.anonKey },
         { name: 'CRM_SUPABASE_SERVICE_ROLE_KEY', value: params.serviceRoleKey },
       ]),

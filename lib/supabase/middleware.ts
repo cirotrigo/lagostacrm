@@ -21,7 +21,9 @@ export async function updateSession(request: NextRequest) {
 
     // Check if Supabase is properly configured
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    // Prefer new publishable key format, fallback to legacy anon key
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     // Skip auth if not configured or using placeholder values
     const isConfigured = supabaseUrl &&

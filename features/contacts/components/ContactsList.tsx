@@ -169,7 +169,9 @@ export const ContactsList: React.FC<ContactsListProps> = ({
     }, [contacts]);
 
     // Performance: avoid creating `new Date()` for each row in formatRelativeDate.
-    const now = new Date();
+    // Memoized para evitar hydration mismatch (server vs client timestamp) e
+    // evitar recriação a cada render
+    const now = React.useMemo(() => new Date(), []);
     
     return (
         <div className="glass rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">

@@ -7,8 +7,10 @@ import { createClient } from '@supabase/supabase-js';
  * - Seguro para uso em scripts/CLI e em agentes (sem cookies)
  */
 export function createStaticAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  // Prefer new key formats, fallback to legacy
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+  return createClient(supabaseUrl, supabaseSecretKey);
 }

@@ -723,32 +723,41 @@ const CRMInnerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       return lastActivityTs !== null && lastActivityTs < thirtyDaysAgo.getTime();
     });
 
-    let newActivitiesCount = 0;
+    // Coletar todas as atividades a serem criadas primeiro (evita await sequencial em loop)
+    const activitiesToCreate = riskyContacts
+      .filter(contact => {
+        // Verificar se já existe tarefa para este contato
+        const existingTask = activities.find(
+          a =>
+            a.title === 'Análise de Carteira: Risco de Churn' &&
+            a.description?.includes(contact.name) &&
+            !a.completed
+        );
+        return !existingTask;
+      })
+      .map(contact => {
+        const companyId = contact.clientCompanyId || contact.companyId;
+        const company = companies.find(c => c.id === companyId);
+        const companyDisplay = company?.name ? ` (Empresa: ${company.name})` : '';
 
-    for (const contact of riskyContacts) {
-      const existingTask = activities.find(
-        a =>
-          a.title === 'Análise de Carteira: Risco de Churn' &&
-          a.description?.includes(contact.name) &&
-          !a.completed
-      );
-
-      if (!existingTask) {
-        await addActivity({
+        return {
           dealId: '',
           dealTitle: 'Carteira de Clientes',
-          type: 'TASK',
+          type: 'TASK' as const,
           title: 'Análise de Carteira: Risco de Churn',
-          description: `O cliente ${contact.name} ${companies.find(c => c.id === (contact.clientCompanyId || contact.companyId))?.name ? `(Empresa: ${companies.find(c => c.id === (contact.clientCompanyId || contact.companyId))?.name})` : ''} está inativo há mais de 30 dias.`,
+          description: `O cliente ${contact.name}${companyDisplay} está inativo há mais de 30 dias.`,
           date: new Date().toISOString(),
           user: { name: 'Sistema', avatar: '' },
           completed: false,
-        });
-        newActivitiesCount++;
-      }
+        };
+      });
+
+    // Criar todas as atividades em paralelo (antes era O(n) sequencial)
+    if (activitiesToCreate.length > 0) {
+      await Promise.all(activitiesToCreate.map(activity => addActivity(activity)));
     }
 
-    return newActivitiesCount;
+    return activitiesToCreate.length;
   }, [contacts, activities, companies, addActivity]);
 
   const checkStagnantDeals = useCallback(async () => {
@@ -762,34 +771,43 @@ const CRMInnerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         (!d.lastStageChangeDate || new Date(d.lastStageChangeDate) < tenDaysAgo)
     );
 
-    let count = 0;
-    if (stagnantDeals.length > 0) {
-      for (const deal of stagnantDeals.slice(0, 3)) {
+    if (stagnantDeals.length === 0) {
+      return 0;
+    }
+
+    // Coletar atividades a serem criadas (evita await sequencial em loop)
+    const activitiesToCreate = stagnantDeals
+      .slice(0, 3) // Limitar a 3 deals
+      .filter(deal => {
+        // Verificar se já existe alerta para este deal
         const existingAlert = activities.find(
           a => a.dealId === deal.id && a.title === 'Alerta de Estagnação' && !a.completed
         );
+        return !existingAlert;
+      })
+      .map(deal => {
+        // Buscar o label do estágio para a mensagem (não UUID)
+        const board = getBoardById(deal.boardId);
+        const stageLabel = board?.stages.find(s => s.id === deal.status)?.label || deal.status;
 
-        if (!existingAlert) {
-          // Buscar o label do estágio para a mensagem (não UUID)
-          const board = getBoardById(deal.boardId);
-          const stageLabel = board?.stages.find(s => s.id === deal.status)?.label || deal.status;
+        return {
+          dealId: deal.id,
+          dealTitle: deal.title,
+          type: 'TASK' as const,
+          title: 'Alerta de Estagnação',
+          description: `Oportunidade parada em ${stageLabel} há mais de 10 dias.`,
+          date: new Date().toISOString(),
+          user: { name: 'Sistema', avatar: '' },
+          completed: false,
+        };
+      });
 
-          await addActivity({
-            dealId: deal.id,
-            dealTitle: deal.title,
-            type: 'TASK',
-            title: 'Alerta de Estagnação',
-            description: `Oportunidade parada em ${stageLabel} há mais de 10 dias.`,
-            date: new Date().toISOString(),
-            user: { name: 'Sistema', avatar: '' },
-            completed: false,
-          });
-          count++;
-        }
-      }
-      return stagnantDeals.length;
+    // Criar todas as atividades em paralelo (antes era O(n) sequencial)
+    if (activitiesToCreate.length > 0) {
+      await Promise.all(activitiesToCreate.map(activity => addActivity(activity)));
     }
-    return 0;
+
+    return stagnantDeals.length;
   }, [rawDeals, activities, addActivity, getBoardById]);
 
   // Build the context value

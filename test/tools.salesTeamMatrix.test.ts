@@ -22,13 +22,18 @@ const supabaseUrl =
   process.env.VITE_SUPABASE_URL ||
   '';
 
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+// Prefer new secret key format, fallback to legacy service_role key
+const serviceRoleKey =
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  '';
 
 const hasRealSupabaseCreds =
   Boolean(supabaseUrl) &&
   Boolean(serviceRoleKey) &&
   serviceRoleKey !== 'your_service_role_key' &&
-  !serviceRoleKey.startsWith('your_');
+  !serviceRoleKey.startsWith('your_') &&
+  !serviceRoleKey.startsWith('sb_secret_your_');
 
 const describeSupabase = hasRealSupabaseCreds ? describe : describe.skip;
 

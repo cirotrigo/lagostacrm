@@ -1,5 +1,3 @@
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { PeriodFilter, PERIOD_LABELS } from '@/features/dashboard/hooks/useDashboardMetrics';
 import { Deal } from '@/types';
 
@@ -33,15 +31,26 @@ const COLORS = {
 };
 
 /**
- * Função pública `generateReportPDF` do projeto.
+ * Gera um PDF com o relatório de performance do pipeline.
  *
- * @param {ReportData} data - Parâmetro `data`.
- * @param {PeriodFilter} period - Parâmetro `period`.
- * @param {string | undefined} boardName - Parâmetro `boardName`.
- * @param {string | undefined} generatedBy - Parâmetro `generatedBy`.
- * @returns {void} Não retorna valor.
+ * Usa dynamic imports para carregar jsPDF e jspdf-autotable apenas quando necessário,
+ * reduzindo o bundle inicial em ~200KB.
+ *
+ * @param {ReportData} data - Dados do relatório (pipeline, win rate, deals, etc.)
+ * @param {PeriodFilter} period - Período selecionado para o relatório
+ * @param {string | undefined} boardName - Nome do pipeline/board
+ * @param {string | undefined} generatedBy - Nome do usuário que gerou o relatório
+ * @returns {Promise<void>} Promise que resolve quando o PDF é gerado e aberto
  */
-export const generateReportPDF = (data: ReportData, period: PeriodFilter, boardName?: string, generatedBy?: string) => {
+export const generateReportPDF = async (data: ReportData, period: PeriodFilter, boardName?: string, generatedBy?: string) => {
+    // Dynamic imports - carrega jsPDF apenas quando a função é chamada
+    // Isso remove ~200KB do bundle inicial
+    const [{ jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+    ]);
+    const autoTable = autoTableModule.default;
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;

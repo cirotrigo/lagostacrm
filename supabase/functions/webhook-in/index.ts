@@ -169,8 +169,10 @@ Deno.serve(async (req) => {
 
   // Prefer custom secrets (installer-managed) to avoid reserved `SUPABASE_` prefix restrictions.
   // Fallback to Supabase-provided envs when available.
+  // New key format: CRM_SUPABASE_SECRET_KEY, legacy: CRM_SUPABASE_SERVICE_ROLE_KEY
   const supabaseUrl = Deno.env.get("CRM_SUPABASE_URL") ?? Deno.env.get("SUPABASE_URL");
   const serviceKey =
+    Deno.env.get("CRM_SUPABASE_SECRET_KEY") ??
     Deno.env.get("CRM_SUPABASE_SERVICE_ROLE_KEY") ??
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceKey) {

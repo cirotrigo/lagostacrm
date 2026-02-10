@@ -184,11 +184,25 @@ export async function POST(req: Request) {
           value: supabase.url,
           targets: envTargets,
         },
+        // New publishable key format (recommended)
+        {
+          key: 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+          value: resolvedAnonKey,
+          targets: envTargets,
+        },
+        // Legacy anon key (fallback for older projects)
         {
           key: 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
           value: resolvedAnonKey,
           targets: envTargets,
         },
+        // New secret key format (recommended)
+        {
+          key: 'SUPABASE_SECRET_KEY',
+          value: resolvedServiceRoleKey,
+          targets: envTargets,
+        },
+        // Legacy service_role key (fallback for older projects)
         {
           key: 'SUPABASE_SERVICE_ROLE_KEY',
           value: resolvedServiceRoleKey,

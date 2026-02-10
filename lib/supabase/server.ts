@@ -9,9 +9,14 @@ import { cookies } from 'next/headers'
 export async function createClient() {
     const cookieStore = await cookies()
 
+    // Prefer new key formats, fallback to legacy
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
     return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        supabaseUrl,
+        supabaseAnonKey,
         {
             cookies: {
                 getAll() {
@@ -40,9 +45,14 @@ export async function createClient() {
 export async function createAdminClient() {
     const cookieStore = await cookies()
 
+    // Prefer new key formats, fallback to legacy
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY
+        || process.env.SUPABASE_SERVICE_ROLE_KEY!
+
     return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        supabaseUrl,
+        supabaseSecretKey,
         {
             cookies: {
                 getAll() {
@@ -71,9 +81,11 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
  * @returns {SupabaseClient<any, "public", "public", any, any>} Retorna um valor do tipo `SupabaseClient<any, "public", "public", any, any>`.
  */
 export function createStaticAdminClient() {
-    return createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    // Prefer new key formats, fallback to legacy
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY
+        || process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+    return createSupabaseClient(supabaseUrl, supabaseSecretKey);
 }
 

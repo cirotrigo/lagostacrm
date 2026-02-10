@@ -6,7 +6,9 @@ export type PublicApiAuthResult =
 
 function getAnonSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Prefer new publishable key format, fallback to legacy anon key
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anon) return null;
   return createSupabaseClient(url, anon);
 }

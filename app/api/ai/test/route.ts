@@ -32,7 +32,9 @@ export async function POST(req: Request) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Prefer new secret key format, fallback to legacy service_role key
+    const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY
+        || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
         return NextResponse.json(

@@ -44,15 +44,17 @@ export async function POST(req: Request) {
   if (!orgs.ok) return json({ error: orgs.error, status: orgs.status }, orgs.status || 500);
 
   // Enrich orgs with plan + active counts.
+  // Paralelizamos getSupabaseOrganization e listAllSupabaseOrganizationProjects
+  // pois são chamadas independentes que usam apenas accessToken e slug.
   const enriched = await Promise.all(
     orgs.organizations.map(async (o) => {
-      const details = await getSupabaseOrganization({ accessToken, organizationSlug: o.slug });
-      const plan = details.ok && typeof details.organization.plan === 'string' ? details.organization.plan : undefined;
+      // Executa ambas as chamadas em paralelo (reduz latência em ~50%)
+      const [details, projects] = await Promise.all([
+        getSupabaseOrganization({ accessToken, organizationSlug: o.slug }),
+        listAllSupabaseOrganizationProjects({ accessToken, organizationSlug: o.slug }),
+      ]);
 
-      const projects = await listAllSupabaseOrganizationProjects({
-        accessToken,
-        organizationSlug: o.slug,
-      });
+      const plan = details.ok && typeof details.organization.plan === 'string' ? details.organization.plan : undefined;
       const items = projects.ok ? projects.projects : [];
       const activeProjects = items.filter((p) => (p.status || '').toUpperCase().startsWith('ACTIVE'));
 

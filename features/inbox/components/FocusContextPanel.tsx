@@ -119,9 +119,11 @@ export const FocusContextPanel: React.FC<FocusContextPanelProps> = ({
             onClose();
         };
 
+        // capture: true para interceptar antes de outros handlers
+        // NÃO usamos passive porque chamamos preventDefault()
         window.addEventListener('keydown', onKeyDown, { capture: true });
         return () => {
-            window.removeEventListener('keydown', onKeyDown, { capture: true } as any);
+            window.removeEventListener('keydown', onKeyDown, { capture: true });
         };
     }, [onClose]);
 
