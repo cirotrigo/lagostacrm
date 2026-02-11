@@ -71,6 +71,17 @@ const statusConfig: Record<
   },
 };
 
+// Normalize WPPConnect status (CONNECTED -> connected, CLOSED -> disconnected, etc.)
+const normalizeStatus = (status: string | undefined): WhatsAppSessionStatus => {
+  if (!status) return 'disconnected';
+  const lower = status.toLowerCase();
+  if (lower === 'connected' || lower === 'islogged') return 'connected';
+  if (lower === 'connecting' || lower === 'opening' || lower === 'pairing') return 'connecting';
+  if (lower === 'closed' || lower === 'disconnected' || lower === 'notlogged') return 'disconnected';
+  if (lower === 'qrcode' || lower === 'qr_pending') return 'qr_pending';
+  return 'disconnected';
+};
+
 export const WhatsAppSection: React.FC = () => {
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [qrCodeData, setQrCodeData] = useState<QRCodeData | null>(null);
@@ -113,7 +124,7 @@ export const WhatsAppSection: React.FC = () => {
 
   // Polling para QR Code quando status é qr_pending ou connecting
   useEffect(() => {
-    const status = sessionData?.session?.status || sessionData?.wppStatus?.status;
+    const status = sessionData?.session?.status || normalizeStatus(sessionData?.wppStatus?.status);
     if (status === 'qr_pending' || status === 'connecting') {
       fetchQRCode();
       const interval = setInterval(fetchQRCode, 5000);
@@ -123,7 +134,7 @@ export const WhatsAppSection: React.FC = () => {
 
   // Polling para status quando não está conectado
   useEffect(() => {
-    const status = sessionData?.session?.status;
+    const status = sessionData?.session?.status || normalizeStatus(sessionData?.wppStatus?.status);
     if (status && status !== 'connected') {
       const interval = setInterval(fetchSession, 10000);
       return () => clearInterval(interval);
@@ -152,8 +163,8 @@ export const WhatsAppSection: React.FC = () => {
   };
 
   const currentStatus: WhatsAppSessionStatus =
-    (sessionData?.session?.status as WhatsAppSessionStatus) ||
-    (sessionData?.wppStatus?.status as WhatsAppSessionStatus) ||
+    sessionData?.session?.status ||
+    normalizeStatus(sessionData?.wppStatus?.status) ||
     'disconnected';
 
   const statusInfo = statusConfig[currentStatus] || statusConfig.disconnected;
