@@ -26,9 +26,18 @@ export async function GET() {
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
+  // Debug logging for production troubleshooting
   if (!user) {
+    console.log('[Session Route] Auth failed:', {
+      hasUser: !!user,
+      authError: authError?.message || null,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'set' : 'missing',
+      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ? 'publishable' :
+                   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'anon' : 'missing',
+    });
     return json({ error: 'Unauthorized' }, 401);
   }
 
