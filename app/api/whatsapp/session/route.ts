@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { isAllowedOrigin } from '@/lib/security/sameOrigin';
+import { cookies } from 'next/headers';
 
 function json<T>(body: T, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -22,6 +23,17 @@ const API_AUTH_TOKEN = WPPCONNECT_TOKEN || WPPCONNECT_SECRET_KEY;
  * Retorna status da sessão WhatsApp (Supabase + WPPConnect)
  */
 export async function GET() {
+  // Debug: Log cookies received
+  const cookieStore = await cookies();
+  const allCookies = cookieStore.getAll();
+  const supabaseCookies = allCookies.filter(c => c.name.includes('supabase') || c.name.includes('sb-'));
+
+  console.log('[Session Route] Request received:', {
+    totalCookies: allCookies.length,
+    supabaseCookieNames: supabaseCookies.map(c => c.name),
+    hasAuthCookie: supabaseCookies.some(c => c.name.includes('auth-token')),
+  });
+
   const supabase = await createClient();
 
   const {
@@ -30,14 +42,13 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   // Debug logging for production troubleshooting
+  console.log('[Session Route] Auth result:', {
+    hasUser: !!user,
+    userId: user?.id?.substring(0, 8) || null,
+    authError: authError?.message || null,
+  });
+
   if (!user) {
-    console.log('[Session Route] Auth failed:', {
-      hasUser: !!user,
-      authError: authError?.message || null,
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'set' : 'missing',
-      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ? 'publishable' :
-                   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'anon' : 'missing',
-    });
     return json({ error: 'Unauthorized' }, 401);
   }
 
