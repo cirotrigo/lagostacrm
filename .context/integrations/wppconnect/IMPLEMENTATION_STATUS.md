@@ -12,7 +12,7 @@
 | Fase 1 | Infraestrutura WPPConnect | ✅ Completo |
 | Fase 2 | Backend - Tabelas (Migration) | ✅ Completo |
 | Fase 3 | Backend - API Routes | ✅ Completo |
-| Fase 4 | n8n - Workflow WPPConnect | 🔄 Pendente |
+| Fase 4 | n8n - Workflow WPPConnect | ✅ Completo |
 | Fase 4.5 | Reconexao Automatica | 🔄 Pendente |
 | Fase 5 | n8n - Sincronizacao Labels | 🔄 Pendente |
 | Fase 6 | Frontend - Settings WhatsApp | ✅ Completo |
@@ -75,16 +75,24 @@
 - [x] `/api/whatsapp/conversations/[id]/messages/route.ts` - Mensagens
 - [x] `/api/whatsapp/webhook/route.ts` - Receber eventos do n8n
 
-### Fase 4: n8n - Workflow WPPConnect 🔄
+### Fase 4: n8n - Workflow WPPConnect ✅
 
-- [ ] Criar webhook receiver para WPPConnect
-- [ ] Adaptar workflow existente de Chatwoot para WPPConnect
-- [ ] Criar fluxo de criacao de contato/conversa
-- [ ] Criar fluxo de envio de mensagens
-- [ ] Integrar com IA existente
+- [x] Criar webhook receiver para WPPConnect
+- [x] Adaptar workflow existente de Chatwoot para WPPConnect
+- [x] Criar fluxo de criacao de contato/conversa
+- [x] Criar fluxo de envio de mensagens
+- [x] Integrar com IA existente
+- [x] Documentar configuracao de webhooks
+
+**Arquivos criados:**
+- `.context/integrations/n8n/[Coronel Picanha] Agente WPPConnect.json`
+- `.context/integrations/n8n/WPPCONNECT_SETUP.md`
+
+**Pendente (configuracao manual):**
+- [ ] Importar workflow no n8n
+- [ ] Criar credenciais no n8n
 - [ ] Configurar webhooks no WPPConnect
-
-**Workflow existente a migrar:** `[Coronel Picanha] Agente de atendimento.json`
+- [ ] Ativar workflow
 
 ### Fase 6: Frontend - Settings WhatsApp ✅
 
@@ -141,18 +149,18 @@ whatsapp: {
 
 ## Proximos Passos
 
-### Prioridade Alta
-1. **Criar workflow n8n para WPPConnect** - Adaptar o workflow existente de Chatwoot
-2. **Configurar webhooks no WPPConnect** - Apontar para n8n
-3. **Testar fluxo end-to-end** - Receber mensagem -> IA -> Resposta
+### Prioridade Alta (Configuracao Manual Necessaria)
+1. **Importar workflow no n8n** - Arquivo: `[Coronel Picanha] Agente WPPConnect.json`
+2. **Criar credenciais no n8n** - Ver `WPPCONNECT_SETUP.md`
+3. **Configurar webhooks no WPPConnect** - Apontar para n8n
+4. **Testar fluxo end-to-end** - Receber mensagem -> IA -> Resposta
 
 ### Prioridade Media
-4. Health check e reconexao automatica
-5. Sincronizacao de labels
-6. Deploy do LagostaCRM na Vercel com novas env vars
+5. Health check e reconexao automatica (Fase 4.5)
+6. Sincronizacao de labels (Fase 5)
+7. Deploy do LagostaCRM na Vercel com novas env vars
 
 ### Prioridade Baixa
-7. Documentacao de uso
 8. Monitoramento e alertas
 
 ---
@@ -174,6 +182,8 @@ features/messaging/components/*.tsx (8 arquivos)
 features/messaging/hooks/*.ts (4 arquivos)
 features/messaging/types/messaging.ts
 features/settings/components/WhatsAppSection.tsx
+.context/integrations/n8n/[Coronel Picanha] Agente WPPConnect.json
+.context/integrations/n8n/WPPCONNECT_SETUP.md
 ```
 
 ### Arquivos Modificados
