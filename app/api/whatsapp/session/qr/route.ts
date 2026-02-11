@@ -45,14 +45,14 @@ export async function GET() {
   }
 
   try {
-    const response = await fetch(
-      `${WPPCONNECT_HOST}/api/${WPPCONNECT_SESSION_NAME}/qrcode-session`,
-      {
-        headers: {
-          Authorization: `Bearer ${API_AUTH_TOKEN}`,
-        },
-      }
-    );
+    // Usa status-session que retorna JSON com QR code base64
+    const wppUrl = `${WPPCONNECT_HOST}/api/${WPPCONNECT_SESSION_NAME}/status-session`;
+
+    const response = await fetch(wppUrl, {
+      headers: {
+        Authorization: `Bearer ${API_AUTH_TOKEN}`,
+      },
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
