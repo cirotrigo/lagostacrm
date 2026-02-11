@@ -9,14 +9,18 @@ function json<T>(body: T, status = 200): Response {
 
 const WPPCONNECT_HOST = process.env.WPPCONNECT_HOST;
 const WPPCONNECT_SECRET_KEY = process.env.WPPCONNECT_SECRET_KEY;
-const WPPCONNECT_SESSION_NAME = process.env.WPPCONNECT_SESSION_NAME || 'lagostacrm-main';
+const WPPCONNECT_TOKEN = process.env.WPPCONNECT_TOKEN;
+const WPPCONNECT_SESSION_NAME = process.env.WPPCONNECT_SESSION_NAME || 'lagostacrm';
+
+// Use TOKEN for API auth (bcrypt hash), SECRET_KEY is for webhook validation
+const API_AUTH_TOKEN = WPPCONNECT_TOKEN || WPPCONNECT_SECRET_KEY;
 
 /**
  * GET /api/whatsapp/session/qr
  * Retorna QR Code para escaneamento (base64)
  */
 export async function GET() {
-  if (!WPPCONNECT_HOST || !WPPCONNECT_SECRET_KEY) {
+  if (!WPPCONNECT_HOST || !API_AUTH_TOKEN) {
     return json({ error: 'WPPConnect not configured' }, 503);
   }
 
@@ -45,7 +49,7 @@ export async function GET() {
       `${WPPCONNECT_HOST}/api/${WPPCONNECT_SESSION_NAME}/qrcode-session`,
       {
         headers: {
-          Authorization: `Bearer ${WPPCONNECT_SECRET_KEY}`,
+          Authorization: `Bearer ${API_AUTH_TOKEN}`,
         },
       }
     );

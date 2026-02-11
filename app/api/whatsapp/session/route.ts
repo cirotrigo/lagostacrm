@@ -11,7 +11,11 @@ function json<T>(body: T, status = 200): Response {
 
 const WPPCONNECT_HOST = process.env.WPPCONNECT_HOST;
 const WPPCONNECT_SECRET_KEY = process.env.WPPCONNECT_SECRET_KEY;
-const WPPCONNECT_SESSION_NAME = process.env.WPPCONNECT_SESSION_NAME || 'lagostacrm-main';
+const WPPCONNECT_TOKEN = process.env.WPPCONNECT_TOKEN;
+const WPPCONNECT_SESSION_NAME = process.env.WPPCONNECT_SESSION_NAME || 'lagostacrm';
+
+// Use TOKEN for API auth (bcrypt hash), SECRET_KEY is for webhook validation
+const API_AUTH_TOKEN = WPPCONNECT_TOKEN || WPPCONNECT_SECRET_KEY;
 
 /**
  * GET /api/whatsapp/session
@@ -52,13 +56,13 @@ export async function GET() {
 
   // Se WPPConnect está configurado, busca status em tempo real
   let wppStatus = null;
-  if (WPPCONNECT_HOST && WPPCONNECT_SECRET_KEY) {
+  if (WPPCONNECT_HOST && API_AUTH_TOKEN) {
     try {
       const response = await fetch(
         `${WPPCONNECT_HOST}/api/${WPPCONNECT_SESSION_NAME}/status-session`,
         {
           headers: {
-            Authorization: `Bearer ${WPPCONNECT_SECRET_KEY}`,
+            Authorization: `Bearer ${API_AUTH_TOKEN}`,
           },
         }
       );
@@ -74,7 +78,7 @@ export async function GET() {
     session: session || null,
     wppStatus,
     sessionName: WPPCONNECT_SESSION_NAME,
-    isConfigured: Boolean(WPPCONNECT_HOST && WPPCONNECT_SECRET_KEY),
+    isConfigured: Boolean(WPPCONNECT_HOST && API_AUTH_TOKEN),
   });
 }
 
@@ -91,7 +95,7 @@ export async function POST(req: Request) {
     return json({ error: 'Forbidden' }, 403);
   }
 
-  if (!WPPCONNECT_HOST || !WPPCONNECT_SECRET_KEY) {
+  if (!WPPCONNECT_HOST || !API_AUTH_TOKEN) {
     return json({ error: 'WPPConnect not configured' }, 503);
   }
 
@@ -147,7 +151,7 @@ export async function POST(req: Request) {
     const response = await fetch(endpoint, {
       method,
       headers: {
-        Authorization: `Bearer ${WPPCONNECT_SECRET_KEY}`,
+        Authorization: `Bearer ${API_AUTH_TOKEN}`,
         'Content-Type': 'application/json',
       },
     });
