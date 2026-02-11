@@ -52,7 +52,10 @@ type RealtimeTable =
   | 'activities'
   | 'boards'
   | 'board_stages'
-  | 'crm_companies';
+  | 'crm_companies'
+  | 'whatsapp_sessions'
+  | 'whatsapp_conversations'
+  | 'whatsapp_messages';
 
 // Lazy getter for query keys mapping - avoids initialization issues in tests
 const getTableQueryKeys = (table: RealtimeTable): readonly (readonly unknown[])[] => {
@@ -63,6 +66,9 @@ const getTableQueryKeys = (table: RealtimeTable): readonly (readonly unknown[])[
     boards: [queryKeys.boards.all],
     board_stages: [queryKeys.boards.all], // stages invalidate boards
     crm_companies: [queryKeys.companies.all],
+    whatsapp_sessions: [queryKeys.whatsapp.session()],
+    whatsapp_conversations: [queryKeys.whatsapp.conversations()],
+    whatsapp_messages: [queryKeys.whatsapp.all],
   };
   return mapping[table];
 };

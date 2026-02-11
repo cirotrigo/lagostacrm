@@ -43,6 +43,17 @@ export const queryKeys = {
         funnel: ['dashboard', 'funnel'] as const,
         timeline: ['dashboard', 'timeline'] as const,
     },
+
+    // WhatsApp Messaging
+    whatsapp: {
+        all: ['whatsapp'] as const,
+        session: () => ['whatsapp', 'session'] as const,
+        conversations: () => ['whatsapp', 'conversations'] as const,
+        conversation: (id: string) => ['whatsapp', 'conversations', id] as const,
+        messages: (conversationId: string) => ['whatsapp', 'messages', conversationId] as const,
+        templates: () => ['whatsapp', 'templates'] as const,
+        labels: () => ['whatsapp', 'labels'] as const,
+    },
 };
 
 /**

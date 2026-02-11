@@ -1,0 +1,551 @@
+{
+  "name": "[LagostaCRM] WPPConnect - Base Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Gatilho - Webhook WPPConnect\n\nRecebe eventos do WPPConnect Server:\n- onMessage (mensagens recebidas)\n- onAck (status de entrega)\n- onLabel (mudanças de etiquetas)",
+        "height": 320,
+        "width": 280
+      },
+      "id": "916d41bf-48e6-41e3-8661-3241bc9ba1c5",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-880, 160]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wppconnect/lagostacrm",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-800, 320],
+      "id": "1f91d602-5899-4f07-8854-26c47fae778f",
+      "name": "Webhook",
+      "webhookId": "wppconnect-lagostacrm"
+    },
+    {
+      "parameters": {
+        "content": "## Variáveis do Fluxo\n\nConfigure:\n- CRM-Host: URL do LagostaCRM\n- WPP-Host: URL do WPPConnect Server\n- WPP-Session: Nome da sessão",
+        "height": 280,
+        "width": 280,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-560, 160],
+      "id": "0bd8e61b-9be9-4be5-bfb7-b0aaec5464a7",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "69f6217f-9063-423f-abf4-e94f6b70f94e",
+              "name": "CRM-Host",
+              "value": "https://coronelpicanhacrm.vercel.app",
+              "type": "string"
+            },
+            {
+              "id": "9f488c5c-0b3b-48e9-87b1-5a22d513d1ec",
+              "name": "WPP-Host",
+              "value": "https://seu-wppconnect-server.com",
+              "type": "string"
+            },
+            {
+              "id": "5d5c64c0-6bce-491f-82fc-0aa5149516bf",
+              "name": "WPP-Session",
+              "value": "lagostacrm-main",
+              "type": "string"
+            },
+            {
+              "id": "8cf12e76-7924-417a-9941-9b3b65748069",
+              "name": "EventType",
+              "value": "={{ $json.body.event }}",
+              "type": "string"
+            },
+            {
+              "id": "88ad3099-bafe-435d-9dea-ea65368a4cbe",
+              "name": "SenderPhone",
+              "value": "={{ ($json.body.sender?.id || '').replace('@c.us', '').replace('@s.whatsapp.net', '') }}",
+              "type": "string"
+            },
+            {
+              "id": "0733986a-61fc-423a-ad97-14abf9fcd1b1",
+              "name": "SenderName",
+              "value": "={{ $json.body.sender?.pushname || $json.body.sender?.name || 'Desconhecido' }}",
+              "type": "string"
+            },
+            {
+              "id": "0e8fc314-b3ff-4317-9102-50253f35a298",
+              "name": "MessageContent",
+              "value": "={{ $json.body.body || $json.body.caption || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "2236cc1a-7671-4684-b567-cb943e939916",
+              "name": "MessageType",
+              "value": "={{ $json.body.type || 'chat' }}",
+              "type": "string"
+            },
+            {
+              "id": "fb3f3cb0-c854-4002-a8cf-d3a0d3c765ce",
+              "name": "MessageID",
+              "value": "={{ $json.body.id }}",
+              "type": "string"
+            },
+            {
+              "id": "1ae1a51c-00cb-47f9-8dc8-5a05c66fc0c8",
+              "name": "ChatID",
+              "value": "={{ $json.body.chatId || $json.body.from }}",
+              "type": "string"
+            },
+            {
+              "id": "697401cd-0b21-4318-a367-80fa42390dcd",
+              "name": "IsGroup",
+              "value": "={{ ($json.body.chatId || '').includes('@g.us') }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7057d2df-f5d6-467e-aaee-c6f833331e3c",
+      "name": "Fluxo_Variaveis",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-480, 320]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "130cc493-a17a-4cc1-955b-816799583076",
+              "leftValue": "={{ $('Fluxo_Variaveis').item.json.EventType }}",
+              "rightValue": "onMessage",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9d7a5468-84e5-4a69-bd97-d76ebcfb5162",
+      "name": "É Mensagem?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-160, 320]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "d794ecce-59f0-4db6-a518-194d4d1e6820",
+              "leftValue": "={{ $('Fluxo_Variaveis').item.json.IsGroup }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+              "leftValue": "={{ $('Fluxo_Variaveis').item.json.MessageContent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bc8b084e-9e04-41e6-84f6-80c68bd1c9c7",
+      "name": "Filtrar_Grupos_Vazios",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [80, 240]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Fluxo_Variaveis').item.json['CRM-Host'] }}/api/public/v1/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $('Fluxo_Variaveis').item.json.SenderPhone }}"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9043329d-ab05-43b0-934a-8058ca5538f5",
+      "name": "Buscar_Contato_CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [320, 240],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "LagostaCRM API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "3419c30f-4400-401b-bf40-db1579507f96",
+              "leftValue": "={{ $json.data[0].id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "979cf3ed-660a-4783-95be-69c1bae69233",
+      "name": "Contato_Existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [560, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Fluxo_Variaveis').item.json['CRM-Host'] }}/api/public/v1/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $('Fluxo_Variaveis').item.json.SenderName }}\",\n  \"phone\": \"{{ $('Fluxo_Variaveis').item.json.SenderPhone }}\",\n  \"source\": \"WHATSAPP\",\n  \"stage\": \"LEAD\",\n  \"status\": \"ACTIVE\"\n}",
+        "options": {}
+      },
+      "id": "96730289-d526-400a-98bb-9fbb2bc2e60d",
+      "name": "Criar_Contato_CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, 320],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "LagostaCRM API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c311906b-5851-4229-b1dc-bf5aad039088",
+              "name": "contact_id",
+              "value": "={{ $json.data[0].id }}",
+              "type": "string"
+            },
+            {
+              "id": "9940b877-256f-4d96-aa97-f419ac46f4b4",
+              "name": "contact_name",
+              "value": "={{ $json.data[0].name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7db6d4f8-1c24-4455-baa6-f6bf472a8cf5",
+      "name": "Set_Contato_Existente",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [800, 160]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ffa8d11f-d72d-48a0-a8ce-5cf1cbbce95b",
+              "name": "contact_id",
+              "value": "={{ $json.data.id }}",
+              "type": "string"
+            },
+            {
+              "id": "d7cc24aa-8b5d-4751-a1c9-74306ef94f03",
+              "name": "contact_name",
+              "value": "={{ $('Fluxo_Variaveis').item.json.SenderName }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bda58b5d-d2ce-4e37-a6c7-d3ebd4be4f1c",
+      "name": "Set_Contato_Novo",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1040, 320]
+    },
+    {
+      "parameters": {},
+      "id": "c311906b-merge",
+      "name": "Merge_Contatos",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1040, 160]
+    },
+    {
+      "parameters": {
+        "content": "## Próximos Passos\n\nA partir daqui você pode:\n\n1. Salvar mensagem no Supabase\n2. Acionar agente IA\n3. Enviar resposta via WPPConnect\n4. Atualizar deal no CRM",
+        "height": 280,
+        "width": 280,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1280, 80],
+      "id": "sticky-next",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Processamento de Labels e ACK\n\nPara outros eventos (onAck, onLabel),\nadicione branches adicionais aqui",
+        "height": 200,
+        "width": 300,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-160, 480],
+      "id": "sticky-other",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Enviar Mensagem via WPPConnect\n\nExemplo de como enviar mensagem de volta.\nConecte este nó após o Merge_Contatos.",
+        "height": 280,
+        "width": 360,
+        "color": 1
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1280, 400],
+      "id": "sticky-send",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Fluxo_Variaveis').item.json['WPP-Host'] }}/api/{{ $('Fluxo_Variaveis').item.json['WPP-Session'] }}/send-message",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Fluxo_Variaveis').item.json.SenderPhone }}\",\n  \"message\": \"Olá! Recebi sua mensagem. Como posso ajudar?\"\n}",
+        "options": {}
+      },
+      "id": "send-message-wpp",
+      "name": "Enviar_Mensagem_WPP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1360, 520],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_WPP_CREDENTIAL_ID",
+          "name": "WPPConnect API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Gerenciar Labels no WhatsApp\n\nExemplo de como adicionar/remover labels em um chat.",
+        "height": 280,
+        "width": 360,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1680, 400],
+      "id": "sticky-labels",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Fluxo_Variaveis').item.json['WPP-Host'] }}/api/{{ $('Fluxo_Variaveis').item.json['WPP-Session'] }}/add-or-remove-labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatIds\": [\"{{ $('Fluxo_Variaveis').item.json.ChatID }}\"],\n  \"labels\": [\n    { \"labelId\": \"1\", \"type\": \"add\" }\n  ]\n}",
+        "options": {}
+      },
+      "id": "manage-labels-wpp",
+      "name": "Gerenciar_Labels_WPP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 520],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_WPP_CREDENTIAL_ID",
+          "name": "WPPConnect API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fluxo_Variaveis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fluxo_Variaveis": {
+      "main": [
+        [
+          {
+            "node": "É Mensagem?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Mensagem?": {
+      "main": [
+        [
+          {
+            "node": "Filtrar_Grupos_Vazios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Filtrar_Grupos_Vazios": {
+      "main": [
+        [
+          {
+            "node": "Buscar_Contato_CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Buscar_Contato_CRM": {
+      "main": [
+        [
+          {
+            "node": "Contato_Existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contato_Existe?": {
+      "main": [
+        [
+          {
+            "node": "Set_Contato_Existente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Criar_Contato_CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar_Contato_CRM": {
+      "main": [
+        [
+          {
+            "node": "Set_Contato_Novo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_Contato_Existente": {
+      "main": [
+        [
+          {
+            "node": "Merge_Contatos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_Contato_Novo": {
+      "main": [
+        [
+          {
+            "node": "Merge_Contatos",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

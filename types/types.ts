@@ -488,3 +488,256 @@ export interface ContactsServerFilters {
 
 /** Colunas ordenáveis na tabela de contatos. */
 export type ContactSortableColumn = 'name' | 'created_at' | 'updated_at' | 'stage';
+
+// =============================================================================
+// WhatsApp Messaging Types
+// =============================================================================
+
+/**
+ * Status de conexão da sessão WhatsApp.
+ */
+export type WhatsAppSessionStatus =
+  | 'disconnected'
+  | 'connecting'
+  | 'qr_pending'
+  | 'connected'
+  | 'error';
+
+/**
+ * Sessão WhatsApp conectada ao WPPConnect.
+ */
+export interface WhatsAppSession {
+  id: string;
+  organization_id: string;
+  session_name: string;
+  phone_number: string | null;
+  profile_name: string | null;
+  profile_picture_url: string | null;
+  status: WhatsAppSessionStatus;
+  qr_code: string | null;
+  error_message: string | null;
+  is_default: boolean;
+  webhook_url: string | null;
+  auto_reconnect: boolean;
+  connected_at: string | null;
+  last_sync_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Status de uma conversa WhatsApp.
+ */
+export type WhatsAppConversationStatus = 'open' | 'pending' | 'resolved' | 'archived';
+
+/**
+ * Direção da mensagem.
+ */
+export type MessageDirection = 'inbound' | 'outbound';
+
+/**
+ * Conversa WhatsApp com um contato.
+ */
+export interface WhatsAppConversation {
+  id: string;
+  organization_id: string;
+  session_id: string;
+  contact_id: string | null;
+  deal_id: string | null;
+  remote_jid: string;
+  is_group: boolean;
+  group_name: string | null;
+  status: WhatsAppConversationStatus;
+  assigned_to: string | null;
+  ai_enabled: boolean;
+  unread_count: number;
+  total_messages: number;
+  last_message_at: string | null;
+  last_message_preview: string | null;
+  last_message_direction: MessageDirection | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Conversa com dados do contato (view).
+ */
+export interface WhatsAppConversationView extends WhatsAppConversation {
+  contact_name: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  contact_avatar: string | null;
+  deal_title: string | null;
+  deal_value: number | null;
+  deal_stage: string | null;
+  session_name: string;
+  session_phone: string | null;
+}
+
+/**
+ * Tipo de mídia da mensagem.
+ */
+export type WhatsAppMediaType =
+  | 'text'
+  | 'image'
+  | 'audio'
+  | 'video'
+  | 'document'
+  | 'sticker'
+  | 'location'
+  | 'contact'
+  | 'poll';
+
+/**
+ * Status de entrega da mensagem.
+ */
+export type WhatsAppMessageStatus =
+  | 'pending'
+  | 'sent'
+  | 'delivered'
+  | 'read'
+  | 'failed';
+
+/**
+ * Mensagem WhatsApp.
+ */
+export interface WhatsAppMessage {
+  id: string;
+  conversation_id: string;
+  wpp_message_id: string | null;
+  direction: MessageDirection;
+  media_type: WhatsAppMediaType;
+  content: string | null;
+  caption: string | null;
+  media_url: string | null;
+  media_mime_type: string | null;
+  media_filename: string | null;
+  media_size_bytes: number | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  location_name: string | null;
+  status: WhatsAppMessageStatus;
+  status_updated_at: string | null;
+  error_message: string | null;
+  sender_jid: string | null;
+  sender_name: string | null;
+  sender_phone: string | null;
+  quoted_message_id: string | null;
+  is_from_me: boolean;
+  is_forwarded: boolean;
+  is_broadcast: boolean;
+  wpp_timestamp: string | null;
+  created_at: string;
+}
+
+/**
+ * Direção de sincronização de labels.
+ */
+export type LabelSyncDirection = 'to_crm' | 'to_wpp' | 'both' | 'none';
+
+/**
+ * Mapeamento de label WhatsApp para tag CRM.
+ */
+export interface WhatsAppLabelSync {
+  id: string;
+  organization_id: string;
+  session_id: string;
+  wpp_label_id: string;
+  wpp_label_name: string;
+  wpp_label_color: string | null;
+  crm_tag_id: string | null;
+  sync_direction: LabelSyncDirection;
+  auto_create_tag: boolean;
+  last_synced_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Label aplicada a uma conversa.
+ */
+export interface WhatsAppConversationLabel {
+  id: string;
+  conversation_id: string;
+  label_sync_id: string;
+  applied_at: string;
+  applied_by: 'wpp' | 'crm' | 'n8n' | null;
+}
+
+/**
+ * Evento de webhook recebido.
+ */
+export interface WhatsAppWebhookEvent {
+  id: string;
+  organization_id: string | null;
+  session_id: string | null;
+  event_type: string;
+  payload: Record<string, unknown>;
+  status: 'received' | 'processing' | 'processed' | 'failed' | 'ignored';
+  error_message: string | null;
+  processed_at: string | null;
+  received_at: string;
+}
+
+/**
+ * Categoria de template de mensagem.
+ */
+export type MessageTemplateCategory = 'general' | 'greeting' | 'follow_up' | 'closing';
+
+/**
+ * Template de mensagem reutilizável.
+ */
+export interface WhatsAppMessageTemplate {
+  id: string;
+  organization_id: string;
+  name: string;
+  category: MessageTemplateCategory;
+  content: string;
+  media_url: string | null;
+  media_type: string | null;
+  is_active: boolean;
+  usage_count: number;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+/**
+ * Payload para enviar mensagem.
+ */
+export interface SendMessagePayload {
+  conversation_id: string;
+  content: string;
+  media_url?: string;
+  media_type?: WhatsAppMediaType;
+  quoted_message_id?: string;
+}
+
+/**
+ * Filtros para listagem de conversas.
+ */
+export interface ConversationFilters {
+  status?: WhatsAppConversationStatus | 'all';
+  assigned_to?: string | 'unassigned' | 'all';
+  search?: string;
+  has_unread?: boolean;
+}
+
+/**
+ * Resposta da API de conversas.
+ */
+export interface ConversationsResponse {
+  data: WhatsAppConversationView[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/**
+ * Resposta da API de mensagens.
+ */
+export interface MessagesResponse {
+  data: WhatsAppMessage[];
+  has_more: boolean;
+  oldest_id: string | null;
+}
