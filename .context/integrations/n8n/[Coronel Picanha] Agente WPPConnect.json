@@ -7,13 +7,13 @@
         "height": 284,
         "width": 200
       },
-      "id": "916d41bf-48e6-41e3-8661-3241bc9ba1c5",
+      "id": "44d49933-1708-4d89-b685-aa0bc73f1928",
       "name": "Sticky Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -880,
-        224
+        -864,
+        80
       ]
     },
     {
@@ -23,13 +23,13 @@
         "width": 1098,
         "color": 4
       },
-      "id": "bda58b5d-d2ce-4e37-a6c7-d3ebd4be4f1c",
+      "id": "5cde5a58-693f-468f-a921-87d2883b6dd1",
       "name": "Sticky Note1",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        160,
-        32
+        176,
+        -112
       ]
     },
     {
@@ -41,10 +41,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -608,
-        240
+        -592,
+        96
       ],
-      "id": "d7cc24aa-8b5d-4751-a1c9-74306ef94f03",
+      "id": "4dc4f272-2c31-40a0-a2a4-9a6d3d447686",
       "name": "Sticky Note5"
     },
     {
@@ -56,10 +56,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -832,
-        352
+        -816,
+        208
       ],
-      "id": "1f91d602-5899-4f07-8854-26c47fae778f",
+      "id": "6577cbe5-bd38-462b-96cf-2d0b4270f591",
       "name": "Webhook",
       "webhookId": "wppconnect-coronel-picanha"
     },
@@ -73,10 +73,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -336,
-        144
+        -320,
+        0
       ],
-      "id": "0bd8e61b-9be9-4be5-bfb7-b0aaec5464a7",
+      "id": "8ebe9b53-8ef7-4300-8258-2dc2977e0c02",
       "name": "Sticky Note6"
     },
     {
@@ -87,13 +87,13 @@
               "id": "cliente-nome",
               "name": "ClienteNome",
               "type": "string",
-              "value": "={{(() => { const name = $('Webhook').item.json.body.data?.sender?.pushname || $('Webhook').item.json.body.data?.sender?.name || 'Cliente'; return name.split(' ').filter(w => w).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' '); })()}}"
+              "value": "={{(() => { const name = $('Webhook').item.json.body.sender?.pushname || $('Webhook').item.json.body.sender?.name || $('Webhook').item.json.body.notifyName || 'Cliente'; return name.split(' ').filter(w => w).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' '); })()}}"
             },
             {
               "id": "cliente-telefone",
               "name": "ClienteTelefone",
               "type": "string",
-              "value": "={{ $('Webhook').item.json.body.data?.from?.replace('@c.us', '').replace('@s.whatsapp.net', '') }}"
+              "value": "={{ $('Webhook').item.json.body.from?.replace('@c.us', '').replace('@s.whatsapp.net', '').replace('@lid', '') }}"
             },
             {
               "id": "cliente-email",
@@ -135,49 +135,49 @@
               "id": "wpp-msg-id",
               "name": "WPP-MessageID",
               "type": "string",
-              "value": "={{ $('Webhook').item.json.body.data?.id }}"
+              "value": "={{ $('Webhook').item.json.body.id }}"
             },
             {
               "id": "wpp-conv-id",
               "name": "WPP-ConversationID",
               "type": "string",
-              "value": "={{ $('Webhook').item.json.body.data?.from?.replace('@c.us', '').replace('@s.whatsapp.net', '') }}"
+              "value": "={{ $('Webhook').item.json.body.from?.replace('@c.us', '').replace('@s.whatsapp.net', '').replace('@lid', '') }}"
             },
             {
               "id": "mensagem",
               "name": "Mensagem",
               "type": "string",
-              "value": "={{ $('Webhook').item.json.body.data?.body || '' }}"
+              "value": "={{ $('Webhook').item.json.body.body || $('Webhook').item.json.body.content || '' }}"
             },
             {
               "id": "msg-time",
               "name": "MessagemTime",
               "type": "string",
-              "value": "={{ new Date(($('Webhook').item.json.body.data?.timestamp || 0) * 1000).toISOString() }}"
+              "value": "={{ new Date(($('Webhook').item.json.body.t || $('Webhook').item.json.body.timestamp || 0) * 1000).toISOString() }}"
             },
             {
               "id": "horario",
               "name": "Horario",
               "type": "string",
-              "value": "={{ new Date(($('Webhook').item.json.body.data?.timestamp || 0) * 1000).toLocaleString('pt-BR') }}"
+              "value": "={{ new Date(($('Webhook').item.json.body.t || $('Webhook').item.json.body.timestamp || 0) * 1000).toLocaleString('pt-BR') }}"
             },
             {
               "id": "msg-type",
               "name": "MessageType",
               "type": "string",
-              "value": "={{ $('Webhook').item.json.body.data?.type }}"
+              "value": "={{ $('Webhook').item.json.body.type }}"
             },
             {
               "id": "url-arquivo",
               "name": "URL-Arquivo",
               "type": "string",
-              "value": "={{ $('Webhook').item.json.body.data?.mediaUrl }}"
+              "value": "={{ $('Webhook').item.json.body.mediaUrl || $('Webhook').item.json.body.deprecatedMms3Url || '' }}"
             },
             {
               "id": "mimetype",
               "name": "MimeType",
               "type": "string",
-              "value": "={{ $('Webhook').item.json.body.data?.mimetype }}"
+              "value": "={{ $('Webhook').item.json.body.mimetype || '' }}"
             },
             {
               "id": "buffer-delay",
@@ -195,28 +195,37 @@
         },
         "options": {}
       },
-      "id": "7057d2df-f5d6-467e-aaee-c6f833331e3c",
+      "id": "d2582eed-e946-4dc5-b52c-24b7ae9b3827",
       "name": "Fluxo_Variaveis",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -240,
-        352
+        -224,
+        208
       ]
     },
     {
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "caseSensitive": false,
             "leftValue": "",
             "typeValidation": "loose",
             "version": 1
           },
           "conditions": [
             {
+              "id": "event-check",
+              "leftValue": "={{ $json.body?.event || $json.event || '' }}",
+              "rightValue": "onmessage",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
               "id": "group-check",
-              "leftValue": "={{ $('Webhook').item.json.body.data?.isGroupMsg }}",
+              "leftValue": "={{ $json.body?.isGroupMsg ?? false }}",
               "rightValue": false,
               "operator": {
                 "type": "boolean",
@@ -225,19 +234,10 @@
             },
             {
               "id": "fromme-check",
-              "leftValue": "={{ $('Webhook').item.json.body.data?.fromMe }}",
+              "leftValue": "={{ $json.body?.fromMe ?? false }}",
               "rightValue": false,
               "operator": {
                 "type": "boolean",
-                "operation": "equals"
-              }
-            },
-            {
-              "id": "event-check",
-              "leftValue": "={{ $('Webhook').item.json.body.event }}",
-              "rightValue": "onmessage",
-              "operator": {
-                "type": "string",
                 "operation": "equals"
               }
             }
@@ -247,13 +247,13 @@
         "looseTypeValidation": true,
         "options": {}
       },
-      "id": "9d7a5468-84e5-4a69-bd97-d76ebcfb5162",
+      "id": "50712943-ec87-41e7-a9eb-8e4b9da92522",
       "name": "Filtro_Inicial",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.1,
       "position": [
-        -528,
-        352
+        -512,
+        208
       ]
     },
     {
@@ -276,19 +276,19 @@
         },
         "options": {}
       },
-      "id": "9043329d-ab05-43b0-934a-8058ca5538f5",
+      "id": "708f815a-7700-4db2-bd17-59a5e1dcc74e",
       "name": "Encontrar_Cliente_CRM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        0,
-        352
+        16,
+        208
       ],
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -318,13 +318,13 @@
         "looseTypeValidation": true,
         "options": {}
       },
-      "id": "bc8b084e-9e04-41e6-84f6-80c68bd1c9c7",
+      "id": "0ed73731-1028-48c8-81e7-93e530337ddd",
       "name": "Existe_No_CRM?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.1,
       "position": [
-        224,
-        352
+        240,
+        208
       ],
       "alwaysOutputData": false
     },
@@ -339,18 +339,18 @@
         "jsonBody": "={\n  \"name\": \"{{ $('Fluxo_Variaveis').item.json.ClienteNome }}\",\n  \"phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n  \"email\": \"{{ $('Fluxo_Variaveis').item.json.ClienteEmail }}\",\n  \"source\": \"WHATSAPP\",\n  \"stage\": \"LEAD\",\n  \"status\": \"ACTIVE\"\n}",
         "options": {}
       },
-      "id": "979cf3ed-660a-4783-95be-69c1bae69233",
+      "id": "62c6c8d3-b084-4099-bedb-9c272c0db82b",
       "name": "Criar_Contato_CRM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        448,
-        448
+        464,
+        304
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -365,18 +365,18 @@
         "jsonBody": "={\n  \"title\": \"WhatsApp - {{ $('Fluxo_Variaveis').item.json.ClienteNome }}\",\n  \"value\": 0,\n  \"board_key\": \"{{ $('Fluxo_Variaveis').item.json['CRM-BoardKey'] }}\",\n  \"contact_id\": \"{{ $json.data.id }}\"\n}",
         "options": {}
       },
-      "id": "96730289-d526-400a-98bb-9fbb2bc2e60d",
+      "id": "23a3ff79-d677-4569-9978-b3b5f7886aed",
       "name": "Criar_Deal_CRM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        672,
-        448
+        688,
+        304
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -412,13 +412,13 @@
         },
         "options": {}
       },
-      "id": "c311906b-5851-4229-b1dc-bf5aad039088",
+      "id": "ea8085a2-d0ba-4098-8d1d-64867c200b1b",
       "name": "Set_Contato_Existente",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        896,
-        256
+        912,
+        112
       ]
     },
     {
@@ -453,24 +453,24 @@
         },
         "options": {}
       },
-      "id": "9940b877-256f-4d96-aa97-f419ac46f4b4",
+      "id": "ce8b7ac8-1a0e-469c-908b-f5c09ff403c4",
       "name": "Set_Contato_Novo",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        896,
-        448
+        912,
+        304
       ]
     },
     {
       "parameters": {},
-      "id": "7db6d4f8-1c24-4455-baa6-f6bf472a8cf5",
+      "id": "2c81e1e4-4199-48ac-a3c8-1da3f4116e5d",
       "name": "Merge_Contatos",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        1120,
-        352
+        1136,
+        208
       ]
     },
     {
@@ -480,13 +480,13 @@
         "width": 1632,
         "color": 2
       },
-      "id": "ffa8d11f-d72d-48a0-a8ce-5cf1cbbce95b",
+      "id": "313d8f70-2b1a-4c20-a768-d5748bc6c9e0",
       "name": "Sticky Note4",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -528,
-        912
+        -512,
+        768
       ]
     },
     {
@@ -530,6 +530,30 @@
                     "id": "aud",
                     "leftValue": "={{ $('Fluxo_Variaveis').item.json.MessageType }}",
                     "rightValue": "ptt",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "aud2",
+                    "leftValue": "={{ $('Fluxo_Variaveis').item.json.MessageType }}",
+                    "rightValue": "audio",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
@@ -597,13 +621,13 @@
           "renameFallbackOutput": "Erro"
         }
       },
-      "id": "f687efd2-90ad-4606-9424-47cf66e1c098",
+      "id": "ba565b92-7363-4ffd-9876-f305c426d1bb",
       "name": "MessageType",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.1,
       "position": [
-        -496,
-        1552
+        -480,
+        1408
       ]
     },
     {
@@ -620,13 +644,13 @@
         },
         "options": {}
       },
-      "id": "8b7765e1-48d3-428c-a940-62264be19021",
+      "id": "c7fd8b53-3435-4847-a8c0-908674619208",
       "name": "Msg Texto",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        752,
-        1024
+        768,
+        880
       ]
     },
     {
@@ -634,13 +658,13 @@
         "url": "={{ $('Fluxo_Variaveis').item.json['URL-Arquivo'] }}",
         "options": {}
       },
-      "id": "61f5d6dd-b470-4c7a-aff2-6ec63274bf07",
+      "id": "15e26928-62c5-4428-8563-a22ff3633e5a",
       "name": "getAudio",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        240,
-        1216
+        256,
+        1072
       ]
     },
     {
@@ -650,17 +674,17 @@
         "binaryPropertyName": "=data",
         "options": {}
       },
-      "id": "28086438-153e-4e1a-9bda-a136edb43a65",
+      "id": "84babd91-851e-4e99-a4cb-c31a9c0bcd3c",
       "name": "Transcrever Áudio",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.4,
       "position": [
-        528,
-        1216
+        544,
+        1072
       ],
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
+          "id": "w7hw6xt43gykWFZ8",
           "name": "OpenAi account"
         }
       }
@@ -679,13 +703,13 @@
         },
         "options": {}
       },
-      "id": "15f14990-0b02-40b0-a9f3-221f869aee8f",
+      "id": "858f3fd5-efcb-432a-9280-9dfff73b9700",
       "name": "ConteudoAUDIO",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        752,
-        1216
+        768,
+        1072
       ]
     },
     {
@@ -696,10 +720,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -48,
-        1504
+        -32,
+        1360
       ],
-      "id": "d9d7ea38-4c0a-4c7f-a239-c79bdfadd9df",
+      "id": "9a0d645c-0765-43ea-9f24-e7d95b300179",
       "name": "getImage"
     },
     {
@@ -714,10 +738,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.8,
       "position": [
-        176,
-        1408
+        192,
+        1264
       ],
-      "id": "f05ed8e0-829c-4eff-a9a5-7ba96f93dd5d",
+      "id": "a92c87f7-10c0-4d9d-87e8-e61004532f32",
       "name": "Analise Imagem"
     },
     {
@@ -733,14 +757,14 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        240,
-        1632
+        256,
+        1488
       ],
-      "id": "ed7d8809-8404-4757-a577-5b8d720170b5",
+      "id": "516d2930-eeed-4fd2-bd46-b3824681a307",
       "name": "LLM_Imagem",
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
+          "id": "w7hw6xt43gykWFZ8",
           "name": "OpenAi account"
         }
       }
@@ -752,10 +776,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        528,
-        1504
+        544,
+        1360
       ],
-      "id": "0bcd609d-6c67-42aa-af24-9866c0a9f84a",
+      "id": "9de4c117-5489-4cfe-be63-2e9bfca15a85",
       "name": "Ajusta"
     },
     {
@@ -772,13 +796,13 @@
         },
         "options": {}
       },
-      "id": "7cce2f1c-5ca6-42f3-81be-7ab403c1e12d",
+      "id": "8e24d7e1-e74f-4b07-a750-f3922ac57373",
       "name": "ConteudoIMG",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        752,
-        1504
+        768,
+        1360
       ]
     },
     {
@@ -789,10 +813,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -272,
-        2000
+        -256,
+        1856
       ],
-      "id": "eafdddaa-6230-4459-8f71-2424e8568790",
+      "id": "48590002-25cd-44d0-876c-06fb50db0d9b",
       "name": "getDoc"
     },
     {
@@ -803,10 +827,10 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -48,
-        2000
+        -32,
+        1856
       ],
-      "id": "d7f238c2-1adb-4f19-a746-ca7994d351bb",
+      "id": "956adbf0-206f-47b6-86a3-c8803f9b01d7",
       "name": "Extract from File",
       "onError": "continueErrorOutput"
     },
@@ -822,10 +846,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.8,
       "position": [
-        176,
-        1808
+        192,
+        1664
       ],
-      "id": "fe09f9c7-5945-4340-887d-05101c62ec23",
+      "id": "fcfc9859-a16a-478f-b88b-83e3b125b377",
       "name": "Analise Doc"
     },
     {
@@ -841,14 +865,14 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        240,
-        2032
+        256,
+        1888
       ],
-      "id": "5588669d-4f79-4003-8794-88db70d42a9f",
+      "id": "994270af-45bd-40ae-9d9d-ea72ecfaa618",
       "name": "LLM_Doc",
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
+          "id": "w7hw6xt43gykWFZ8",
           "name": "OpenAi account"
         }
       }
@@ -860,10 +884,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        528,
-        1904
+        544,
+        1760
       ],
-      "id": "870a4275-1c14-472d-92c8-92bc5e56e86a",
+      "id": "54b2f0cd-8d54-472a-9748-03c99848c2fb",
       "name": "AjustaDoc"
     },
     {
@@ -880,13 +904,13 @@
         },
         "options": {}
       },
-      "id": "60cdc9e1-4ab5-4a46-9ffd-d42997878249",
+      "id": "8a322085-1aa9-4073-bd2f-9f2a281650f6",
       "name": "ConteudoDOC",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        752,
-        1904
+        768,
+        1760
       ]
     },
     {
@@ -903,26 +927,26 @@
         },
         "options": {}
       },
-      "id": "ed025e0d-36e7-4fa4-aca6-1cb56f327ce5",
+      "id": "ca1f7483-5a36-4ba4-ac4a-a928ebc584b1",
       "name": "ErrorMSG",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        240,
-        2208
+        256,
+        2064
       ]
     },
     {
       "parameters": {
         "numberInputs": 5
       },
-      "id": "ce6141bb-90bf-40dc-93fa-aa3bc18f08c0",
+      "id": "404907f9-373c-4890-a0f9-c0ec5ede9def",
       "name": "Merge_Tipos",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        976,
-        1456
+        992,
+        1312
       ]
     },
     {
@@ -932,13 +956,13 @@
         "width": 1476,
         "color": 5
       },
-      "id": "7a85e962-a3ce-4cda-b6cd-85f31cdfa0f5",
+      "id": "54fc8ed6-105b-4ae8-b58e-51b91ea8c350",
       "name": "Sticky Note10",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -480,
-        2576
+        -464,
+        2432
       ]
     },
     {
@@ -973,13 +997,13 @@
         },
         "options": {}
       },
-      "id": "c455c03b-e1d0-4ad3-bb31-d07f7ed397d4",
+      "id": "dd05fe98-c6ef-44fc-adb0-5bb3f6a39100",
       "name": "normalizacao",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -432,
-        2864
+        -416,
+        2720
       ]
     },
     {
@@ -989,18 +1013,18 @@
         "messageData": "={{ JSON.stringify($json.message) }}",
         "tail": true
       },
-      "id": "2ea869f1-907e-42c3-8410-9411de340f59",
+      "id": "14a9eed6-1569-48ab-99da-42a8eea2f5c7",
       "name": "push message buffer",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        32,
-        2864
+        48,
+        2720
       ],
       "credentials": {
         "redis": {
-          "id": "wppconnect-redis",
-          "name": "WPPConnect Redis"
+          "id": "GprqDtXmkUnWWsND",
+          "name": "Redis account"
         }
       }
     },
@@ -1011,18 +1035,18 @@
         "key": "=buffer:{{ $('normalizacao').item.json.message.chat_id }}",
         "options": {}
       },
-      "id": "b673f3ad-e556-4ca6-9458-5b6ba6435d65",
+      "id": "f18c7864-0796-412b-8fdc-2185302573b0",
       "name": "get messages buffer",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        256,
-        2864
+        272,
+        2720
       ],
       "credentials": {
         "redis": {
-          "id": "wppconnect-redis",
-          "name": "WPPConnect Redis"
+          "id": "GprqDtXmkUnWWsND",
+          "name": "Redis account"
         }
       }
     },
@@ -1086,37 +1110,37 @@
           "renameFallbackOutput": "esperar"
         }
       },
-      "id": "ac7828b2-eec3-4dd4-9375-3229452bdf46",
+      "id": "51402033-4b4f-4ec1-ab00-026d073ba92b",
       "name": "Switch_Buffer",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        480,
-        2848
+        496,
+        2704
       ]
     },
     {
       "parameters": {},
-      "id": "6da9a9b8-a4de-45ed-b875-ffecc7d0dcb9",
+      "id": "cbd01ce2-67ef-4505-b5b7-57493d00fbb7",
       "name": "No Operation",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        704,
-        2640
+        720,
+        2496
       ]
     },
     {
       "parameters": {
         "amount": "={{ $('Fluxo_Variaveis').item.json.BufferDelay }}"
       },
-      "id": "ba8f1c15-bcb0-48d1-bbb4-8645661624f8",
+      "id": "e31279e2-0a45-4afd-b7e7-1d3fe5a41091",
       "name": "Wait_Buffer",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        704,
-        3056
+        720,
+        2912
       ],
       "webhookId": "buffer-wait-wppconnect"
     },
@@ -1125,18 +1149,18 @@
         "operation": "delete",
         "key": "=buffer:{{ $('normalizacao').item.json.message.chat_id }}"
       },
-      "id": "c2d8b79d-2bf0-4c2f-8cca-ddcc0356d783",
+      "id": "1f0d6699-7cad-44a4-80b3-420f715a5bb7",
       "name": "delete buffer",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        704,
-        2832
+        720,
+        2688
       ],
       "credentials": {
         "redis": {
-          "id": "wppconnect-redis",
-          "name": "WPPConnect Redis"
+          "id": "GprqDtXmkUnWWsND",
+          "name": "Redis account"
         }
       }
     },
@@ -1154,13 +1178,13 @@
         },
         "options": {}
       },
-      "id": "573beec9-31db-4546-a7fd-dc30533a2716",
+      "id": "f749c091-c525-414c-9d92-6be4dec69464",
       "name": "message_json",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -384,
-        3600
+        -368,
+        3456
       ]
     },
     {
@@ -1173,10 +1197,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -96,
-        3456
+        -80,
+        3312
       ],
-      "id": "ec3c2ca6-0642-4f23-8bb0-03c47146ee9a",
+      "id": "2eec2af2-24be-42f7-9e13-5470547eb9c0",
       "name": "Sticky Note14"
     },
     {
@@ -1190,10 +1214,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2,
       "position": [
-        128,
-        3600
+        144,
+        3456
       ],
-      "id": "cb8e557c-934e-4b5c-afcb-f953560a0af1",
+      "id": "1f5a448f-8c8b-4480-9526-d4290be39e60",
       "name": "Agente de IA"
     },
     {
@@ -1209,14 +1233,14 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        -784,
-        4272
+        -768,
+        4128
       ],
-      "id": "1c7e802f-3263-4d36-8fc3-ebbdea06cee9",
+      "id": "22c4e60c-4c83-4e3a-85b7-c81cda22dccf",
       "name": "LLM_Agente",
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
+          "id": "w7hw6xt43gykWFZ8",
           "name": "OpenAi account"
         }
       }
@@ -1231,15 +1255,15 @@
       "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
       "typeVersion": 1.5,
       "position": [
-        -656,
-        4272
+        -640,
+        4128
       ],
-      "id": "698450ce-9896-4e40-af9d-3fb8977c2684",
+      "id": "998047f7-3ae7-4cdd-8082-63ced36634e7",
       "name": "Memoria_Redis",
       "credentials": {
         "redis": {
-          "id": "wppconnect-redis",
-          "name": "WPPConnect Redis"
+          "id": "GprqDtXmkUnWWsND",
+          "name": "Redis account"
         }
       }
     },
@@ -1253,10 +1277,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -464,
-        4640
+        -448,
+        4496
       ],
-      "id": "844155b5-52ea-4108-82cd-93cc367df654",
+      "id": "26cc8b96-b106-4030-b997-37d9b9693476",
       "name": "Sticky Note15"
     },
     {
@@ -1275,10 +1299,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.6,
       "position": [
-        -416,
-        4800
+        -400,
+        4656
       ],
-      "id": "9b98b4ed-45c9-4d20-9491-53a2546354cc",
+      "id": "26a29a3c-9907-4a1e-bea6-efbd01067fa4",
       "name": "Humanizador"
     },
     {
@@ -1294,14 +1318,14 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        -416,
-        5232
+        -400,
+        5088
       ],
-      "id": "0044788b-4927-47cb-b665-d56f89c28d6c",
+      "id": "649baf18-ba50-4850-be01-4e48625528d3",
       "name": "LLM_Humanizador",
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
+          "id": "w7hw6xt43gykWFZ8",
           "name": "OpenAi account"
         }
       }
@@ -1313,10 +1337,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
       "typeVersion": 1,
       "position": [
-        -336,
-        5024
+        -320,
+        4880
       ],
-      "id": "21f3bb14-8968-4b81-8b3f-1b8f7918ea37",
+      "id": "1b44e549-f8fa-42a0-b762-f14b024b48b1",
       "name": "Auto-fixing Output Parser"
     },
     {
@@ -1327,10 +1351,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.2,
       "position": [
-        -240,
-        5232
+        -224,
+        5088
       ],
-      "id": "dbde72d0-fd19-4657-bb8a-cda5eb93c501",
+      "id": "69d52421-85f3-41f2-9bfd-0b0feb2611cc",
       "name": "Output Parser"
     },
     {
@@ -1341,10 +1365,10 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        32,
-        4800
+        48,
+        4656
       ],
-      "id": "5a6d1b80-3257-4738-a11f-6fe3ccd40d19",
+      "id": "03d1ee4b-1604-41af-b45a-a6e720f0d57d",
       "name": "Split Out"
     },
     {
@@ -1354,10 +1378,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        256,
-        4800
+        272,
+        4656
       ],
-      "id": "ece51416-7d4e-49c2-9930-65c0c64980a7",
+      "id": "798607db-7fee-49fd-9e10-84d392dcad3e",
       "name": "Loop Over Items"
     },
     {
@@ -1365,10 +1389,10 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        480,
-        4688
+        496,
+        4544
       ],
-      "id": "99fdb108-d29e-46d2-b8ea-d3dba5c756b7",
+      "id": "13a8382f-a38a-4ec0-92a1-078045c9087a",
       "name": "Fim"
     },
     {
@@ -1378,21 +1402,34 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n  \"message\": \"{{ $json[\\\"output.mensagens\\\"].replace(/\\\\n/g, \\\"\\\\\\\\n\\\").replaceAll('\\\"','*').replaceAll('{','(').replaceAll('}',')') }}\"\n}",
-        "options": {}
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json['output.mensagens'] }}"
+            }
+          ]
+        },
+        "options": {
+          "bodyContentType": "json"
+        }
       },
-      "id": "0150a68e-2e12-47c7-b207-b2473edfe4da",
+      "id": "ffe6a9a8-99b8-4391-b443-262777e02f71",
       "name": "Enviar_Resposta_WPPConnect",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
+      "typeVersion": 4.2,
       "position": [
-        480,
-        4880
+        496,
+        4736
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "wppconnect-api",
+          "id": "fkCh7h3e4c3iHT4J",
           "name": "WPPConnect API"
         }
       }
@@ -1404,12 +1441,70 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        704,
-        4896
+        720,
+        4752
       ],
-      "id": "310cfb33-b689-4582-b1f7-50f79bf820f2",
+      "id": "9eb68cc6-952d-401f-aa70-fdb4c3a79dc5",
       "name": "Wait_Msg",
       "webhookId": "wait-msg-wppconnect"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Fluxo_Variaveis').item.json['CRM-Host'] }}/api/whatsapp/webhook",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event\": \"message.received\",\n  \"session_name\": \"{{ $('Fluxo_Variaveis').item.json['WPP-Session'] }}\",\n  \"data\": {\n    \"wpp_message_id\": \"{{ $('Fluxo_Variaveis').item.json['WPP-MessageID'] }}\",\n    \"phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n    \"content\": \"{{ $('message_json').item.json.messages }}\",\n    \"media_type\": \"{{ $('Fluxo_Variaveis').item.json.MessageType === 'chat' ? 'text' : $('Fluxo_Variaveis').item.json.MessageType }}\",\n    \"sender_jid\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}@c.us\",\n    \"sender_name\": \"{{ $('Fluxo_Variaveis').item.json.ClienteNome }}\",\n    \"sender_phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n    \"wpp_timestamp\": \"{{ $('Fluxo_Variaveis').item.json.MessagemTime }}\",\n    \"is_from_me\": false\n  }\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Persistir_Mensagem_Recebida",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -144,
+        3648
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CRIAR_CREDENCIAL_WPPConnect_Secret",
+          "name": "WPPConnect Secret"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Fluxo_Variaveis').item.json['CRM-Host'] }}/api/whatsapp/webhook",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event\": \"message.received\",\n  \"session_name\": \"{{ $('Fluxo_Variaveis').item.json['WPP-Session'] }}\",\n  \"data\": {\n    \"wpp_message_id\": \"sent_{{ Date.now() }}_{{ Math.random().toString(36).substr(2, 9) }}\",\n    \"phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n    \"content\": \"{{ $json['output.mensagens'] }}\",\n    \"media_type\": \"text\",\n    \"sender_jid\": \"bot@c.us\",\n    \"sender_name\": \"Coronel (Bot)\",\n    \"sender_phone\": \"\",\n    \"wpp_timestamp\": \"{{ new Date().toISOString() }}\",\n    \"is_from_me\": true\n  }\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+      "name": "Persistir_Mensagem_Enviada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        496,
+        4928
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CRIAR_CREDENCIAL_WPPConnect_Secret",
+          "name": "WPPConnect Secret"
+        }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -1421,10 +1516,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -864,
-        3936
+        -848,
+        3792
       ],
-      "id": "7dc9e935-0816-4a9d-b15d-998657dbae87",
+      "id": "495aa364-a53e-4f86-b1d9-d366db2c5e05",
       "name": "Sticky Note Tools"
     },
     {
@@ -1442,15 +1537,15 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -528,
-        4272
+        -512,
+        4128
       ],
-      "id": "0f94c6c2-7bd4-476b-9038-27383ce499c8",
+      "id": "07dad0df-6cf4-437f-9af9-8e96d3e07800",
       "name": "crm_em_atendimento",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -1469,15 +1564,15 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -400,
-        4272
+        -384,
+        4128
       ],
-      "id": "0b616faf-4ac3-496d-8d40-53675a89169e",
+      "id": "6839b4f3-8bd7-4510-a791-9a33c0523071",
       "name": "crm_aguardando_cliente",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -1496,15 +1591,15 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -272,
-        4272
+        -256,
+        4128
       ],
-      "id": "3a1cfbe8-0d84-4555-a726-f4c4eddf4c6f",
+      "id": "59da31f0-2609-45c6-9912-f5869de30fc7",
       "name": "crm_info_fornecidas",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -1523,15 +1618,15 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -144,
-        4272
+        -128,
+        4128
       ],
-      "id": "012afe88-4460-4950-9343-470f439661f1",
+      "id": "f1e17b98-393e-43c0-86a7-1030fe6de188",
       "name": "crm_canal_oficial",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -1550,15 +1645,15 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -16,
-        4272
+        0,
+        4128
       ],
-      "id": "69f7db0a-3019-4e55-a9e4-071f66b2b5b2",
+      "id": "e7d49cf3-1e10-482f-9cee-53891d0bd5e6",
       "name": "crm_finalizado",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -1577,15 +1672,15 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        112,
-        4272
+        128,
+        4128
       ],
-      "id": "afc292ad-e9fe-4a0b-9507-7fe42ff9ed0e",
+      "id": "9aa9effc-7df1-4f44-a437-3d24506cb94c",
       "name": "update_contato",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -1617,15 +1712,15 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        368,
-        4272
+        272,
+        4128
       ],
-      "id": "256fcb60-e696-488a-a478-1415f22f97ba",
+      "id": "2ca4be3d-d122-4ea5-b128-cba9b6979af8",
       "name": "buscar_deals",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -1649,15 +1744,15 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        752,
-        4272
+        672,
+        4128
       ],
-      "id": "4d4d8bd3-8ccb-4c2e-a454-29c748fbaaaf",
+      "id": "d57d0ef0-1bdd-417f-95c1-54a443ef4415",
       "name": "buscar_promocoes",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -1676,15 +1771,15 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        880,
-        4272
+        848,
+        4128
       ],
-      "id": "e57597c7-9658-416d-a8b5-89c6014814a8",
+      "id": "62b93b25-2cab-4059-965e-841d5c2a5fac",
       "name": "adicionar_produto_deal",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -1703,15 +1798,15 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        1024,
-        4272
+        1040,
+        4128
       ],
-      "id": "9e5bf3bd-c2a8-4e95-b97d-e1409e100b05",
+      "id": "d698210b-fa0c-43da-a12f-b9eae762bae5",
       "name": "registrar_agendamento_crm",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
-          "name": "Coronel CRM"
+          "id": "X4bPwYx3Z44RSdNi",
+          "name": "NossoCRM"
         }
       }
     },
@@ -1720,10 +1815,10 @@
       "type": "@n8n/n8n-nodes-langchain.toolThink",
       "typeVersion": 1,
       "position": [
-        496,
-        4272
+        384,
+        4128
       ],
-      "id": "96091e13-82e3-4f53-a8e2-4d56cba2c8c6",
+      "id": "826ec9d1-9f75-4e72-a268-7413b89d6fbe",
       "name": "Think"
     },
     {
@@ -1734,10 +1829,10 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
       "typeVersion": 1,
       "position": [
-        624,
-        4272
+        512,
+        4128
       ],
-      "id": "f6cba051-781c-4206-aaf3-98244c820f6e",
+      "id": "3d9306dc-b04a-4d76-91b9-3aa5b6a7dfa6",
       "name": "MCP_GoogleCalendar"
     },
     {
@@ -1747,14 +1842,14 @@
       "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
       "typeVersion": 1.2,
       "position": [
-        1296,
-        4272
+        1312,
+        4128
       ],
-      "id": "d242bda0-4bb7-477f-8496-02be4fd13c37",
+      "id": "7a135413-4757-4f7a-bbaa-69c4ede6401c",
       "name": "Embeddings OpenAI",
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
+          "id": "w7hw6xt43gykWFZ8",
           "name": "OpenAi account"
         }
       },
@@ -1769,11 +1864,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        1216,
-        4032
+        1232,
+        3888
       ],
       "typeVersion": 1,
-      "id": "c8e42639-fc7a-4dfe-bef2-250308480bca",
+      "id": "50d723df-6e76-4434-ae0a-0388f8e9a6b2",
       "name": "Sticky Note9",
       "disabled": true
     },
@@ -1792,10 +1887,10 @@
       "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
       "typeVersion": 1.3,
       "position": [
-        1296,
-        4096
+        1312,
+        3952
       ],
-      "id": "95a802e3-de9b-4862-9e4f-02026c7d3c26",
+      "id": "9ec32c92-2aa0-4d2a-90cc-16633c2cb859",
       "name": "treinamento",
       "disabled": true
     }
@@ -2239,6 +2334,11 @@
             "node": "Agente de IA",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Persistir_Mensagem_Recebida",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -2526,24 +2626,27 @@
             "node": "Wait_Msg",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Persistir_Mensagem_Enviada",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
+    "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "wppconnect-v1",
+  "versionId": "82b3c48f-67bb-45a9-a7c3-4675eb8c97c0",
   "meta": {
-    "instanceId": "coronel-wppconnect-workflow"
+    "templateCredsSetupCompleted": true,
+    "instanceId": "40a4bf98421ceaa680c1d7554ed416ede6bd8f87784b3bf1a48d585f53d276c2"
   },
-  "id": "wppconnect-coronel-picanha",
-  "tags": [
-    "wppconnect",
-    "whatsapp",
-    "coronel-picanha"
-  ]
+  "id": "OfLomwOulhdKu4GOcMUPF",
+  "tags": []
 }
