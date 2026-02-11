@@ -80,7 +80,9 @@ export const WhatsAppSection: React.FC = () => {
 
   const fetchSession = useCallback(async () => {
     try {
-      const response = await fetch('/api/whatsapp/session');
+      const response = await fetch('/api/whatsapp/session', {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Falha ao buscar sessão');
       const data = await response.json();
       setSessionData(data);
@@ -94,7 +96,9 @@ export const WhatsAppSection: React.FC = () => {
 
   const fetchQRCode = useCallback(async () => {
     try {
-      const response = await fetch('/api/whatsapp/session/qr');
+      const response = await fetch('/api/whatsapp/session/qr', {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Falha ao buscar QR Code');
       const data = await response.json();
       setQrCodeData(data);
@@ -133,6 +137,7 @@ export const WhatsAppSection: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Falha na ação');
       await fetchSession();
