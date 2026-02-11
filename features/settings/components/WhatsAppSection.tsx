@@ -162,10 +162,12 @@ export const WhatsAppSection: React.FC = () => {
     }
   };
 
+  // Prioriza status real-time do WPPConnect sobre o cache do Supabase
+  const wppRealTimeStatus = normalizeStatus(sessionData?.wppStatus?.status);
   const currentStatus: WhatsAppSessionStatus =
-    sessionData?.session?.status ||
-    normalizeStatus(sessionData?.wppStatus?.status) ||
-    'disconnected';
+    wppRealTimeStatus !== 'disconnected'
+      ? wppRealTimeStatus
+      : sessionData?.session?.status || 'disconnected';
 
   const statusInfo = statusConfig[currentStatus] || statusConfig.disconnected;
   const StatusIcon = statusInfo.icon;
