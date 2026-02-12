@@ -7,13 +7,13 @@
         "height": 284,
         "width": 200
       },
-      "id": "44d49933-1708-4d89-b685-aa0bc73f1928",
+      "id": "6fffbb93-fa68-4e98-9d8e-724a883b26b1",
       "name": "Sticky Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -864,
-        80
+        -1040,
+        12976
       ]
     },
     {
@@ -23,13 +23,13 @@
         "width": 1098,
         "color": 4
       },
-      "id": "5cde5a58-693f-468f-a921-87d2883b6dd1",
+      "id": "ffcc938a-c1a4-427b-b577-fdd5bf9228e0",
       "name": "Sticky Note1",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        176,
-        -112
+        0,
+        12784
       ]
     },
     {
@@ -41,10 +41,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -592,
-        96
+        -768,
+        12992
       ],
-      "id": "4dc4f272-2c31-40a0-a2a4-9a6d3d447686",
+      "id": "4521a353-4363-4e98-9245-30d326f43f3b",
       "name": "Sticky Note5"
     },
     {
@@ -56,10 +56,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -816,
-        208
+        -992,
+        13104
       ],
-      "id": "6577cbe5-bd38-462b-96cf-2d0b4270f591",
+      "id": "38bcf7d5-a553-4b39-ad72-64ba2950d2e4",
       "name": "Webhook",
       "webhookId": "wppconnect-coronel-picanha"
     },
@@ -73,10 +73,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -320,
-        0
+        -496,
+        12896
       ],
-      "id": "8ebe9b53-8ef7-4300-8258-2dc2977e0c02",
+      "id": "6c01d339-dd54-497c-b1cf-70cd4e9eb1f4",
       "name": "Sticky Note6"
     },
     {
@@ -195,13 +195,13 @@
         },
         "options": {}
       },
-      "id": "d2582eed-e946-4dc5-b52c-24b7ae9b3827",
+      "id": "7c3f5d2a-861e-4ed3-800c-c29b700fc666",
       "name": "Fluxo_Variaveis",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -224,
-        208
+        -400,
+        13104
       ]
     },
     {
@@ -247,13 +247,13 @@
         "looseTypeValidation": true,
         "options": {}
       },
-      "id": "50712943-ec87-41e7-a9eb-8e4b9da92522",
+      "id": "d2407764-fba1-47b9-8abc-a303c64f2ba8",
       "name": "Filtro_Inicial",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.1,
       "position": [
-        -512,
-        208
+        -688,
+        13104
       ]
     },
     {
@@ -276,13 +276,13 @@
         },
         "options": {}
       },
-      "id": "708f815a-7700-4db2-bd17-59a5e1dcc74e",
+      "id": "c838fcc8-0750-4db6-94d8-dbf6124c9c55",
       "name": "Encontrar_Cliente_CRM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        16,
-        208
+        -160,
+        13104
       ],
       "alwaysOutputData": true,
       "credentials": {
@@ -318,13 +318,13 @@
         "looseTypeValidation": true,
         "options": {}
       },
-      "id": "0ed73731-1028-48c8-81e7-93e530337ddd",
+      "id": "70adee9f-5d19-4f6e-9725-7160c60ef74e",
       "name": "Existe_No_CRM?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.1,
       "position": [
-        240,
-        208
+        64,
+        13104
       ],
       "alwaysOutputData": false
     },
@@ -339,13 +339,13 @@
         "jsonBody": "={\n  \"name\": \"{{ $('Fluxo_Variaveis').item.json.ClienteNome }}\",\n  \"phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n  \"email\": \"{{ $('Fluxo_Variaveis').item.json.ClienteEmail }}\",\n  \"source\": \"WHATSAPP\",\n  \"stage\": \"LEAD\",\n  \"status\": \"ACTIVE\"\n}",
         "options": {}
       },
-      "id": "62c6c8d3-b084-4099-bedb-9c272c0db82b",
+      "id": "91e0eaa7-0897-4b68-97fd-9c3aade0ea38",
       "name": "Criar_Contato_CRM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        464,
-        304
+        288,
+        13200
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -365,13 +365,13 @@
         "jsonBody": "={\n  \"title\": \"WhatsApp - {{ $('Fluxo_Variaveis').item.json.ClienteNome }}\",\n  \"value\": 0,\n  \"board_key\": \"{{ $('Fluxo_Variaveis').item.json['CRM-BoardKey'] }}\",\n  \"contact_id\": \"{{ $json.data.id }}\"\n}",
         "options": {}
       },
-      "id": "23a3ff79-d677-4569-9978-b3b5f7886aed",
+      "id": "c51c909f-78b0-45ce-a31f-d0e1a40dcd4f",
       "name": "Criar_Deal_CRM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        688,
-        304
+        512,
+        13200
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -412,13 +412,13 @@
         },
         "options": {}
       },
-      "id": "ea8085a2-d0ba-4098-8d1d-64867c200b1b",
+      "id": "03f31e11-dd60-4aeb-a53e-dd3a02036b1b",
       "name": "Set_Contato_Existente",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        912,
-        112
+        736,
+        13008
       ]
     },
     {
@@ -453,24 +453,24 @@
         },
         "options": {}
       },
-      "id": "ce8b7ac8-1a0e-469c-908b-f5c09ff403c4",
+      "id": "2cb6697c-02ac-4726-b4f4-df9a36e8825e",
       "name": "Set_Contato_Novo",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        912,
-        304
+        736,
+        13200
       ]
     },
     {
       "parameters": {},
-      "id": "2c81e1e4-4199-48ac-a3c8-1da3f4116e5d",
+      "id": "6dd4dd9c-f79b-44b8-a5ec-4e49abff40cf",
       "name": "Merge_Contatos",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        1136,
-        208
+        960,
+        13104
       ]
     },
     {
@@ -480,13 +480,13 @@
         "width": 1632,
         "color": 2
       },
-      "id": "313d8f70-2b1a-4c20-a768-d5748bc6c9e0",
+      "id": "2f0f25bb-8ab4-4d77-9c22-8549abc6444f",
       "name": "Sticky Note4",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -512,
-        768
+        -688,
+        13664
       ]
     },
     {
@@ -621,13 +621,13 @@
           "renameFallbackOutput": "Erro"
         }
       },
-      "id": "ba565b92-7363-4ffd-9876-f305c426d1bb",
+      "id": "95d79dba-2e9f-4825-8afc-f471b7222f84",
       "name": "MessageType",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.1,
       "position": [
-        -480,
-        1408
+        -656,
+        14304
       ]
     },
     {
@@ -644,13 +644,13 @@
         },
         "options": {}
       },
-      "id": "c7fd8b53-3435-4847-a8c0-908674619208",
+      "id": "5c213040-87ec-4593-91b8-a6cd61eca5fa",
       "name": "Msg Texto",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        768,
-        880
+        592,
+        13776
       ]
     },
     {
@@ -658,13 +658,13 @@
         "url": "={{ $('Fluxo_Variaveis').item.json['URL-Arquivo'] }}",
         "options": {}
       },
-      "id": "15e26928-62c5-4428-8563-a22ff3633e5a",
+      "id": "03cef58c-425b-4929-8920-e2e3c8103449",
       "name": "getAudio",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        256,
-        1072
+        80,
+        13968
       ]
     },
     {
@@ -674,13 +674,13 @@
         "binaryPropertyName": "=data",
         "options": {}
       },
-      "id": "84babd91-851e-4e99-a4cb-c31a9c0bcd3c",
+      "id": "28fa2b20-44ea-478e-b901-96ce8465cf0a",
       "name": "Transcrever Áudio",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.4,
       "position": [
-        544,
-        1072
+        368,
+        13968
       ],
       "credentials": {
         "openAiApi": {
@@ -703,13 +703,13 @@
         },
         "options": {}
       },
-      "id": "858f3fd5-efcb-432a-9280-9dfff73b9700",
+      "id": "d2bb2cbc-ee71-40e3-857a-d18ce47d6e6a",
       "name": "ConteudoAUDIO",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        768,
-        1072
+        592,
+        13968
       ]
     },
     {
@@ -720,10 +720,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -32,
-        1360
+        -208,
+        14256
       ],
-      "id": "9a0d645c-0765-43ea-9f24-e7d95b300179",
+      "id": "3b1c33fd-505a-4767-8350-5fdd82c0509e",
       "name": "getImage"
     },
     {
@@ -738,10 +738,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.8,
       "position": [
-        192,
-        1264
+        16,
+        14160
       ],
-      "id": "a92c87f7-10c0-4d9d-87e8-e61004532f32",
+      "id": "fb7fe469-fa34-4b4b-b616-df2bcd717b39",
       "name": "Analise Imagem"
     },
     {
@@ -757,10 +757,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        256,
-        1488
+        80,
+        14384
       ],
-      "id": "516d2930-eeed-4fd2-bd46-b3824681a307",
+      "id": "bf6c5546-92df-41d7-8cee-28d5f373b573",
       "name": "LLM_Imagem",
       "credentials": {
         "openAiApi": {
@@ -776,10 +776,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        544,
-        1360
+        368,
+        14256
       ],
-      "id": "9de4c117-5489-4cfe-be63-2e9bfca15a85",
+      "id": "15c2ecb0-e590-4efc-930c-d75314febe5b",
       "name": "Ajusta"
     },
     {
@@ -796,13 +796,13 @@
         },
         "options": {}
       },
-      "id": "8e24d7e1-e74f-4b07-a750-f3922ac57373",
+      "id": "9f1a6971-1050-4a18-a43c-462ca1d10ea7",
       "name": "ConteudoIMG",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        768,
-        1360
+        592,
+        14256
       ]
     },
     {
@@ -813,10 +813,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -256,
-        1856
+        -432,
+        14752
       ],
-      "id": "48590002-25cd-44d0-876c-06fb50db0d9b",
+      "id": "4e0f41c8-4ddd-415f-bc99-28bcb5e50f4a",
       "name": "getDoc"
     },
     {
@@ -827,10 +827,10 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -32,
-        1856
+        -208,
+        14752
       ],
-      "id": "956adbf0-206f-47b6-86a3-c8803f9b01d7",
+      "id": "163da562-9ed5-47f0-971c-d6d75b448b49",
       "name": "Extract from File",
       "onError": "continueErrorOutput"
     },
@@ -846,10 +846,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.8,
       "position": [
-        192,
-        1664
+        16,
+        14560
       ],
-      "id": "fcfc9859-a16a-478f-b88b-83e3b125b377",
+      "id": "333a0466-4aef-4f2d-9309-1f497b39cf4d",
       "name": "Analise Doc"
     },
     {
@@ -865,10 +865,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        256,
-        1888
+        80,
+        14784
       ],
-      "id": "994270af-45bd-40ae-9d9d-ea72ecfaa618",
+      "id": "3cc96132-0a99-43ef-820c-4b5ab26ca624",
       "name": "LLM_Doc",
       "credentials": {
         "openAiApi": {
@@ -884,10 +884,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        544,
-        1760
+        368,
+        14656
       ],
-      "id": "54b2f0cd-8d54-472a-9748-03c99848c2fb",
+      "id": "5aa93371-450d-4473-bc7d-2aaff06851b3",
       "name": "AjustaDoc"
     },
     {
@@ -904,13 +904,13 @@
         },
         "options": {}
       },
-      "id": "8a322085-1aa9-4073-bd2f-9f2a281650f6",
+      "id": "70dd69e7-7e83-4383-9139-161366b0c350",
       "name": "ConteudoDOC",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        768,
-        1760
+        592,
+        14656
       ]
     },
     {
@@ -927,26 +927,26 @@
         },
         "options": {}
       },
-      "id": "ca1f7483-5a36-4ba4-ac4a-a928ebc584b1",
+      "id": "713c7619-30a2-4b84-93d2-9d8664df106e",
       "name": "ErrorMSG",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        256,
-        2064
+        80,
+        14960
       ]
     },
     {
       "parameters": {
         "numberInputs": 5
       },
-      "id": "404907f9-373c-4890-a0f9-c0ec5ede9def",
+      "id": "84b56da0-8881-4023-a397-55c6b039119c",
       "name": "Merge_Tipos",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        992,
-        1312
+        816,
+        14208
       ]
     },
     {
@@ -956,13 +956,13 @@
         "width": 1476,
         "color": 5
       },
-      "id": "54fc8ed6-105b-4ae8-b58e-51b91ea8c350",
+      "id": "bdba0108-fdf1-41f5-86a9-ddc43507004f",
       "name": "Sticky Note10",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -464,
-        2432
+        -640,
+        15328
       ]
     },
     {
@@ -997,13 +997,13 @@
         },
         "options": {}
       },
-      "id": "dd05fe98-c6ef-44fc-adb0-5bb3f6a39100",
+      "id": "e690fb17-aa86-4aad-b0a8-3edea7227c39",
       "name": "normalizacao",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -416,
-        2720
+        -592,
+        15616
       ]
     },
     {
@@ -1013,13 +1013,13 @@
         "messageData": "={{ JSON.stringify($json.message) }}",
         "tail": true
       },
-      "id": "14a9eed6-1569-48ab-99da-42a8eea2f5c7",
+      "id": "4d17e6cd-ef51-467e-a5f9-7d603e92d962",
       "name": "push message buffer",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        48,
-        2720
+        -128,
+        15616
       ],
       "credentials": {
         "redis": {
@@ -1035,13 +1035,13 @@
         "key": "=buffer:{{ $('normalizacao').item.json.message.chat_id }}",
         "options": {}
       },
-      "id": "f18c7864-0796-412b-8fdc-2185302573b0",
+      "id": "d5e40722-fcc9-441e-be2b-edb38c6e1845",
       "name": "get messages buffer",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        272,
-        2720
+        96,
+        15616
       ],
       "credentials": {
         "redis": {
@@ -1110,37 +1110,37 @@
           "renameFallbackOutput": "esperar"
         }
       },
-      "id": "51402033-4b4f-4ec1-ab00-026d073ba92b",
+      "id": "816d76f6-fc2e-4b81-8f7c-15e6009f9d3e",
       "name": "Switch_Buffer",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        496,
-        2704
+        320,
+        15600
       ]
     },
     {
       "parameters": {},
-      "id": "cbd01ce2-67ef-4505-b5b7-57493d00fbb7",
+      "id": "104b146a-f76f-4c8b-8754-9adcdfd80649",
       "name": "No Operation",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        720,
-        2496
+        544,
+        15392
       ]
     },
     {
       "parameters": {
         "amount": "={{ $('Fluxo_Variaveis').item.json.BufferDelay }}"
       },
-      "id": "e31279e2-0a45-4afd-b7e7-1d3fe5a41091",
+      "id": "e22d3603-9c66-4249-afc0-6b8ec431f417",
       "name": "Wait_Buffer",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        720,
-        2912
+        544,
+        15808
       ],
       "webhookId": "buffer-wait-wppconnect"
     },
@@ -1149,13 +1149,13 @@
         "operation": "delete",
         "key": "=buffer:{{ $('normalizacao').item.json.message.chat_id }}"
       },
-      "id": "1f0d6699-7cad-44a4-80b3-420f715a5bb7",
+      "id": "87758858-4ff8-4467-b519-880abc1431c7",
       "name": "delete buffer",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        720,
-        2688
+        544,
+        15584
       ],
       "credentials": {
         "redis": {
@@ -1178,13 +1178,13 @@
         },
         "options": {}
       },
-      "id": "f749c091-c525-414c-9d92-6be4dec69464",
+      "id": "fe05c2fb-8287-4689-a221-36a2a4663bab",
       "name": "message_json",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -368,
-        3456
+        -544,
+        16352
       ]
     },
     {
@@ -1197,10 +1197,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -80,
-        3312
+        -256,
+        16208
       ],
-      "id": "2eec2af2-24be-42f7-9e13-5470547eb9c0",
+      "id": "b8182f26-edb2-4102-952a-d556836d5052",
       "name": "Sticky Note14"
     },
     {
@@ -1214,10 +1214,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2,
       "position": [
-        144,
-        3456
+        -32,
+        16352
       ],
-      "id": "1f5a448f-8c8b-4480-9526-d4290be39e60",
+      "id": "4f5b6ffb-9232-470b-ae3e-dd3ff072a574",
       "name": "Agente de IA"
     },
     {
@@ -1233,10 +1233,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        -768,
-        4128
+        -944,
+        17024
       ],
-      "id": "22c4e60c-4c83-4e3a-85b7-c81cda22dccf",
+      "id": "9dca0ed3-ac8a-4573-9e10-7f369548f0f9",
       "name": "LLM_Agente",
       "credentials": {
         "openAiApi": {
@@ -1255,10 +1255,10 @@
       "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
       "typeVersion": 1.5,
       "position": [
-        -640,
-        4128
+        -816,
+        17024
       ],
-      "id": "998047f7-3ae7-4cdd-8082-63ced36634e7",
+      "id": "7e2ce88a-d7a0-4f0f-82e7-1841d6d08a51",
       "name": "Memoria_Redis",
       "credentials": {
         "redis": {
@@ -1277,10 +1277,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -448,
-        4496
+        -624,
+        17392
       ],
-      "id": "26cc8b96-b106-4030-b997-37d9b9693476",
+      "id": "d3269007-ebd3-4979-8f61-20a91f4d8743",
       "name": "Sticky Note15"
     },
     {
@@ -1299,10 +1299,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.6,
       "position": [
-        -400,
-        4656
+        -576,
+        17552
       ],
-      "id": "26a29a3c-9907-4a1e-bea6-efbd01067fa4",
+      "id": "37bd1739-72c6-41f1-b819-5adf17595553",
       "name": "Humanizador"
     },
     {
@@ -1318,10 +1318,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        -400,
-        5088
+        -576,
+        17984
       ],
-      "id": "649baf18-ba50-4850-be01-4e48625528d3",
+      "id": "0b3d125a-df01-490e-b1de-6e48ce63aa44",
       "name": "LLM_Humanizador",
       "credentials": {
         "openAiApi": {
@@ -1337,10 +1337,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
       "typeVersion": 1,
       "position": [
-        -320,
-        4880
+        -496,
+        17776
       ],
-      "id": "1b44e549-f8fa-42a0-b762-f14b024b48b1",
+      "id": "40ae5eb7-7b42-4bfd-987d-6ebc50b14dba",
       "name": "Auto-fixing Output Parser"
     },
     {
@@ -1351,10 +1351,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.2,
       "position": [
-        -224,
-        5088
+        -400,
+        17984
       ],
-      "id": "69d52421-85f3-41f2-9bfd-0b0feb2611cc",
+      "id": "d5d28a36-53d6-4214-8f30-daad22afa9de",
       "name": "Output Parser"
     },
     {
@@ -1365,10 +1365,10 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        48,
-        4656
+        -128,
+        17552
       ],
-      "id": "03d1ee4b-1604-41af-b45a-a6e720f0d57d",
+      "id": "d6f930b4-f07c-4470-9021-1dc937b6307a",
       "name": "Split Out"
     },
     {
@@ -1378,10 +1378,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        272,
-        4656
+        96,
+        17552
       ],
-      "id": "798607db-7fee-49fd-9e10-84d392dcad3e",
+      "id": "423c28ca-b569-457c-abb5-e5c7627c2034",
       "name": "Loop Over Items"
     },
     {
@@ -1389,10 +1389,10 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        496,
-        4544
+        320,
+        17440
       ],
-      "id": "13a8382f-a38a-4ec0-92a1-078045c9087a",
+      "id": "b465ed4f-38c7-4280-b098-36b090f73709",
       "name": "Fim"
     },
     {
@@ -1402,7 +1402,6 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
-        "specifyBody": "keypair",
         "bodyParameters": {
           "parameters": [
             {
@@ -1415,17 +1414,15 @@
             }
           ]
         },
-        "options": {
-          "bodyContentType": "json"
-        }
+        "options": {}
       },
-      "id": "ffe6a9a8-99b8-4391-b443-262777e02f71",
+      "id": "4f254665-9cfb-44f9-9985-968f99bece27",
       "name": "Enviar_Resposta_WPPConnect",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        496,
-        4736
+        320,
+        17632
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -1441,10 +1438,10 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        720,
-        4752
+        544,
+        17648
       ],
-      "id": "9eb68cc6-952d-401f-aa70-fdb4c3a79dc5",
+      "id": "720ac6f4-9756-4f01-9161-19b44c2ce75b",
       "name": "Wait_Msg",
       "webhookId": "wait-msg-wppconnect"
     },
@@ -1461,17 +1458,17 @@
           "timeout": 10000
         }
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "id": "ebd17b01-f47a-47fc-a4a3-590a5c70ba7e",
       "name": "Persistir_Mensagem_Recebida",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -144,
-        3648
+        -320,
+        16544
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CRIAR_CREDENCIAL_WPPConnect_Secret",
+          "id": "jQUuZEW1ICQWiEdB",
           "name": "WPPConnect Secret"
         }
       },
@@ -1490,17 +1487,17 @@
           "timeout": 10000
         }
       },
-      "id": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+      "id": "d308b391-0347-4e9d-8cc7-33577735d1e3",
       "name": "Persistir_Mensagem_Enviada",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        496,
-        4928
+        320,
+        17824
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "CRIAR_CREDENCIAL_WPPConnect_Secret",
+          "id": "jQUuZEW1ICQWiEdB",
           "name": "WPPConnect Secret"
         }
       },
@@ -1516,10 +1513,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -848,
-        3792
+        -1024,
+        16688
       ],
-      "id": "495aa364-a53e-4f86-b1d9-d366db2c5e05",
+      "id": "0a63a220-e762-411b-a6ec-48b7f5620cc0",
       "name": "Sticky Note Tools"
     },
     {
@@ -1537,10 +1534,10 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -512,
-        4128
+        -688,
+        17024
       ],
-      "id": "07dad0df-6cf4-437f-9af9-8e96d3e07800",
+      "id": "45d87284-838f-4f13-b622-3eb3cd04cbe9",
       "name": "crm_em_atendimento",
       "credentials": {
         "httpHeaderAuth": {
@@ -1564,10 +1561,10 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -384,
-        4128
+        -560,
+        17024
       ],
-      "id": "6839b4f3-8bd7-4510-a791-9a33c0523071",
+      "id": "7d81e5c9-df82-454f-929a-7b4aa3d50ebe",
       "name": "crm_aguardando_cliente",
       "credentials": {
         "httpHeaderAuth": {
@@ -1591,10 +1588,10 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -256,
-        4128
+        -432,
+        17024
       ],
-      "id": "59da31f0-2609-45c6-9912-f5869de30fc7",
+      "id": "80006257-a0fe-4727-b0ce-19b553fb5844",
       "name": "crm_info_fornecidas",
       "credentials": {
         "httpHeaderAuth": {
@@ -1618,10 +1615,10 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -128,
-        4128
+        -304,
+        17024
       ],
-      "id": "f1e17b98-393e-43c0-86a7-1030fe6de188",
+      "id": "a6989473-2c2a-4ecb-a21d-06579d78545c",
       "name": "crm_canal_oficial",
       "credentials": {
         "httpHeaderAuth": {
@@ -1645,10 +1642,10 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        0,
-        4128
+        -176,
+        17024
       ],
-      "id": "e7d49cf3-1e10-482f-9cee-53891d0bd5e6",
+      "id": "051e7636-d487-42b8-9b45-c7caf6e1c862",
       "name": "crm_finalizado",
       "credentials": {
         "httpHeaderAuth": {
@@ -1672,10 +1669,10 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        128,
-        4128
+        -48,
+        17024
       ],
-      "id": "9aa9effc-7df1-4f44-a437-3d24506cb94c",
+      "id": "d33c28f8-42ac-4481-9531-c016e56d09e6",
       "name": "update_contato",
       "credentials": {
         "httpHeaderAuth": {
@@ -1712,10 +1709,10 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        272,
-        4128
+        96,
+        17024
       ],
-      "id": "2ca4be3d-d122-4ea5-b128-cba9b6979af8",
+      "id": "fd7a6736-3b64-45c0-a3fd-c47acd9f443c",
       "name": "buscar_deals",
       "credentials": {
         "httpHeaderAuth": {
@@ -1744,10 +1741,10 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        672,
-        4128
+        496,
+        17024
       ],
-      "id": "d57d0ef0-1bdd-417f-95c1-54a443ef4415",
+      "id": "2946060a-b5bb-4d05-89ae-d8e56f8958d4",
       "name": "buscar_promocoes",
       "credentials": {
         "httpHeaderAuth": {
@@ -1771,10 +1768,10 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        848,
-        4128
+        672,
+        17024
       ],
-      "id": "62b93b25-2cab-4059-965e-841d5c2a5fac",
+      "id": "14e6df79-53c8-4669-bd3f-3d951532f89c",
       "name": "adicionar_produto_deal",
       "credentials": {
         "httpHeaderAuth": {
@@ -1798,10 +1795,10 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        1040,
-        4128
+        864,
+        17024
       ],
-      "id": "d698210b-fa0c-43da-a12f-b9eae762bae5",
+      "id": "2b43f828-c4bd-4e84-8150-f0161a9ef4d6",
       "name": "registrar_agendamento_crm",
       "credentials": {
         "httpHeaderAuth": {
@@ -1815,10 +1812,10 @@
       "type": "@n8n/n8n-nodes-langchain.toolThink",
       "typeVersion": 1,
       "position": [
-        384,
-        4128
+        208,
+        17024
       ],
-      "id": "826ec9d1-9f75-4e72-a268-7413b89d6fbe",
+      "id": "133de158-26e9-4dd7-9fd0-24e4b1912944",
       "name": "Think"
     },
     {
@@ -1829,10 +1826,10 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
       "typeVersion": 1,
       "position": [
-        512,
-        4128
+        336,
+        17024
       ],
-      "id": "3d9306dc-b04a-4d76-91b9-3aa5b6a7dfa6",
+      "id": "b57c8f2f-041a-4326-acac-2242c3432ce0",
       "name": "MCP_GoogleCalendar"
     },
     {
@@ -1842,10 +1839,10 @@
       "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
       "typeVersion": 1.2,
       "position": [
-        1312,
-        4128
+        1136,
+        17024
       ],
-      "id": "7a135413-4757-4f7a-bbaa-69c4ede6401c",
+      "id": "8f47310f-1968-4c34-8aac-1227c948a1ff",
       "name": "Embeddings OpenAI",
       "credentials": {
         "openAiApi": {
@@ -1864,11 +1861,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        1232,
-        3888
+        1056,
+        16784
       ],
       "typeVersion": 1,
-      "id": "50d723df-6e76-4434-ae0a-0388f8e9a6b2",
+      "id": "ad298176-8d95-47f0-b546-8d147a7be44c",
       "name": "Sticky Note9",
       "disabled": true
     },
@@ -1887,10 +1884,10 @@
       "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
       "typeVersion": 1.3,
       "position": [
-        1312,
-        3952
+        1136,
+        16848
       ],
-      "id": "9ec32c92-2aa0-4d2a-90cc-16633c2cb859",
+      "id": "2d322c09-1c62-495a-9155-318610ce1f31",
       "name": "treinamento",
       "disabled": true
     }
@@ -2642,7 +2639,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "82b3c48f-67bb-45a9-a7c3-4675eb8c97c0",
+  "versionId": "74f08ed7-acbe-4a6d-b960-bac9b2231463",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "40a4bf98421ceaa680c1d7554ed416ede6bd8f87784b3bf1a48d585f53d276c2"

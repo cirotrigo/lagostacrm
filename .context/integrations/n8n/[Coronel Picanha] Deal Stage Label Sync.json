@@ -166,7 +166,7 @@
     },
     {
       "parameters": {
-        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/all-labels",
+        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/get-all-labels",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "options": {
@@ -314,7 +314,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/add-or-remove-labels",
+        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/add-or-remove-label",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
