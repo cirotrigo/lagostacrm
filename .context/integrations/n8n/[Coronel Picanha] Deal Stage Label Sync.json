@@ -1,0 +1,602 @@
+{
+  "name": "[Coronel Picanha] Deal Stage Label Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Webhook - Deal Stage Changed\n\nRecebe eventos deal.stage_changed do trigger PostgreSQL via integration_outbound_endpoints",
+        "height": 200,
+        "width": 280
+      },
+      "id": "sticky-webhook",
+      "name": "Sticky Note Webhook",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Sincronizacao de Labels\n\nQuando um deal muda de etapa no CRM:\n1. Extrai dados do webhook\n2. Verifica se label ja esta aplicada no chat\n3. Busca/cria label no WhatsApp\n4. Aplica label via WPPConnect API\n\nCobre AMBOS os cenarios:\n- Bot move deal (via tools CRM)\n- Usuario move deal (manualmente no Kanban)",
+        "height": 280,
+        "width": 400,
+        "color": 4
+      },
+      "id": "sticky-info",
+      "name": "Sticky Note Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "deal-stage-label-sync",
+        "options": {
+          "responseMode": "onReceived"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        240
+      ],
+      "id": "webhook-deal-stage",
+      "name": "Webhook_Deal_Stage_Changed",
+      "webhookId": "deal-stage-label-sync"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "contact-phone",
+              "name": "contact_phone",
+              "type": "string",
+              "value": "={{ $json.body?.contact?.phone || $json.contact?.phone || '' }}"
+            },
+            {
+              "id": "to-stage-label",
+              "name": "to_stage_label",
+              "type": "string",
+              "value": "={{ $json.body?.deal?.to_stage_label || $json.deal?.to_stage_label || '' }}"
+            },
+            {
+              "id": "from-stage-label",
+              "name": "from_stage_label",
+              "type": "string",
+              "value": "={{ $json.body?.deal?.from_stage_label || $json.deal?.from_stage_label || '' }}"
+            },
+            {
+              "id": "deal-id",
+              "name": "deal_id",
+              "type": "string",
+              "value": "={{ $json.body?.deal?.id || $json.deal?.id || '' }}"
+            },
+            {
+              "id": "deal-title",
+              "name": "deal_title",
+              "type": "string",
+              "value": "={{ $json.body?.deal?.title || $json.deal?.title || '' }}"
+            },
+            {
+              "id": "contact-name",
+              "name": "contact_name",
+              "type": "string",
+              "value": "={{ $json.body?.contact?.name || $json.contact?.name || '' }}"
+            },
+            {
+              "id": "chat-id",
+              "name": "chatId",
+              "type": "string",
+              "value": "={{ ($json.body?.contact?.phone || $json.contact?.phone || '') + '@c.us' }}"
+            },
+            {
+              "id": "wpp-host",
+              "name": "WPP_Host",
+              "type": "string",
+              "value": "https://coronel-wwp.lagostacriativa.com.br"
+            },
+            {
+              "id": "wpp-session",
+              "name": "WPP_Session",
+              "type": "string",
+              "value": "lagostacrm"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extrair-dados",
+      "name": "Extrair_Dados",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -80,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-phone",
+              "leftValue": "={{ $json.contact_phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "has-stage",
+              "leftValue": "={{ $json.to_stage_label }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "validar-dados",
+      "name": "Dados_Validos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [
+        160,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/all-labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "buscar-labels-wpp",
+      "name": "Buscar_Labels_WPP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        160
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fkCh7h3e4c3iHT4J",
+          "name": "WPPConnect API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Busca ou prepara criacao de label\nconst labelsResponse = $input.first().json;\nconst labels = labelsResponse?.response || labelsResponse || [];\nconst toStageLabel = $('Extrair_Dados').item.json.to_stage_label;\n\n// Mapeamento de nomes longos para labels curtas (limitacao WhatsApp)\nconst stageLabelMap = {\n  'Informacoes Fornecidas': 'Info Fornecidas',\n  'Direcionado para Canal Oficial': 'Canal Oficial'\n};\n\nconst labelName = stageLabelMap[toStageLabel] || toStageLabel;\n\n// Cores por etapa (paleta WhatsApp Business)\nconst stageToColor = {\n  'Nova Interacao': '#9E9E9E',\n  'Em Atendimento': '#4CAF50',\n  'Aguardando Cliente': '#FFC107',\n  'Info Fornecidas': '#2196F3',\n  'Informacoes Fornecidas': '#2196F3',\n  'Canal Oficial': '#9C27B0',\n  'Direcionado para Canal Oficial': '#9C27B0',\n  'Finalizado': '#607D8B'\n};\n\n// Procura label existente (case insensitive)\nconst foundLabel = Array.isArray(labels) \n  ? labels.find(label => label.name?.toLowerCase() === labelName.toLowerCase())\n  : null;\n\nif (foundLabel) {\n  return [{ json: {\n    labelId: foundLabel.id,\n    labelExists: true,\n    labelName: labelName,\n    chatId: $('Extrair_Dados').item.json.chatId\n  }}];\n} else {\n  return [{ json: {\n    labelExists: false,\n    labelName: labelName,\n    labelColor: stageToColor[toStageLabel] || '#9E9E9E',\n    chatId: $('Extrair_Dados').item.json.chatId\n  }}];\n}"
+      },
+      "id": "encontrar-ou-criar",
+      "name": "Encontrar_Ou_Criar_Label",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "label-exists",
+              "leftValue": "={{ $json.labelExists }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "label-existe",
+      "name": "Label_Existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/add-new-label",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $('Encontrar_Ou_Criar_Label').item.json.labelName }}\"\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "criar-label-wpp",
+      "name": "Criar_Label_WPP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        240
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fkCh7h3e4c3iHT4J",
+          "name": "WPPConnect API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "label-id-created",
+              "name": "labelId",
+              "type": "string",
+              "value": "={{ $json.response?.id || $json.id || '' }}"
+            },
+            {
+              "id": "label-name-created",
+              "name": "labelName",
+              "type": "string",
+              "value": "={{ $('Encontrar_Ou_Criar_Label').item.json.labelName }}"
+            },
+            {
+              "id": "chat-id-created",
+              "name": "chatId",
+              "type": "string",
+              "value": "={{ $('Extrair_Dados').item.json.chatId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-label-criada",
+      "name": "Set_Label_Criada",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        240
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "merge-labels",
+      "name": "Merge_Labels",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1600,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/add-or-remove-labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatIds\": [\"{{ $json.chatId }}\"],\n  \"labels\": [\n    {\n      \"labelId\": \"{{ $json.labelId }}\",\n      \"type\": \"add\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "aplicar-label-wpp",
+      "name": "Aplicar_Label_WPP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        160
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fkCh7h3e4c3iHT4J",
+          "name": "WPPConnect API"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "success",
+              "leftValue": "={{ $json.status === 'success' || $json.response?.status === 'success' || $json.status === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "resultado",
+      "name": "Aplicacao_OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [
+        2080,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Sucesso\n\nLabel aplicada com sucesso no chat do WhatsApp",
+        "height": 120,
+        "width": 200,
+        "color": 3
+      },
+      "id": "sticky-sucesso",
+      "name": "Sticky Note Sucesso",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        40
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "fim-sucesso",
+      "name": "Fim_Sucesso",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Erro\n\nFalha ao aplicar label - chat pode nao existir ou API offline",
+        "height": 120,
+        "width": 280,
+        "color": 7
+      },
+      "id": "sticky-erro",
+      "name": "Sticky Note Erro",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "fim-erro",
+      "name": "Fim_Erro",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        240
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "fim-dados-invalidos",
+      "name": "Fim_Dados_Invalidos",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        400,
+        320
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook_Deal_Stage_Changed": {
+      "main": [
+        [
+          {
+            "node": "Extrair_Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair_Dados": {
+      "main": [
+        [
+          {
+            "node": "Dados_Validos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dados_Validos?": {
+      "main": [
+        [
+          {
+            "node": "Buscar_Labels_WPP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fim_Dados_Invalidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar_Labels_WPP": {
+      "main": [
+        [
+          {
+            "node": "Encontrar_Ou_Criar_Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encontrar_Ou_Criar_Label": {
+      "main": [
+        [
+          {
+            "node": "Label_Existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label_Existe?": {
+      "main": [
+        [
+          {
+            "node": "Merge_Labels",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Criar_Label_WPP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar_Label_WPP": {
+      "main": [
+        [
+          {
+            "node": "Set_Label_Criada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_Label_Criada": {
+      "main": [
+        [
+          {
+            "node": "Merge_Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge_Labels": {
+      "main": [
+        [
+          {
+            "node": "Aplicar_Label_WPP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicar_Label_WPP": {
+      "main": [
+        [
+          {
+            "node": "Aplicacao_OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicacao_OK?": {
+      "main": [
+        [
+          {
+            "node": "Fim_Sucesso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fim_Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "40a4bf98421ceaa680c1d7554ed416ede6bd8f87784b3bf1a48d585f53d276c2"
+  },
+  "tags": []
+}

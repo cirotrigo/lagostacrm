@@ -1485,7 +1485,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"event\": \"message.received\",\n  \"session_name\": \"{{ $('Fluxo_Variaveis').item.json['WPP-Session'] }}\",\n  \"data\": {\n    \"wpp_message_id\": \"sent_{{ Date.now() }}_{{ Math.random().toString(36).substr(2, 9) }}\",\n    \"phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n    \"content\": \"{{ $json['output.mensagens'] }}\",\n    \"media_type\": \"text\",\n    \"sender_jid\": \"bot@c.us\",\n    \"sender_name\": \"Coronel (Bot)\",\n    \"sender_phone\": \"\",\n    \"wpp_timestamp\": \"{{ new Date().toISOString() }}\",\n    \"is_from_me\": true\n  }\n}",
+        "jsonBody": "={\n  \"event\": \"message.received\",\n  \"session_name\": \"{{ $('Fluxo_Variaveis').item.json['WPP-Session'] }}\",\n  \"data\": {\n    \"wpp_message_id\": \"sent_{{ Date.now() }}_{{ Math.random().toString(36).substr(2, 9) }}\",\n    \"phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n    \"content\": {{ JSON.stringify($('Split Out').item.json['output.mensagens'] || '') }},\n    \"media_type\": \"text\",\n    \"sender_jid\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}@c.us\",\n    \"sender_name\": \"Coronel (Bot)\",\n    \"sender_phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n    \"wpp_timestamp\": \"{{ new Date().toISOString() }}\",\n    \"is_from_me\": true\n  }\n}",
         "options": {
           "timeout": 10000
         }
