@@ -29,6 +29,12 @@ async function validateAuth(request: NextRequest): Promise<{
         if (!organizationId) {
             return { error: 'X-Organization-Id header required for API key auth', status: 400 };
         }
+
+        // Debug: Check if env vars are set
+        const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const hasKey = !!(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY);
+        console.log('[validateAuth] Creating admin client - URL:', hasUrl, 'Key:', hasKey);
+
         return {
             supabase: createStaticAdminClient(),
             organizationId,
@@ -197,19 +203,23 @@ export async function POST(request: NextRequest) {
         // Helper to convert empty strings to null (n8n sends "" for undefined)
         const emptyToNull = (val: unknown) => (val === '' || val === undefined) ? null : val;
 
+        // Log the data being inserted
+        const insertData = {
+            organization_id: organizationId,
+            chatwoot_conversation_id: body.chatwoot_conversation_id,
+            chatwoot_contact_id: emptyToNull(body.chatwoot_contact_id),
+            chatwoot_inbox_id: emptyToNull(body.chatwoot_inbox_id),
+            contact_id: emptyToNull(body.contact_id),
+            deal_id: emptyToNull(body.deal_id),
+            chatwoot_url: emptyToNull(body.chatwoot_url),
+            status: body.status || 'open',
+        };
+        console.log('[POST] Upserting conversation link:', JSON.stringify(insertData, null, 2));
+
         // Upsert conversation link
         const { data, error } = await supabase
             .from('messaging_conversation_links')
-            .upsert({
-                organization_id: organizationId,
-                chatwoot_conversation_id: body.chatwoot_conversation_id,
-                chatwoot_contact_id: emptyToNull(body.chatwoot_contact_id),
-                chatwoot_inbox_id: emptyToNull(body.chatwoot_inbox_id),
-                contact_id: emptyToNull(body.contact_id),
-                deal_id: emptyToNull(body.deal_id),
-                chatwoot_url: emptyToNull(body.chatwoot_url),
-                status: body.status || 'open',
-            }, {
+            .upsert(insertData, {
                 onConflict: 'organization_id,chatwoot_conversation_id',
             })
             .select()
