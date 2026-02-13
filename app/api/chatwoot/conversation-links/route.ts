@@ -14,25 +14,25 @@ async function validateAuth(request: NextRequest): Promise<{
     supabase: SupabaseClient;
     organizationId: string;
 } | { error: string; status: number }> {
+    // Check multiple possible auth headers
     const authHeader = request.headers.get('Authorization');
-    const expectedSecret = process.env.N8N_WEBHOOK_SECRET || process.env.CHATWOOT_WEBHOOK_SECRET;
+    const xApiKey = request.headers.get('x-api-key');
+    const expectedSecret = process.env.N8N_WEBHOOK_SECRET || process.env.CRM_API_KEY;
 
-    // Check for API key auth (n8n)
-    // Supports both "Bearer <secret>" and direct "<secret>" formats
-    if (authHeader && expectedSecret) {
-        const providedSecret = authHeader.startsWith('Bearer ')
-            ? authHeader.replace('Bearer ', '')
-            : authHeader;
-        if (providedSecret === expectedSecret) {
-            const organizationId = request.headers.get('X-Organization-Id');
-            if (!organizationId) {
-                return { error: 'X-Organization-Id header required for API key auth', status: 400 };
-            }
-            return {
-                supabase: createStaticAdminClient(),
-                organizationId,
-            };
+    // Check for API key auth (n8n uses x-api-key header via "Coronel CRM" credential)
+    const providedKey = xApiKey || (authHeader?.startsWith('Bearer ')
+        ? authHeader.replace('Bearer ', '')
+        : authHeader);
+
+    if (providedKey && expectedSecret && providedKey === expectedSecret) {
+        const organizationId = request.headers.get('X-Organization-Id');
+        if (!organizationId) {
+            return { error: 'X-Organization-Id header required for API key auth', status: 400 };
         }
+        return {
+            supabase: createStaticAdminClient(),
+            organizationId,
+        };
     }
 
     // Fall back to Supabase user auth
