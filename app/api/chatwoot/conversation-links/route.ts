@@ -1,6 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createStaticAdminClient } from '@/lib/supabase/staticAdminClient';
 import type { ConversationLink } from '@/lib/chatwoot';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+/**
+ * Validates request authentication.
+ * Supports both Supabase user auth and n8n API key auth.
+ *
+ * For n8n: Use Authorization: Bearer <N8N_WEBHOOK_SECRET> + X-Organization-Id header
+ */
+async function validateAuth(request: NextRequest): Promise<{
+    supabase: SupabaseClient;
+    organizationId: string;
+} | { error: string; status: number }> {
+    const authHeader = request.headers.get('Authorization');
+    const expectedSecret = process.env.N8N_WEBHOOK_SECRET || process.env.CHATWOOT_WEBHOOK_SECRET;
+
+    // Check for API key auth (n8n)
+    if (authHeader?.startsWith('Bearer ') && expectedSecret) {
+        const providedSecret = authHeader.replace('Bearer ', '');
+        if (providedSecret === expectedSecret) {
+            const organizationId = request.headers.get('X-Organization-Id');
+            if (!organizationId) {
+                return { error: 'X-Organization-Id header required for API key auth', status: 400 };
+            }
+            return {
+                supabase: createStaticAdminClient(),
+                organizationId,
+            };
+        }
+    }
+
+    // Fall back to Supabase user auth
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+        return { error: 'Unauthorized', status: 401 };
+    }
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single();
+
+    if (!profile?.organization_id) {
+        return { error: 'No organization', status: 400 };
+    }
+
+    return {
+        supabase,
+        organizationId: profile.organization_id,
+    };
+}
 
 /**
  * Database row type for messaging_conversation_links
@@ -55,24 +108,13 @@ function toConversationLink(row: DbConversationLink): ConversationLink {
  */
 export async function GET(request: NextRequest) {
     try {
-        const supabase = await createClient();
-
-        // Auth
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        // Auth (supports both Supabase user and n8n API key)
+        const authResult = await validateAuth(request);
+        if ('error' in authResult) {
+            return NextResponse.json({ error: authResult.error }, { status: authResult.status });
         }
 
-        // Get org
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('organization_id')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.organization_id) {
-            return NextResponse.json({ error: 'No organization' }, { status: 400 });
-        }
+        const { supabase, organizationId } = authResult;
 
         const { searchParams } = new URL(request.url);
         const contactId = searchParams.get('contact_id');
@@ -83,7 +125,7 @@ export async function GET(request: NextRequest) {
         let query = supabase
             .from('messaging_conversation_links')
             .select('*')
-            .eq('organization_id', profile.organization_id)
+            .eq('organization_id', organizationId)
             .order('last_message_at', { ascending: false, nullsFirst: false });
 
         if (contactId) {
@@ -131,24 +173,13 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        const supabase = await createClient();
-
-        // Auth
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        // Auth (supports both Supabase user and n8n API key)
+        const authResult = await validateAuth(request);
+        if ('error' in authResult) {
+            return NextResponse.json({ error: authResult.error }, { status: authResult.status });
         }
 
-        // Get org
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('organization_id')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.organization_id) {
-            return NextResponse.json({ error: 'No organization' }, { status: 400 });
-        }
+        const { supabase, organizationId } = authResult;
 
         // Parse body
         const body = await request.json();
@@ -164,7 +195,7 @@ export async function POST(request: NextRequest) {
         const { data, error } = await supabase
             .from('messaging_conversation_links')
             .upsert({
-                organization_id: profile.organization_id,
+                organization_id: organizationId,
                 chatwoot_conversation_id: body.chatwoot_conversation_id,
                 chatwoot_contact_id: body.chatwoot_contact_id,
                 chatwoot_inbox_id: body.chatwoot_inbox_id,
@@ -204,13 +235,13 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
     try {
-        const supabase = await createClient();
-
-        // Auth
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        // Auth (supports both Supabase user and n8n API key)
+        const authResult = await validateAuth(request);
+        if ('error' in authResult) {
+            return NextResponse.json({ error: authResult.error }, { status: authResult.status });
         }
+
+        const { supabase } = authResult;
 
         // Parse body
         const body = await request.json();
