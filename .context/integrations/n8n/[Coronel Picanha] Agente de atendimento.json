@@ -1923,6 +1923,15 @@
               "neverError": true
             }
           }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Organization-Id",
+              "value": "da05aa77-f90a-4c5b-8b3a-d18a7ca4e92e"
+            }
+          ]
         }
       },
       "id": "criar-conversation-link-001",
