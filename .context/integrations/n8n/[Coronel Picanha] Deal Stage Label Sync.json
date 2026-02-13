@@ -3,83 +3,374 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Deal Stage Label Sync\n\nEste workflow sincroniza labels no Chatwoot quando um deal muda de stage no CRM.\n\n### Fluxo:\n1. Webhook recebe evento deal.stage_changed\n2. Busca mapeamento de label para o novo stage\n3. Busca conversation link do deal\n4. Aplica label no Chatwoot\n5. Registra log de sincronização",
-        "height": 320,
-        "width": 400,
+        "content": "## Deal Stage Label Sync (WhatsApp + Chatwoot)\n\nEste workflow sincroniza labels quando um deal muda de stage no CRM.\n\n### Fluxo:\n1. Webhook recebe evento deal.stage_changed\n2. Extrai dados do webhook\n3. **Paralelo:**\n   - WhatsApp: Busca chats e labels, aplica via WPPConnect\n   - Chatwoot: Busca mapeamento e conversation link, aplica via API\n\n### PRE-REQUISITOS:\n- Labels devem existir no WhatsApp Business\n- Mapeamentos devem existir em messaging_label_map",
+        "height": 400,
+        "width": 420,
         "color": 4
       },
       "id": "sticky-intro",
-      "name": "Sticky Note",
+      "name": "Sticky Note Info",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-800, 160]
+      "position": [240, 160]
+    },
+    {
+      "parameters": {
+        "content": "## WhatsApp (WPPConnect)\n\nSincroniza labels usando LID do chat",
+        "height": 100,
+        "width": 300,
+        "color": 3
+      },
+      "id": "sticky-wpp",
+      "name": "Sticky Note WPP",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1040, 480]
+    },
+    {
+      "parameters": {
+        "content": "## Chatwoot\n\nSincroniza labels via API do Chatwoot",
+        "height": 100,
+        "width": 300,
+        "color": 5
+      },
+      "id": "sticky-cw",
+      "name": "Sticky Note CW",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1040, 1040]
     },
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "deal/stage-changed",
+        "path": "deal-stage-label-sync",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-560, 400],
+      "position": [320, 640],
       "id": "webhook-stage-changed",
-      "name": "Webhook_Stage_Changed",
-      "webhookId": "deal-stage-changed-lagostacrm"
+      "name": "Webhook_Deal_Stage_Changed",
+      "webhookId": "deal-stage-label-sync"
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "var-crm-host",
-              "name": "CRM-Host",
-              "value": "https://coronelpicanhacrm.vercel.app",
-              "type": "string"
+              "id": "contact-phone",
+              "name": "contact_phone",
+              "type": "string",
+              "value": "={{ $json.body?.contact?.phone || $json.contact?.phone || '' }}"
             },
             {
-              "id": "var-cw-host",
-              "name": "CW-Host",
-              "value": "https://chatwoot-coronel.lagostacriativa.com.br",
-              "type": "string"
+              "id": "contact-phone-normalized",
+              "name": "contact_phone_normalized",
+              "type": "string",
+              "value": "={{ ($json.body?.contact?.phone || $json.contact?.phone || '').replace(/^\\+/, '').replace(/[^0-9]/g, '') }}"
             },
             {
-              "id": "var-cw-account",
-              "name": "CW-Account",
-              "value": "1",
-              "type": "string"
+              "id": "to-stage-label",
+              "name": "to_stage_label",
+              "type": "string",
+              "value": "={{ $json.body?.deal?.to_stage_label || $json.deal?.to_stage_label || '' }}"
             },
             {
-              "id": "var-deal-id",
+              "id": "from-stage-label",
+              "name": "from_stage_label",
+              "type": "string",
+              "value": "={{ $json.body?.deal?.from_stage_label || $json.deal?.from_stage_label || '' }}"
+            },
+            {
+              "id": "deal-id",
               "name": "deal_id",
-              "value": "={{ $json.body.deal?.id || $json.body.deal_id }}",
-              "type": "string"
+              "type": "string",
+              "value": "={{ $json.body?.deal?.id || $json.deal?.id || '' }}"
             },
             {
-              "id": "var-stage-id",
+              "id": "deal-title",
+              "name": "deal_title",
+              "type": "string",
+              "value": "={{ $json.body?.deal?.title || $json.deal?.title || '' }}"
+            },
+            {
+              "id": "contact-name",
+              "name": "contact_name",
+              "type": "string",
+              "value": "={{ $json.body?.contact?.name || $json.contact?.name || '' }}"
+            },
+            {
+              "id": "stage-id",
               "name": "stage_id",
-              "value": "={{ $json.body.deal?.stage_id || $json.body.to_stage_id }}",
-              "type": "string"
+              "type": "string",
+              "value": "={{ $json.body?.deal?.stage_id || $json.body?.to_stage_id || '' }}"
             },
             {
-              "id": "var-org-id",
+              "id": "org-id",
               "name": "organization_id",
-              "value": "={{ $json.body.organization_id }}",
-              "type": "string"
+              "type": "string",
+              "value": "={{ $json.body?.organization_id || '' }}"
+            },
+            {
+              "id": "wpp-host",
+              "name": "WPP_Host",
+              "type": "string",
+              "value": "https://coronel-wwp.lagostacriativa.com.br"
+            },
+            {
+              "id": "wpp-session",
+              "name": "WPP_Session",
+              "type": "string",
+              "value": "lagostacrm"
+            },
+            {
+              "id": "crm-host",
+              "name": "CRM_Host",
+              "type": "string",
+              "value": "https://coronelpicanhacrm.vercel.app"
+            },
+            {
+              "id": "cw-host",
+              "name": "CW_Host",
+              "type": "string",
+              "value": "https://chatwoot-coronel.lagostacriativa.com.br"
+            },
+            {
+              "id": "cw-account",
+              "name": "CW_Account",
+              "type": "string",
+              "value": "1"
             }
           ]
         },
         "options": {}
       },
-      "id": "set-variaveis",
-      "name": "Variaveis",
+      "id": "extrair-dados",
+      "name": "Extrair_Dados",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-336, 400]
+      "position": [544, 640]
     },
     {
       "parameters": {
-        "url": "={{ $json['CRM-Host'] }}/api/chatwoot/labels",
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-stage",
+              "leftValue": "={{ $json.to_stage_label }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "dados-validos",
+      "name": "Dados_Validos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [768, 640]
+    },
+    {
+      "parameters": {},
+      "id": "fim-dados-invalidos",
+      "name": "Fim_Dados_Invalidos",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [992, 800]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/all-chats",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "buscar-chats-wpp",
+      "name": "Buscar_Chats_WPP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 600],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vZqWhvXHmgq4fjXx",
+          "name": "WPPConnect API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/get-all-labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "buscar-labels-wpp",
+      "name": "Buscar_Labels_WPP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1344, 600],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vZqWhvXHmgq4fjXx",
+          "name": "WPPConnect API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Busca o LID do chat e as labels (nova e anterior)\nconst chatsResponse = $('Buscar_Chats_WPP').first().json;\nconst labelsResponse = $input.first().json;\n\nconst chats = chatsResponse?.response || [];\nconst labels = labelsResponse?.response || labelsResponse || [];\n\nconst contactPhone = $('Extrair_Dados').item.json.contact_phone_normalized;\nconst toStageLabel = $('Extrair_Dados').item.json.to_stage_label;\nconst fromStageLabel = $('Extrair_Dados').item.json.from_stage_label;\n\n// Mapeamento de nomes do CRM para labels do WhatsApp\nconst stageLabelMap = {\n  'Nova Interação': 'Nova Interacao',\n  'Informacoes Fornecidas': 'Info Fornecidas',\n  'Informações Fornecidas': 'Info Fornecidas',\n  'Direcionado para Canal Oficial': 'Canal Oficial'\n};\n\n// Funcao para buscar label pelo nome\nfunction findLabel(stageName) {\n  if (!stageName) return null;\n  const labelName = stageLabelMap[stageName] || stageName;\n  return Array.isArray(labels) \n    ? labels.find(label => {\n        const lname = label.name?.toLowerCase();\n        return lname === labelName.toLowerCase() || \n               lname === stageName.toLowerCase();\n      })\n    : null;\n}\n\n// Busca label da nova etapa\nconst newLabelName = stageLabelMap[toStageLabel] || toStageLabel;\nconst foundNewLabel = findLabel(toStageLabel);\n\n// Busca label da etapa anterior (para remover)\nconst oldLabelName = stageLabelMap[fromStageLabel] || fromStageLabel;\nconst foundOldLabel = findLabel(fromStageLabel);\n\n// Procura o chat pelo numero de telefone\nlet chatLid = null;\nlet chatFound = false;\n\nif (Array.isArray(chats) && contactPhone) {\n  for (const chat of chats) {\n    const chatStr = JSON.stringify(chat);\n    if (chatStr.includes(contactPhone)) {\n      chatLid = chat.id?._serialized || null;\n      chatFound = true;\n      break;\n    }\n    const shortPhone = contactPhone.slice(-11);\n    if (shortPhone.length >= 8 && chatStr.includes(shortPhone)) {\n      chatLid = chat.id?._serialized || null;\n      chatFound = true;\n      break;\n    }\n  }\n}\n\n// Se nao encontrou pelo telefone, tenta pelo nome\nif (!chatFound && $('Extrair_Dados').item.json.contact_name) {\n  const contactName = $('Extrair_Dados').item.json.contact_name.toLowerCase();\n  for (const chat of chats) {\n    const chatName = (chat.contact?.name || chat.contact?.pushname || '').toLowerCase();\n    if (chatName && chatName.includes(contactName)) {\n      chatLid = chat.id?._serialized || null;\n      chatFound = true;\n      break;\n    }\n  }\n}\n\n// Monta o array de options para a API\nconst labelOptions = [];\n\n// Se tem label antiga, adiciona operacao de remocao primeiro\nif (foundOldLabel) {\n  labelOptions.push({ labelId: String(foundOldLabel.id), type: 'remove' });\n}\n\n// Adiciona operacao de adicionar nova label\nif (foundNewLabel) {\n  labelOptions.push({ labelId: String(foundNewLabel.id), type: 'add' });\n}\n\nif (foundNewLabel && chatFound && chatLid) {\n  return [{ json: {\n    newLabelId: String(foundNewLabel.id),\n    newLabelName: foundNewLabel.name,\n    oldLabelId: foundOldLabel ? String(foundOldLabel.id) : null,\n    oldLabelName: foundOldLabel ? foundOldLabel.name : null,\n    labelOptions: labelOptions,\n    labelFound: true,\n    chatLid: chatLid,\n    chatFound: true,\n    contactPhone: contactPhone\n  }}];\n} else if (!foundNewLabel) {\n  return [{ json: {\n    newLabelId: '',\n    newLabelName: newLabelName,\n    oldLabelId: null,\n    oldLabelName: null,\n    labelOptions: [],\n    labelFound: false,\n    chatLid: chatLid,\n    chatFound: chatFound,\n    contactPhone: contactPhone,\n    error: `Label '${newLabelName}' nao encontrada no WhatsApp. Crie manualmente.`\n  }}];\n} else {\n  return [{ json: {\n    newLabelId: String(foundNewLabel.id),\n    newLabelName: foundNewLabel.name,\n    oldLabelId: null,\n    oldLabelName: null,\n    labelOptions: [],\n    labelFound: true,\n    chatLid: null,\n    chatFound: false,\n    contactPhone: contactPhone,\n    error: `Chat nao encontrado para telefone ${contactPhone}. O contato precisa ter uma conversa previa no WhatsApp.`\n  }}];\n}"
+      },
+      "id": "encontrar-label-chat",
+      "name": "Encontrar_Label_e_Chat",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1568, 600]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "label-found",
+              "leftValue": "={{ $json.labelFound }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "chat-found",
+              "leftValue": "={{ $json.chatFound }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "label-chat-ok",
+      "name": "Label_e_Chat_OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [1792, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/add-or-remove-label",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chatIds: [$json.chatLid], options: $json.labelOptions }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "aplicar-label-wpp",
+      "name": "Aplicar_Label_WPP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2016, 504],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "vZqWhvXHmgq4fjXx",
+          "name": "WPPConnect API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "success",
+              "leftValue": "={{ $json.status === 'success' || $json.response?.status === 'success' || $json.status === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "aplicacao-wpp-ok",
+      "name": "Aplicacao_WPP_OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [2240, 504]
+    },
+    {
+      "parameters": {},
+      "id": "fim-sucesso-wpp",
+      "name": "Fim_Sucesso_WPP",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2464, 408]
+    },
+    {
+      "parameters": {},
+      "id": "fim-erro-wpp",
+      "name": "Fim_Erro_WPP",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2464, 600]
+    },
+    {
+      "parameters": {},
+      "id": "fim-nao-encontrado-wpp",
+      "name": "Fim_Nao_Encontrado_WPP",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2016, 696]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Extrair_Dados').item.json.CRM_Host }}/api/chatwoot/labels",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendQuery": true,
@@ -87,24 +378,25 @@
           "parameters": [
             {
               "name": "stage_id",
-              "value": "={{ $json.stage_id }}"
+              "value": "={{ $('Extrair_Dados').item.json.stage_id }}"
             }
           ]
         },
         "options": {}
       },
       "id": "buscar-label-map",
-      "name": "Buscar_Label_Map",
+      "name": "Buscar_Label_Map_CW",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-112, 400],
+      "position": [1120, 1160],
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
           "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -118,7 +410,7 @@
           "conditions": [
             {
               "id": "check-label-exists",
-              "leftValue": "={{ $json.data[0]?.chatwoot_label }}",
+              "leftValue": "={{ $json.data?.[0]?.chatwoot_label }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -132,11 +424,11 @@
         "looseTypeValidation": true,
         "options": {}
       },
-      "id": "check-label-map",
-      "name": "Tem_Mapeamento?",
+      "id": "tem-mapeamento-cw",
+      "name": "Tem_Mapeamento_CW?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.1,
-      "position": [112, 400]
+      "position": [1344, 1160]
     },
     {
       "parameters": {
@@ -158,15 +450,15 @@
         },
         "options": {}
       },
-      "id": "set-label",
-      "name": "Set_Label",
+      "id": "set-label-cw",
+      "name": "Set_Label_CW",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [336, 304]
+      "position": [1568, 1064]
     },
     {
       "parameters": {
-        "url": "={{ $('Variaveis').item.json['CRM-Host'] }}/api/chatwoot/conversation-links",
+        "url": "={{ $('Extrair_Dados').item.json.CRM_Host }}/api/chatwoot/conversation-links",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendQuery": true,
@@ -174,7 +466,7 @@
           "parameters": [
             {
               "name": "deal_id",
-              "value": "={{ $('Variaveis').item.json.deal_id }}"
+              "value": "={{ $('Extrair_Dados').item.json.deal_id }}"
             }
           ]
         },
@@ -184,14 +476,15 @@
       "name": "Buscar_Conversation_Link",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [560, 304],
+      "position": [1792, 1064],
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
           "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -205,7 +498,7 @@
           "conditions": [
             {
               "id": "check-conv-exists",
-              "leftValue": "={{ $json.data[0]?.chatwootConversationId }}",
+              "leftValue": "={{ $json.data?.[0]?.chatwootConversationId }}",
               "rightValue": "",
               "operator": {
                 "type": "number",
@@ -219,11 +512,11 @@
         "looseTypeValidation": true,
         "options": {}
       },
-      "id": "check-conversation",
-      "name": "Tem_Conversa?",
+      "id": "tem-conversa-cw",
+      "name": "Tem_Conversa_CW?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.1,
-      "position": [784, 304]
+      "position": [2016, 1064]
     },
     {
       "parameters": {
@@ -239,21 +532,21 @@
         },
         "options": {}
       },
-      "id": "set-conversation",
-      "name": "Set_Conversation",
+      "id": "set-conversation-cw",
+      "name": "Set_Conversation_CW",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1008, 208]
+      "position": [2240, 968]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Variaveis').item.json['CW-Host'] }}/api/v1/accounts/{{ $('Variaveis').item.json['CW-Account'] }}/conversations/{{ $json.chatwoot_conversation_id }}/labels",
+        "url": "={{ $('Extrair_Dados').item.json.CW_Host }}/api/v1/accounts/{{ $('Extrair_Dados').item.json.CW_Account }}/conversations/{{ $json.chatwoot_conversation_id }}/labels",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"labels\": [\"{{ $('Set_Label').item.json.chatwoot_label }}\"]\n}",
+        "jsonBody": "={\n  \"labels\": [\"{{ $('Set_Label_CW').item.json.chatwoot_label }}\"]\n}",
         "options": {
           "response": {
             "response": {
@@ -266,18 +559,19 @@
       "name": "Aplicar_Label_Chatwoot",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1232, 208],
+      "position": [2464, 968],
       "credentials": {
         "httpHeaderAuth": {
           "id": "1uvzB18SDD4GzDDt",
           "name": "ChatWoot Coronel"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Variaveis').item.json['CRM-Host'] }}/api/chatwoot/labels/sync-log",
+        "url": "={{ $('Extrair_Dados').item.json.CRM_Host }}/api/chatwoot/labels/sync-log",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -285,13 +579,13 @@
           "parameters": [
             {
               "name": "X-Organization-Id",
-              "value": "={{ $('Variaveis').item.json.organization_id }}"
+              "value": "={{ $('Extrair_Dados').item.json.organization_id }}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"deal_id\": \"{{ $('Variaveis').item.json.deal_id }}\",\n  \"action\": \"add_label\",\n  \"label_name\": \"{{ $('Set_Label').item.json.chatwoot_label }}\",\n  \"target\": \"chatwoot\",\n  \"success\": {{ $json.error ? false : true }},\n  \"error_message\": {{ $json.error ? JSON.stringify($json.error) : null }},\n  \"triggered_by\": \"stage_change\"\n}",
+        "jsonBody": "={\n  \"deal_id\": \"{{ $('Extrair_Dados').item.json.deal_id }}\",\n  \"action\": \"add_label\",\n  \"label_name\": \"{{ $('Set_Label_CW').item.json.chatwoot_label }}\",\n  \"target\": \"chatwoot\",\n  \"success\": {{ $json.error ? false : true }},\n  \"error_message\": {{ $json.error ? JSON.stringify($json.error) : null }},\n  \"triggered_by\": \"stage_change\"\n}",
         "options": {
           "response": {
             "response": {
@@ -300,89 +594,193 @@
           }
         }
       },
-      "id": "registrar-log",
-      "name": "Registrar_Log",
+      "id": "registrar-log-cw",
+      "name": "Registrar_Log_CW",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1456, 208],
+      "position": [2688, 968],
       "credentials": {
         "httpHeaderAuth": {
           "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {},
-      "id": "no-label-map",
-      "name": "Sem_Mapeamento",
+      "id": "sem-mapeamento-cw",
+      "name": "Sem_Mapeamento_CW",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [336, 496]
+      "position": [1568, 1256]
     },
     {
       "parameters": {},
-      "id": "no-conversation",
-      "name": "Sem_Conversa",
+      "id": "sem-conversa-cw",
+      "name": "Sem_Conversa_CW",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1008, 400]
+      "position": [2240, 1160]
     }
   ],
   "pinData": {},
   "connections": {
-    "Webhook_Stage_Changed": {
+    "Webhook_Deal_Stage_Changed": {
       "main": [
         [
           {
-            "node": "Variaveis",
+            "node": "Extrair_Dados",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Variaveis": {
+    "Extrair_Dados": {
       "main": [
         [
           {
-            "node": "Buscar_Label_Map",
+            "node": "Dados_Validos?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Buscar_Label_Map": {
+    "Dados_Validos?": {
       "main": [
         [
           {
-            "node": "Tem_Mapeamento?",
+            "node": "Buscar_Chats_WPP",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Tem_Mapeamento?": {
-      "main": [
-        [
+          },
           {
-            "node": "Set_Label",
+            "node": "Buscar_Label_Map_CW",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Sem_Mapeamento",
+            "node": "Fim_Dados_Invalidos",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Set_Label": {
+    "Buscar_Chats_WPP": {
+      "main": [
+        [
+          {
+            "node": "Buscar_Labels_WPP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar_Labels_WPP": {
+      "main": [
+        [
+          {
+            "node": "Encontrar_Label_e_Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encontrar_Label_e_Chat": {
+      "main": [
+        [
+          {
+            "node": "Label_e_Chat_OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label_e_Chat_OK?": {
+      "main": [
+        [
+          {
+            "node": "Aplicar_Label_WPP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fim_Nao_Encontrado_WPP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicar_Label_WPP": {
+      "main": [
+        [
+          {
+            "node": "Aplicacao_WPP_OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicacao_WPP_OK?": {
+      "main": [
+        [
+          {
+            "node": "Fim_Sucesso_WPP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fim_Erro_WPP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar_Label_Map_CW": {
+      "main": [
+        [
+          {
+            "node": "Tem_Mapeamento_CW?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem_Mapeamento_CW?": {
+      "main": [
+        [
+          {
+            "node": "Set_Label_CW",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem_Mapeamento_CW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_Label_CW": {
       "main": [
         [
           {
@@ -397,32 +795,32 @@
       "main": [
         [
           {
-            "node": "Tem_Conversa?",
+            "node": "Tem_Conversa_CW?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tem_Conversa?": {
+    "Tem_Conversa_CW?": {
       "main": [
         [
           {
-            "node": "Set_Conversation",
+            "node": "Set_Conversation_CW",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Sem_Conversa",
+            "node": "Sem_Conversa_CW",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Set_Conversation": {
+    "Set_Conversation_CW": {
       "main": [
         [
           {
@@ -437,7 +835,7 @@
       "main": [
         [
           {
-            "node": "Registrar_Log",
+            "node": "Registrar_Log_CW",
             "type": "main",
             "index": 0
           }
@@ -449,10 +847,10 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "1",
+  "versionId": "2",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "lagostacrm-chatwoot-labels-sync"
+    "instanceId": "lagostacrm-labels-sync-merged"
   },
   "tags": []
 }
