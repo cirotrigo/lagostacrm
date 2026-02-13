@@ -18,8 +18,8 @@
     },
     {
       "parameters": {
-        "content": "## Sincronizacao de Labels\n\nQuando um deal muda de etapa no CRM:\n1. Extrai dados do webhook\n2. Verifica se label ja esta aplicada no chat\n3. Busca/cria label no WhatsApp\n4. Aplica label via WPPConnect API\n\nCobre AMBOS os cenarios:\n- Bot move deal (via tools CRM)\n- Usuario move deal (manualmente no Kanban)",
-        "height": 280,
+        "content": "## Sincronizacao de Labels\n\nQuando um deal muda de etapa no CRM:\n1. Extrai dados do webhook\n2. Busca chats existentes para encontrar o LID do contato\n3. Busca labels existentes no WhatsApp\n4. Encontra a label correspondente pelo nome\n5. Aplica label via WPPConnect API usando o LID\n\nPRE-REQUISITO: Labels devem existir no WhatsApp Business!\nCriar manualmente: Nova Interacao, Em Atendimento, Aguardando Cliente, Info Fornecidas, Canal Oficial, Finalizado\n\nIMPORTANTE: O WPPConnect usa formato @lid (Linked ID) para labels, nao @c.us",
+        "height": 360,
         "width": 400,
         "color": 4
       },
@@ -29,7 +29,7 @@
       "typeVersion": 1,
       "position": [
         -400,
-        -200
+        -280
       ]
     },
     {
@@ -61,6 +61,12 @@
               "value": "={{ $json.body?.contact?.phone || $json.contact?.phone || '' }}"
             },
             {
+              "id": "contact-phone-normalized",
+              "name": "contact_phone_normalized",
+              "type": "string",
+              "value": "={{ ($json.body?.contact?.phone || $json.contact?.phone || '').replace(/^\\+/, '').replace(/[^0-9]/g, '') }}"
+            },
+            {
               "id": "to-stage-label",
               "name": "to_stage_label",
               "type": "string",
@@ -89,12 +95,6 @@
               "name": "contact_name",
               "type": "string",
               "value": "={{ $json.body?.contact?.name || $json.contact?.name || '' }}"
-            },
-            {
-              "id": "chat-id",
-              "name": "chatId",
-              "type": "string",
-              "value": "={{ ($json.body?.contact?.phone || $json.contact?.phone || '') + '@c.us' }}"
             },
             {
               "id": "wpp-host",
@@ -166,15 +166,15 @@
     },
     {
       "parameters": {
-        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/get-all-labels",
+        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/all-chats",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "options": {
-          "timeout": 15000
+          "timeout": 30000
         }
       },
-      "id": "buscar-labels-wpp",
-      "name": "Buscar_Labels_WPP",
+      "id": "buscar-chats-wpp",
+      "name": "Buscar_Chats_WPP",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -191,14 +191,39 @@
     },
     {
       "parameters": {
-        "jsCode": "// Busca ou prepara criacao de label\nconst labelsResponse = $input.first().json;\nconst labels = labelsResponse?.response || labelsResponse || [];\nconst toStageLabel = $('Extrair_Dados').item.json.to_stage_label;\n\n// Mapeamento de nomes longos para labels curtas (limitacao WhatsApp)\nconst stageLabelMap = {\n  'Informacoes Fornecidas': 'Info Fornecidas',\n  'Direcionado para Canal Oficial': 'Canal Oficial'\n};\n\nconst labelName = stageLabelMap[toStageLabel] || toStageLabel;\n\n// Cores por etapa (paleta WhatsApp Business)\nconst stageToColor = {\n  'Nova Interacao': '#9E9E9E',\n  'Em Atendimento': '#4CAF50',\n  'Aguardando Cliente': '#FFC107',\n  'Info Fornecidas': '#2196F3',\n  'Informacoes Fornecidas': '#2196F3',\n  'Canal Oficial': '#9C27B0',\n  'Direcionado para Canal Oficial': '#9C27B0',\n  'Finalizado': '#607D8B'\n};\n\n// Procura label existente (case insensitive)\nconst foundLabel = Array.isArray(labels) \n  ? labels.find(label => label.name?.toLowerCase() === labelName.toLowerCase())\n  : null;\n\nif (foundLabel) {\n  return [{ json: {\n    labelId: foundLabel.id,\n    labelExists: true,\n    labelName: labelName,\n    chatId: $('Extrair_Dados').item.json.chatId\n  }}];\n} else {\n  return [{ json: {\n    labelExists: false,\n    labelName: labelName,\n    labelColor: stageToColor[toStageLabel] || '#9E9E9E',\n    chatId: $('Extrair_Dados').item.json.chatId\n  }}];\n}"
+        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/get-all-labels",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        }
       },
-      "id": "encontrar-ou-criar",
-      "name": "Encontrar_Ou_Criar_Label",
+      "id": "buscar-labels-wpp",
+      "name": "Buscar_Labels_WPP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        160
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fkCh7h3e4c3iHT4J",
+          "name": "WPPConnect API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Busca o LID do chat e as labels (nova e anterior)\nconst chatsResponse = $('Buscar_Chats_WPP').first().json;\nconst labelsResponse = $input.first().json;\n\nconst chats = chatsResponse?.response || [];\nconst labels = labelsResponse?.response || labelsResponse || [];\n\nconst contactPhone = $('Extrair_Dados').item.json.contact_phone_normalized;\nconst toStageLabel = $('Extrair_Dados').item.json.to_stage_label;\nconst fromStageLabel = $('Extrair_Dados').item.json.from_stage_label;\n\n// Mapeamento de nomes do CRM para labels do WhatsApp\nconst stageLabelMap = {\n  'Nova Interação': 'Nova Interacao',\n  'Informacoes Fornecidas': 'Info Fornecidas',\n  'Informações Fornecidas': 'Info Fornecidas',\n  'Direcionado para Canal Oficial': 'Canal Oficial'\n};\n\n// Funcao para buscar label pelo nome\nfunction findLabel(stageName) {\n  if (!stageName) return null;\n  const labelName = stageLabelMap[stageName] || stageName;\n  return Array.isArray(labels) \n    ? labels.find(label => {\n        const lname = label.name?.toLowerCase();\n        return lname === labelName.toLowerCase() || \n               lname === stageName.toLowerCase();\n      })\n    : null;\n}\n\n// Busca label da nova etapa\nconst newLabelName = stageLabelMap[toStageLabel] || toStageLabel;\nconst foundNewLabel = findLabel(toStageLabel);\n\n// Busca label da etapa anterior (para remover)\nconst oldLabelName = stageLabelMap[fromStageLabel] || fromStageLabel;\nconst foundOldLabel = findLabel(fromStageLabel);\n\n// Procura o chat pelo numero de telefone\nlet chatLid = null;\nlet chatFound = false;\n\nif (Array.isArray(chats) && contactPhone) {\n  for (const chat of chats) {\n    const chatStr = JSON.stringify(chat);\n    if (chatStr.includes(contactPhone)) {\n      chatLid = chat.id?._serialized || null;\n      chatFound = true;\n      break;\n    }\n    const shortPhone = contactPhone.slice(-11);\n    if (shortPhone.length >= 8 && chatStr.includes(shortPhone)) {\n      chatLid = chat.id?._serialized || null;\n      chatFound = true;\n      break;\n    }\n  }\n}\n\n// Se nao encontrou pelo telefone, tenta pelo nome\nif (!chatFound && $('Extrair_Dados').item.json.contact_name) {\n  const contactName = $('Extrair_Dados').item.json.contact_name.toLowerCase();\n  for (const chat of chats) {\n    const chatName = (chat.contact?.name || chat.contact?.pushname || '').toLowerCase();\n    if (chatName && chatName.includes(contactName)) {\n      chatLid = chat.id?._serialized || null;\n      chatFound = true;\n      break;\n    }\n  }\n}\n\n// Monta o array de options para a API\nconst labelOptions = [];\n\n// Se tem label antiga, adiciona operacao de remocao primeiro\nif (foundOldLabel) {\n  labelOptions.push({ labelId: String(foundOldLabel.id), type: 'remove' });\n}\n\n// Adiciona operacao de adicionar nova label\nif (foundNewLabel) {\n  labelOptions.push({ labelId: String(foundNewLabel.id), type: 'add' });\n}\n\nif (foundNewLabel && chatFound && chatLid) {\n  return [{ json: {\n    newLabelId: String(foundNewLabel.id),\n    newLabelName: foundNewLabel.name,\n    oldLabelId: foundOldLabel ? String(foundOldLabel.id) : null,\n    oldLabelName: foundOldLabel ? foundOldLabel.name : null,\n    labelOptions: labelOptions,\n    labelFound: true,\n    chatLid: chatLid,\n    chatFound: true,\n    contactPhone: contactPhone\n  }}];\n} else if (!foundNewLabel) {\n  return [{ json: {\n    newLabelId: '',\n    newLabelName: newLabelName,\n    oldLabelId: null,\n    oldLabelName: null,\n    labelOptions: [],\n    labelFound: false,\n    chatLid: chatLid,\n    chatFound: chatFound,\n    contactPhone: contactPhone,\n    error: `Label '${newLabelName}' nao encontrada no WhatsApp. Crie manualmente.`\n  }}];\n} else {\n  return [{ json: {\n    newLabelId: String(foundNewLabel.id),\n    newLabelName: foundNewLabel.name,\n    oldLabelId: null,\n    oldLabelName: null,\n    labelOptions: [],\n    labelFound: true,\n    chatLid: null,\n    chatFound: false,\n    contactPhone: contactPhone,\n    error: `Chat nao encontrado para telefone ${contactPhone}. O contato precisa ter uma conversa previa no WhatsApp.`\n  }}];\n}"
+      },
+      "id": "encontrar-label-e-chat",
+      "name": "Encontrar_Label_e_Chat",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        640,
+        880,
         160
       ]
     },
@@ -213,8 +238,17 @@
           },
           "conditions": [
             {
-              "id": "label-exists",
-              "leftValue": "={{ $json.labelExists }}",
+              "id": "label-found",
+              "leftValue": "={{ $json.labelFound }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "chat-found",
+              "leftValue": "={{ $json.chatFound }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -227,87 +261,12 @@
         "looseTypeValidation": true,
         "options": {}
       },
-      "id": "label-existe",
-      "name": "Label_Existe?",
+      "id": "label-e-chat-ok",
+      "name": "Label_e_Chat_OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.1,
       "position": [
-        880,
-        160
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Extrair_Dados').item.json.WPP_Host }}/api/{{ $('Extrair_Dados').item.json.WPP_Session }}/add-new-label",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"name\": \"{{ $('Encontrar_Ou_Criar_Label').item.json.labelName }}\"\n}",
-        "options": {
-          "timeout": 15000
-        }
-      },
-      "id": "criar-label-wpp",
-      "name": "Criar_Label_WPP",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
         1120,
-        240
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "fkCh7h3e4c3iHT4J",
-          "name": "WPPConnect API"
-        }
-      },
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "label-id-created",
-              "name": "labelId",
-              "type": "string",
-              "value": "={{ $json.response?.id || $json.id || '' }}"
-            },
-            {
-              "id": "label-name-created",
-              "name": "labelName",
-              "type": "string",
-              "value": "={{ $('Encontrar_Ou_Criar_Label').item.json.labelName }}"
-            },
-            {
-              "id": "chat-id-created",
-              "name": "chatId",
-              "type": "string",
-              "value": "={{ $('Extrair_Dados').item.json.chatId }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "set-label-criada",
-      "name": "Set_Label_Criada",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1360,
-        240
-      ]
-    },
-    {
-      "parameters": {},
-      "id": "merge-labels",
-      "name": "Merge_Labels",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [
-        1600,
         160
       ]
     },
@@ -319,7 +278,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"chatIds\": [\"{{ $json.chatId }}\"],\n  \"labels\": [\n    {\n      \"labelId\": \"{{ $json.labelId }}\",\n      \"type\": \"add\"\n    }\n  ]\n}",
+        "jsonBody": "={{ JSON.stringify({ chatIds: [$json.chatLid], options: $json.labelOptions }) }}",
         "options": {
           "timeout": 15000
         }
@@ -329,8 +288,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1840,
-        160
+        1360,
+        80
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -373,15 +332,15 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.1,
       "position": [
-        2080,
-        160
+        1600,
+        80
       ]
     },
     {
       "parameters": {
-        "content": "## Sucesso\n\nLabel aplicada com sucesso no chat do WhatsApp",
+        "content": "## Sucesso\n\nLabel aplicada com sucesso no chat do WhatsApp usando o LID correto",
         "height": 120,
-        "width": 200,
+        "width": 240,
         "color": 3
       },
       "id": "sticky-sucesso",
@@ -389,8 +348,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2320,
-        40
+        1840,
+        -20
       ]
     },
     {
@@ -400,34 +359,61 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        2400,
-        80
+        1920,
+        20
       ]
     },
     {
       "parameters": {
-        "content": "## Erro\n\nFalha ao aplicar label - chat pode nao existir ou API offline",
+        "content": "## Erro na Aplicacao\n\nFalha ao aplicar label - verifique logs",
         "height": 120,
         "width": 280,
         "color": 7
       },
-      "id": "sticky-erro",
-      "name": "Sticky Note Erro",
+      "id": "sticky-erro-aplicacao",
+      "name": "Sticky Note Erro Aplicacao",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2320,
+        1840,
+        140
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "fim-erro-aplicacao",
+      "name": "Fim_Erro_Aplicacao",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Label ou Chat Nao Encontrado\n\n- Label nao existe no WhatsApp: Crie manualmente\n- Chat nao encontrado: Contato precisa ter conversa previa no WhatsApp",
+        "height": 160,
+        "width": 340,
+        "color": 6
+      },
+      "id": "sticky-nao-encontrado",
+      "name": "Sticky Note Nao Encontrado",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1320,
         200
       ]
     },
     {
       "parameters": {},
-      "id": "fim-erro",
-      "name": "Fim_Erro",
+      "id": "fim-nao-encontrado",
+      "name": "Fim_Nao_Encontrado",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        2400,
+        1440,
         240
       ]
     },
@@ -471,7 +457,7 @@
       "main": [
         [
           {
-            "node": "Buscar_Labels_WPP",
+            "node": "Buscar_Chats_WPP",
             "type": "main",
             "index": 0
           }
@@ -485,73 +471,51 @@
         ]
       ]
     },
+    "Buscar_Chats_WPP": {
+      "main": [
+        [
+          {
+            "node": "Buscar_Labels_WPP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Buscar_Labels_WPP": {
       "main": [
         [
           {
-            "node": "Encontrar_Ou_Criar_Label",
+            "node": "Encontrar_Label_e_Chat",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Encontrar_Ou_Criar_Label": {
+    "Encontrar_Label_e_Chat": {
       "main": [
         [
           {
-            "node": "Label_Existe?",
+            "node": "Label_e_Chat_OK?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Label_Existe?": {
+    "Label_e_Chat_OK?": {
       "main": [
         [
           {
-            "node": "Merge_Labels",
+            "node": "Aplicar_Label_WPP",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Criar_Label_WPP",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Criar_Label_WPP": {
-      "main": [
-        [
-          {
-            "node": "Set_Label_Criada",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Set_Label_Criada": {
-      "main": [
-        [
-          {
-            "node": "Merge_Labels",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Merge_Labels": {
-      "main": [
-        [
-          {
-            "node": "Aplicar_Label_WPP",
+            "node": "Fim_Nao_Encontrado",
             "type": "main",
             "index": 0
           }
@@ -580,7 +544,7 @@
         ],
         [
           {
-            "node": "Fim_Erro",
+            "node": "Fim_Erro_Aplicacao",
             "type": "main",
             "index": 0
           }

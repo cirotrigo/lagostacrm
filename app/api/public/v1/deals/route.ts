@@ -192,6 +192,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Provide contact_id or contact', code: 'VALIDATION_ERROR' }, { status: 422 });
   }
 
+  // Check for existing open deal for this contact on this board
+  // This prevents race conditions from creating duplicate deals
+  const existingDeal = await sb
+    .from('deals')
+    .select('id,title,value,board_id,stage_id,contact_id,client_company_id,is_won,is_lost,loss_reason,closed_at,created_at,updated_at')
+    .eq('organization_id', auth.organizationId)
+    .eq('board_id', boardId)
+    .eq('contact_id', contactId)
+    .eq('is_won', false)
+    .eq('is_lost', false)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (existingDeal.error) {
+    return NextResponse.json({ error: existingDeal.error.message, code: 'DB_ERROR' }, { status: 500 });
+  }
+
+  // If open deal already exists for this contact/board, return it instead of creating new
+  if (existingDeal.data) {
+    return NextResponse.json({ data: existingDeal.data, action: 'existing' });
+  }
+
   const now = new Date().toISOString();
   const value = Number(parsed.data.value ?? 0);
   const insertPayload: any = {

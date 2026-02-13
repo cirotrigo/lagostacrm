@@ -9,11 +9,13 @@
 
 | Fase | Descricao | Status | Arquivo |
 |------|-----------|--------|---------|
-| 1 | Labels no WhatsApp | Pendente (manual) | - |
+| 1 | Labels no WhatsApp | IMPLEMENTADO | Criadas manualmente no WhatsApp Business |
 | 2 | Trigger auto-tag PostgreSQL | IMPLEMENTADO | `supabase/migrations/20260213000000_deal_stage_auto_tag.sql` |
 | 3 | Verificar trigger notify_deal_stage_changed | JA EXISTIA | `supabase/migrations/20251201000000_schema_init.sql:2110-2216` |
 | 4 | Workflow n8n dedicado | IMPLEMENTADO | `.context/integrations/n8n/[Coronel Picanha] Deal Stage Label Sync.json` |
 | 5 | Registrar endpoint no CRM | Pendente (SQL manual) | - |
+| 6 | Correcao formato LID | IMPLEMENTADO | Workflow busca @lid via /all-chats |
+| 7 | Remocao label anterior | IMPLEMENTADO | Remove label antiga antes de aplicar nova |
 
 ---
 
@@ -247,7 +249,7 @@ No no `Fluxo_Variaveis` do workflow `[Coronel Picanha] Agente WPPConnect`, o cam
 | 3 | Movimentacao rapida | Mover deal 2 etapas em sequencia | Ambas as tags no deal + Ambas as labels no WhatsApp |
 | 4 | WPPConnect offline | Mover deal com WPP fora | Tag no deal + Retry no webhook |
 | 5 | Label inexistente | Mover para etapa cuja label nao existe no WPP | Label criada automaticamente + Aplicada |
-| 6 | Contato sem chat WPP | Deal sem conversa previa no WhatsApp | Erro tratado, nao quebra o fluxo |
+| 6 | Contato sem chat WPP | Deal sem conversa previa no WhatsApp | Label NÃO aplicada (comportamento esperado) - vai para Fim_Nao_Encontrado |
 
 ### Testar Trigger PostgreSQL
 
@@ -294,6 +296,42 @@ curl -X POST "https://coronel-n8n.lagostacriativa.com.br/webhook/deal-stage-labe
 **NAO MODIFICADOS:**
 - `[Coronel Picanha] Agente WPPConnect.json` - nao precisa alteracao
 - `supabase/migrations/20251201000000_schema_init.sql` - trigger ja existia
+
+---
+
+## Descoberta Importante: Formato @lid
+
+### O Problema
+
+O WPPConnect usa internamente o formato `@lid` (Linked ID) para identificar chats, não o formato `@c.us` baseado no número de telefone.
+
+**Exemplo:**
+- Formato `@c.us`: `5527997576827@c.us` (baseado no telefone) - NÃO FUNCIONA para labels
+- Formato `@lid`: `73993746919534@lid` (ID interno do WhatsApp) - FUNCIONA para labels
+
+### A Solução
+
+O workflow foi atualizado para:
+1. Buscar todos os chats via `/all-chats`
+2. Procurar o chat pelo número de telefone do contato
+3. Extrair o `@lid` correto do chat encontrado
+4. Usar o `@lid` para aplicar a label
+
+### Limitações (IMPORTANTE)
+
+**Labels só podem ser aplicadas em chats existentes no WhatsApp.**
+
+- O contato PRECISA ter uma conversa prévia no WhatsApp
+- Se o contato nunca conversou, a label NÃO será aplicada
+- O workflow trata isso graciosamente: vai para `Fim_Nao_Encontrado` sem erro
+- A label será aplicada automaticamente quando o deal mudar de etapa DEPOIS que o contato iniciar conversa
+
+**Fluxo para contatos novos:**
+1. Contato novo cria deal (sem chat WhatsApp ainda) → Label NÃO aplicada
+2. Contato envia primeira mensagem no WhatsApp → Chat criado
+3. Deal muda de etapa novamente → Label APLICADA com sucesso
+
+**Este é comportamento esperado do WhatsApp Business, não um bug.**
 
 ---
 
