@@ -1420,7 +1420,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 30000
+        }
       },
       "id": "4f254665-9cfb-44f9-9985-968f99bece27",
       "name": "Enviar_Resposta_WPPConnect",
@@ -1435,7 +1437,10 @@
           "id": "fkCh7h3e4c3iHT4J",
           "name": "WPPConnect API"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
     },
     {
       "parameters": {

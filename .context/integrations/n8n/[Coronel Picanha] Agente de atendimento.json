@@ -7,13 +7,13 @@
         "height": 284,
         "width": 200
       },
-      "id": "916d41bf-48e6-41e3-8661-3241bc9ba1c5",
+      "id": "40dc17e7-92ea-4cd4-bfa4-62c0c772806a",
       "name": "Sticky Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -880,
-        224
+        -1008,
+        240
       ]
     },
     {
@@ -23,13 +23,13 @@
         "width": 1098,
         "color": 4
       },
-      "id": "bda58b5d-d2ce-4e37-a6c7-d3ebd4be4f1c",
+      "id": "8c588da1-83a6-4a3c-9a9a-74e67e463b8d",
       "name": "Sticky Note1",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        160,
-        32
+        32,
+        48
       ]
     },
     {
@@ -41,25 +41,25 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -608,
-        240
+        -736,
+        256
       ],
-      "id": "d7cc24aa-8b5d-4751-a1c9-74306ef94f03",
+      "id": "b348c173-f311-4394-9a71-cb20c2922093",
       "name": "Sticky Note5"
     },
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "chatwoot/coronel-picanha",
+        "path": "agente/atendimento",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -832,
-        352
+        -960,
+        368
       ],
-      "id": "1f91d602-5899-4f07-8854-26c47fae778f",
+      "id": "249afe21-1d97-4184-a479-e8df9846871f",
       "name": "Webhook",
       "webhookId": "sdr-agencia-multisservicos"
     },
@@ -73,10 +73,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -336,
-        144
+        -464,
+        160
       ],
-      "id": "0bd8e61b-9be9-4be5-bfb7-b0aaec5464a7",
+      "id": "d4562965-9467-4cd1-9337-28ea1e16a9c0",
       "name": "Sticky Note6"
     },
     {
@@ -86,19 +86,19 @@
             {
               "id": "69f6217f-9063-423f-abf4-e94f6b70f94e",
               "name": "ClienteNome",
-              "value": "={{(() => {\n  const name = $('Webhook').item.json.body.messages[0].sender.name || '';\n  return name\n    .split(' ')\n    .filter(w => w)\n    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())\n    .join(' ');\n})()}}",
+              "value": "={{(() => {\n  const name = $('Webhook').item.json.body.sender?.name || '';\n  return name\n    .split(' ')\n    .filter(w => w)\n    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())\n    .join(' ');\n})()}}",
               "type": "string"
             },
             {
               "id": "9f488c5c-0b3b-48e9-87b1-5a22d513d1ec",
               "name": "ClienteTelefone",
-              "value": "={{ $('Webhook').item.json.body.meta.sender.phone_number }}",
+              "value": "={{ $('Webhook').item.json.body.sender?.phone_number }}",
               "type": "string"
             },
             {
               "id": "5d5c64c0-6bce-491f-82fc-0aa5149516bf",
               "name": "ClienteEmail",
-              "value": "={{ $('Webhook').item.json.body.meta.sender.email }}",
+              "value": "={{ $('Webhook').item.json.body.sender?.email }}",
               "type": "string"
             },
             {
@@ -116,73 +116,73 @@
             {
               "id": "8cf12e76-7924-417a-9941-9b3b65748069",
               "name": "CW-Host",
-              "value": "https://scarylanternfish-chatwoot.cloudfy.live",
+              "value": "https://chatwoot-coronel.lagostacriativa.com.br",
               "type": "string"
             },
             {
               "id": "n8n-host-mcp",
               "name": "N8N-Host",
-              "value": "https://scarylanternfish-n8n.cloudfy.live",
+              "value": "https://n8n-coronel.lagostacriativa.com.br",
               "type": "string"
             },
             {
               "id": "88ad3099-bafe-435d-9dea-ea65368a4cbe",
               "name": "CW-ContactID",
-              "value": "={{ $('Webhook').item.json.body.contact_inbox.contact_id }}",
+              "value": "={{ $('Webhook').item.json.body.conversation?.contact_inbox?.contact_id }}",
               "type": "string"
             },
             {
               "id": "0733986a-61fc-423a-ad97-14abf9fcd1b1",
               "name": "CW-ConversationID",
-              "value": "={{ $('Webhook').item.json.body.messages[0].conversation_id }}",
+              "value": "={{ $('Webhook').item.json.body.conversation?.id }}",
               "type": "string"
             },
             {
               "id": "0e8fc314-b3ff-4317-9102-50253f35a298",
               "name": "CW-MessageID",
-              "value": "={{ $('Webhook').item.json.body.messages[0].id }}",
+              "value": "={{ $('Webhook').item.json.body.id }}",
               "type": "string"
             },
             {
               "id": "2236cc1a-7671-4684-b567-cb943e939916",
               "name": "CW-Inbox",
-              "value": "={{ $('Webhook').item.json.body.messages[0].inbox_id }}",
+              "value": "={{ $('Webhook').item.json.body.inbox?.id }}",
               "type": "string"
             },
             {
               "id": "fb3f3cb0-c854-4002-a8cf-d3a0d3c765ce",
               "name": "CW-Account",
-              "value": "={{ $('Webhook').item.json.body.messages[0].account_id }}",
+              "value": "={{ $('Webhook').item.json.body.account?.id }}",
               "type": "string"
             },
             {
               "id": "1ae1a51c-00cb-47f9-8dc8-5a05c66fc0c8",
               "name": "Mensagem",
-              "value": "={{ $('Webhook').item.json.body.messages[0].content }}",
+              "value": "={{ $('Webhook').item.json.body.content }}",
               "type": "string"
             },
             {
               "id": "697401cd-0b21-4318-a367-80fa42390dcd",
               "name": "MessagemTime",
-              "value": "={{ $json.body.messages[0].updated_at.toDateTime() }}",
+              "value": "={{ $json.body.created_at }}",
               "type": "string"
             },
             {
               "id": "aa2d241e-01dc-47bc-bfff-ad5e4535ece2",
               "name": "Horario",
-              "value": "={{ $json.body.messages[0].created_at.toDateTime('s').format('dd/MM/yyyy HH:mm') }}",
+              "value": "={{ DateTime.fromISO($json.body.created_at).toFormat('dd/MM/yyyy HH:mm') }}",
               "type": "string"
             },
             {
               "id": "213228f6-c8f1-44db-a2c3-80853bed0013",
               "name": "MessageType",
-              "value": "={{ $('Webhook').item.json.body.messages[0].attachments[0].file_type }}",
+              "value": "={{ $('Webhook').item.json.body.attachments?.[0]?.file_type || $('Webhook').item.json.body.content_type }}",
               "type": "string"
             },
             {
               "id": "4787dd13-cc5b-499b-b1b4-531208253d28",
               "name": "URL-Arquivo",
-              "value": "={{ $('Webhook').item.json.body.messages[0].attachments[0].data_url }}",
+              "value": "={{ $('Webhook').item.json.body.attachments?.[0]?.data_url }}",
               "type": "string"
             },
             {
@@ -207,13 +207,13 @@
         },
         "options": {}
       },
-      "id": "7057d2df-f5d6-467e-aaee-c6f833331e3c",
+      "id": "09a0bee7-dd00-4346-8ed7-6ce414ee634e",
       "name": "Fluxo_Variaveis",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -240,
-        352
+        -368,
+        368
       ]
     },
     {
@@ -227,8 +227,17 @@
           },
           "conditions": [
             {
+              "id": "incoming-msg-check",
+              "leftValue": "={{ $('Webhook').item.json.body.message_type }}",
+              "rightValue": "incoming",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
               "id": "130cc493-a17a-4cc1-955b-816799583076",
-              "leftValue": "={{ $('Webhook').item.json.body.messages[0].sender.identifier }}",
+              "leftValue": "={{ $('Webhook').item.json.body.sender?.identifier }}",
               "rightValue": "@g.us",
               "operator": {
                 "type": "string",
@@ -237,7 +246,7 @@
             },
             {
               "id": "d794ecce-59f0-4db6-a518-194d4d1e6820",
-              "leftValue": "={{ $('Webhook').item.json.body.meta.assignee.id }}",
+              "leftValue": "={{ $('Webhook').item.json.body.conversation?.meta?.assignee?.id }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -260,13 +269,13 @@
         "looseTypeValidation": true,
         "options": {}
       },
-      "id": "9d7a5468-84e5-4a69-bd97-d76ebcfb5162",
+      "id": "528667df-8c62-434d-bc3b-388597cfb026",
       "name": "Filtro_Inicial",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.1,
       "position": [
-        -528,
-        352
+        -656,
+        368
       ]
     },
     {
@@ -289,18 +298,18 @@
         },
         "options": {}
       },
-      "id": "9043329d-ab05-43b0-934a-8058ca5538f5",
+      "id": "cf70ec87-56fb-4f82-b30d-427ee4045ae7",
       "name": "Encontrar_Cliente_CRM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        0,
-        352
+        -128,
+        368
       ],
       "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -331,13 +340,13 @@
         "looseTypeValidation": true,
         "options": {}
       },
-      "id": "bc8b084e-9e04-41e6-84f6-80c68bd1c9c7",
+      "id": "44e4e7aa-20ee-47d6-aeb6-64217838af22",
       "name": "Existe_No_CRM?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.1,
       "position": [
-        224,
-        352
+        96,
+        368
       ],
       "alwaysOutputData": false
     },
@@ -352,17 +361,17 @@
         "jsonBody": "={\n  \"name\": \"{{ $('Fluxo_Variaveis').item.json.ClienteNome }}\",\n  \"phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n  \"email\": \"{{ $('Fluxo_Variaveis').item.json.ClienteEmail }}\",\n  \"source\": \"WHATSAPP\",\n  \"stage\": \"LEAD\",\n  \"status\": \"ACTIVE\"\n}",
         "options": {}
       },
-      "id": "979cf3ed-660a-4783-95be-69c1bae69233",
+      "id": "96986fd8-3461-4a37-9cdc-391ef5dbbce3",
       "name": "Criar_Contato_CRM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        448,
-        448
+        320,
+        464
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -378,17 +387,17 @@
         "jsonBody": "={\n  \"title\": \"WhatsApp - {{ $('Fluxo_Variaveis').item.json.ClienteNome }}\",\n  \"value\": 0,\n  \"board_key\": \"{{ $('Fluxo_Variaveis').item.json['CRM-BoardKey'] }}\",\n  \"contact_id\": \"{{ $json.data.id }}\"\n}",
         "options": {}
       },
-      "id": "96730289-d526-400a-98bb-9fbb2bc2e60d",
+      "id": "a498428c-8119-4ba2-9d0c-374ab38e322e",
       "name": "Criar_Deal_CRM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        672,
-        448
+        544,
+        464
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -425,13 +434,93 @@
         },
         "options": {}
       },
-      "id": "c311906b-5851-4229-b1dc-bf5aad039088",
+      "id": "e8590d9b-351c-4e68-aecd-7e6e01ddd27a",
       "name": "Set_Contato_Existente",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        896,
-        256
+        768,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Fluxo_Variaveis').item.json['CRM-Host'] }}/api/public/v1/deals",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"title\": \"WhatsApp - {{ $('Fluxo_Variaveis').item.json.ClienteNome }}\",\n  \"value\": 0,\n  \"board_key\": \"{{ $('Fluxo_Variaveis').item.json['CRM-BoardKey'] }}\",\n  \"contact_id\": \"{{ $json.contact_id }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "garantir-deal-existente-001",
+      "name": "Garantir_Deal_Existente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        272
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RhZY4FZWk3Pstr72",
+          "name": "Coronel CRM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "restore-contact-id",
+              "name": "contact_id",
+              "value": "={{ $('Set_Contato_Existente').item.json.contact_id }}",
+              "type": "string"
+            },
+            {
+              "id": "restore-contact-name",
+              "name": "contact_name",
+              "value": "={{ $('Set_Contato_Existente').item.json.contact_name }}",
+              "type": "string"
+            },
+            {
+              "id": "restore-contact-phone",
+              "name": "contact_phone",
+              "value": "={{ $('Set_Contato_Existente').item.json.contact_phone }}",
+              "type": "string"
+            },
+            {
+              "id": "restore-contact-email",
+              "name": "contact_email",
+              "value": "={{ $('Set_Contato_Existente').item.json.contact_email }}",
+              "type": "string"
+            },
+            {
+              "id": "deal-id-existente",
+              "name": "deal_id",
+              "value": "={{ $(\"Garantir_Deal_Existente\").item.json.data?.id || \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "restaurar-dados-contato-001",
+      "name": "Restaurar_Dados_Contato",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        992,
+        272
       ]
     },
     {
@@ -461,29 +550,35 @@
               "name": "contact_email",
               "value": "={{ $('Fluxo_Variaveis').item.json.ClienteEmail }}",
               "type": "string"
+            },
+            {
+              "id": "deal-id-novo",
+              "name": "deal_id",
+              "value": "={{ $(\"Criar_Deal_CRM\").item.json.data.id }}",
+              "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "id": "9940b877-256f-4d96-aa97-f419ac46f4b4",
+      "id": "498470c2-c16e-4b66-bcb4-596c67f65d05",
       "name": "Set_Contato_Novo",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        896,
-        448
+        768,
+        464
       ]
     },
     {
       "parameters": {},
-      "id": "7db6d4f8-1c24-4455-baa6-f6bf472a8cf5",
+      "id": "11383a9d-6119-4ecb-881d-79cfe151bb3b",
       "name": "Merge_Contatos",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        1120,
-        352
+        992,
+        368
       ]
     },
     {
@@ -493,13 +588,13 @@
         "width": 1632,
         "color": 2
       },
-      "id": "ffa8d11f-d72d-48a0-a8ce-5cf1cbbce95b",
+      "id": "afd2535a-fc78-477b-94e0-245e04f2de4f",
       "name": "Sticky Note4",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -528,
-        912
+        -656,
+        928
       ]
     },
     {
@@ -611,13 +706,13 @@
           "renameFallbackOutput": "Erro"
         }
       },
-      "id": "f687efd2-90ad-4606-9424-47cf66e1c098",
+      "id": "09eecdc7-c104-4b8f-bf9f-3ffa098fb8ab",
       "name": "MessageType",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.1,
       "position": [
-        -496,
-        1552
+        -624,
+        1568
       ]
     },
     {
@@ -634,27 +729,27 @@
         },
         "options": {}
       },
-      "id": "8b7765e1-48d3-428c-a940-62264be19021",
+      "id": "134cc382-4e71-43dd-aaa1-eb73efdc12bf",
       "name": "Msg Texto",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        752,
-        1024
+        624,
+        1040
       ]
     },
     {
       "parameters": {
-        "url": "={{ $('Webhook').item.json.body.messages[0].attachments[0].data_url }}",
+        "url": "={{ $('Webhook').item.json.body.attachments?.[0]?.data_url }}",
         "options": {}
       },
-      "id": "61f5d6dd-b470-4c7a-aff2-6ec63274bf07",
+      "id": "d31cfe0b-400c-42d1-8104-9806aa1cdf00",
       "name": "getAudio",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        240,
-        1216
+        112,
+        1232
       ]
     },
     {
@@ -664,18 +759,18 @@
         "binaryPropertyName": "=data",
         "options": {}
       },
-      "id": "28086438-153e-4e1a-9bda-a136edb43a65",
+      "id": "d0f3ca03-cae4-457e-a00c-130397e4b5da",
       "name": "Transcrever Áudio",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.4,
       "position": [
-        528,
-        1216
+        400,
+        1232
       ],
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
-          "name": "OpenAi account"
+          "id": "L8prowczBuToXAV1",
+          "name": "OpenAi account 2"
         }
       }
     },
@@ -693,27 +788,27 @@
         },
         "options": {}
       },
-      "id": "15f14990-0b02-40b0-a9f3-221f869aee8f",
+      "id": "25b18f8b-4b9d-472d-9950-78446fea4c26",
       "name": "ConteudoAUDIO",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        752,
-        1216
+        624,
+        1232
       ]
     },
     {
       "parameters": {
-        "url": "={{ $('Webhook').item.json.body.messages[0].attachments[0].data_url }}",
+        "url": "={{ $('Webhook').item.json.body.attachments?.[0]?.data_url }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -48,
-        1504
+        -176,
+        1520
       ],
-      "id": "d9d7ea38-4c0a-4c7f-a239-c79bdfadd9df",
+      "id": "2540e2c2-268b-453a-9860-c63940eb1e09",
       "name": "getImage"
     },
     {
@@ -728,10 +823,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.8,
       "position": [
-        176,
-        1408
+        48,
+        1424
       ],
-      "id": "f05ed8e0-829c-4eff-a9a5-7ba96f93dd5d",
+      "id": "914c3565-b7b0-423f-aefa-e1b31eb7a01f",
       "name": "Analise Imagem"
     },
     {
@@ -747,15 +842,15 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        240,
-        1632
+        112,
+        1648
       ],
-      "id": "ed7d8809-8404-4757-a577-5b8d720170b5",
+      "id": "edab7c97-9d18-4816-8a06-9a68efa2e3e3",
       "name": "LLM_Imagem",
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
-          "name": "OpenAi account"
+          "id": "L8prowczBuToXAV1",
+          "name": "OpenAi account 2"
         }
       }
     },
@@ -766,10 +861,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        528,
-        1504
+        400,
+        1520
       ],
-      "id": "0bcd609d-6c67-42aa-af24-9866c0a9f84a",
+      "id": "84999cd4-2267-4037-80b5-666bb16a1c0a",
       "name": "Ajusta"
     },
     {
@@ -786,13 +881,13 @@
         },
         "options": {}
       },
-      "id": "7cce2f1c-5ca6-42f3-81be-7ab403c1e12d",
+      "id": "b2161a61-bbec-4cba-8d3c-9f38c484906e",
       "name": "ConteudoIMG",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        752,
-        1504
+        624,
+        1520
       ]
     },
     {
@@ -803,10 +898,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -272,
-        2000
+        -400,
+        2016
       ],
-      "id": "eafdddaa-6230-4459-8f71-2424e8568790",
+      "id": "c3182bd5-7b35-4db1-a405-6a26868e1eba",
       "name": "getDoc"
     },
     {
@@ -817,10 +912,10 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -48,
-        2000
+        -176,
+        2016
       ],
-      "id": "d7f238c2-1adb-4f19-a746-ca7994d351bb",
+      "id": "8031c068-f401-49c4-857d-c088a7149791",
       "name": "Extract from File",
       "onError": "continueErrorOutput"
     },
@@ -836,10 +931,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.8,
       "position": [
-        176,
-        1808
+        48,
+        1824
       ],
-      "id": "fe09f9c7-5945-4340-887d-05101c62ec23",
+      "id": "7fad9dbc-53c1-4d8e-8536-3135446fbea3",
       "name": "Analise Doc"
     },
     {
@@ -855,15 +950,15 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        240,
-        2032
+        112,
+        2048
       ],
-      "id": "5588669d-4f79-4003-8794-88db70d42a9f",
+      "id": "15f4491c-b9ec-4ef0-bec4-c30c900bf5b4",
       "name": "LLM_Doc",
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
-          "name": "OpenAi account"
+          "id": "L8prowczBuToXAV1",
+          "name": "OpenAi account 2"
         }
       }
     },
@@ -874,10 +969,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        528,
-        1904
+        400,
+        1920
       ],
-      "id": "870a4275-1c14-472d-92c8-92bc5e56e86a",
+      "id": "5d1be77c-961a-4b36-87ef-f506819266db",
       "name": "AjustaDoc"
     },
     {
@@ -894,13 +989,13 @@
         },
         "options": {}
       },
-      "id": "60cdc9e1-4ab5-4a46-9ffd-d42997878249",
+      "id": "622d9028-4bd3-4c6f-9691-14c4c35934de",
       "name": "ConteudoDOC",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        752,
-        1904
+        624,
+        1920
       ]
     },
     {
@@ -917,26 +1012,26 @@
         },
         "options": {}
       },
-      "id": "ed025e0d-36e7-4fa4-aca6-1cb56f327ce5",
+      "id": "7bfa5d5b-37d0-4a53-b2cb-38e4c01b82f6",
       "name": "ErrorMSG",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        240,
-        2208
+        112,
+        2224
       ]
     },
     {
       "parameters": {
         "numberInputs": 5
       },
-      "id": "ce6141bb-90bf-40dc-93fa-aa3bc18f08c0",
+      "id": "ccf396b0-8faf-4840-801f-e90d0ba9b8ad",
       "name": "Merge_Tipos",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        976,
-        1456
+        848,
+        1472
       ]
     },
     {
@@ -946,13 +1041,13 @@
         "width": 1476,
         "color": 5
       },
-      "id": "7a85e962-a3ce-4cda-b6cd-85f31cdfa0f5",
+      "id": "a454b594-6820-4f56-bc79-46515e277143",
       "name": "Sticky Note10",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -480,
-        2576
+        -608,
+        2592
       ]
     },
     {
@@ -987,13 +1082,13 @@
         },
         "options": {}
       },
-      "id": "c455c03b-e1d0-4ad3-bb31-d07f7ed397d4",
+      "id": "f9308fc2-92de-4698-89a3-1d7c40d3d744",
       "name": "normalizacao",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -432,
-        2864
+        -560,
+        2880
       ]
     },
     {
@@ -1003,18 +1098,18 @@
         "messageData": "={{ JSON.stringify($json.message) }}",
         "tail": true
       },
-      "id": "2ea869f1-907e-42c3-8410-9411de340f59",
+      "id": "a7c43cfd-f5fd-4598-9cee-15a3ab328a78",
       "name": "push message buffer",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        32,
-        2864
+        -96,
+        2880
       ],
       "credentials": {
         "redis": {
-          "id": "UU4ajfwq1OBZRg7e",
-          "name": "redis_cloudfy"
+          "id": "JS4opZoggH6GWic9",
+          "name": "Redis account"
         }
       }
     },
@@ -1025,18 +1120,18 @@
         "key": "=buffer:{{ $('normalizacao').item.json.message.chat_id }}",
         "options": {}
       },
-      "id": "b673f3ad-e556-4ca6-9458-5b6ba6435d65",
+      "id": "94f5bf37-2553-45bf-94b8-fba6b5569a06",
       "name": "get messages buffer",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        256,
-        2864
+        128,
+        2880
       ],
       "credentials": {
         "redis": {
-          "id": "UU4ajfwq1OBZRg7e",
-          "name": "redis_cloudfy"
+          "id": "JS4opZoggH6GWic9",
+          "name": "Redis account"
         }
       }
     },
@@ -1080,7 +1175,7 @@
                   {
                     "id": "fdd1e894-df1c-4ebd-8f56-82f66dad03be",
                     "leftValue": "={{ JSON.parse($json.messages.last()).timestamp }}",
-                    "rightValue": "={{ $now.minus($('Fluxo_Variaveis').item.json.BufferDelay-'1', 'seconds') }}",
+                    "rightValue": "={{ $now.minus(Number($('Fluxo_Variaveis').item.json.BufferDelay) - 1, 'seconds') }}",
                     "operator": {
                       "type": "dateTime",
                       "operation": "before"
@@ -1100,37 +1195,37 @@
           "renameFallbackOutput": "esperar"
         }
       },
-      "id": "ac7828b2-eec3-4dd4-9375-3229452bdf46",
+      "id": "1515465f-4bb9-4950-9ffa-5eb4aba0ffc7",
       "name": "Switch_Buffer",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        480,
-        2848
+        352,
+        2864
       ]
     },
     {
       "parameters": {},
-      "id": "6da9a9b8-a4de-45ed-b875-ffecc7d0dcb9",
+      "id": "0da1c9da-2cba-4403-a509-826a163a0d0e",
       "name": "No Operation",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        704,
-        2640
+        576,
+        2656
       ]
     },
     {
       "parameters": {
-        "amount": "={{ $('Fluxo_Variaveis').item.json.BufferDelay }}"
+        "amount": "={{ Number($('Fluxo_Variaveis').item.json.BufferDelay) }}"
       },
-      "id": "ba8f1c15-bcb0-48d1-bbb4-8645661624f8",
+      "id": "4c6f7c09-8876-4c58-9666-038c6badaae7",
       "name": "Wait_Buffer",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        704,
-        3056
+        576,
+        3072
       ],
       "webhookId": "buffer-wait-lagostacrm"
     },
@@ -1139,18 +1234,18 @@
         "operation": "delete",
         "key": "=buffer:{{ $('normalizacao').item.json.message.chat_id }}"
       },
-      "id": "c2d8b79d-2bf0-4c2f-8cca-ddcc0356d783",
+      "id": "582e41cd-cf2e-491e-aeb7-32fcba89ae06",
       "name": "delete buffer",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        704,
-        2832
+        576,
+        2848
       ],
       "credentials": {
         "redis": {
-          "id": "UU4ajfwq1OBZRg7e",
-          "name": "redis_cloudfy"
+          "id": "JS4opZoggH6GWic9",
+          "name": "Redis account"
         }
       }
     },
@@ -1168,13 +1263,13 @@
         },
         "options": {}
       },
-      "id": "573beec9-31db-4546-a7fd-dc30533a2716",
+      "id": "f3185a03-6e9e-4459-bf26-070ca79b54ad",
       "name": "message_json",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -384,
-        3600
+        -512,
+        3616
       ]
     },
     {
@@ -1187,10 +1282,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -96,
-        3456
+        -224,
+        3472
       ],
-      "id": "ec3c2ca6-0642-4f23-8bb0-03c47146ee9a",
+      "id": "6c9c4fcc-62e2-4f27-9954-3b79ff244c5e",
       "name": "Sticky Note14"
     },
     {
@@ -1204,10 +1299,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2,
       "position": [
-        128,
-        3600
+        0,
+        3616
       ],
-      "id": "cb8e557c-934e-4b5c-afcb-f953560a0af1",
+      "id": "54054666-4b2b-4b50-b7ad-ecc05018cce5",
       "name": "Agente de IA"
     },
     {
@@ -1223,15 +1318,15 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        -784,
-        4272
+        -960,
+        4288
       ],
-      "id": "1c7e802f-3263-4d36-8fc3-ebbdea06cee9",
+      "id": "0046dd35-faff-4128-a228-b4c168067d9f",
       "name": "LLM_Agente",
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
-          "name": "OpenAi account"
+          "id": "L8prowczBuToXAV1",
+          "name": "OpenAi account 2"
         }
       }
     },
@@ -1245,15 +1340,15 @@
       "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
       "typeVersion": 1.5,
       "position": [
-        -656,
-        4272
+        -848,
+        4288
       ],
-      "id": "698450ce-9896-4e40-af9d-3fb8977c2684",
+      "id": "35907e6d-118b-4905-8da1-b3871eae4dbb",
       "name": "Memoria_Redis",
       "credentials": {
         "redis": {
-          "id": "UU4ajfwq1OBZRg7e",
-          "name": "redis_cloudfy"
+          "id": "JS4opZoggH6GWic9",
+          "name": "Redis account"
         }
       }
     },
@@ -1267,10 +1362,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -464,
-        4640
+        -592,
+        4656
       ],
-      "id": "844155b5-52ea-4108-82cd-93cc367df654",
+      "id": "53831563-d1d7-4ea1-bb69-367a19c6c4e9",
       "name": "Sticky Note15"
     },
     {
@@ -1289,10 +1384,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.6,
       "position": [
-        -416,
-        4800
+        -544,
+        4816
       ],
-      "id": "9b98b4ed-45c9-4d20-9491-53a2546354cc",
+      "id": "26ea662b-131a-4b67-9605-c334be523522",
       "name": "Humanizador"
     },
     {
@@ -1308,15 +1403,15 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        -416,
-        5232
+        -544,
+        5248
       ],
-      "id": "0044788b-4927-47cb-b665-d56f89c28d6c",
+      "id": "506ffec5-bc87-4172-9f1d-f902a19033a4",
       "name": "LLM_Humanizador",
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
-          "name": "OpenAi account"
+          "id": "L8prowczBuToXAV1",
+          "name": "OpenAi account 2"
         }
       }
     },
@@ -1327,10 +1422,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
       "typeVersion": 1,
       "position": [
-        -336,
-        5024
+        -464,
+        5040
       ],
-      "id": "21f3bb14-8968-4b81-8b3f-1b8f7918ea37",
+      "id": "cada8ff5-bfc2-4467-92ef-fe7000e371dd",
       "name": "Auto-fixing Output Parser"
     },
     {
@@ -1341,10 +1436,10 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.2,
       "position": [
-        -240,
-        5232
+        -368,
+        5248
       ],
-      "id": "dbde72d0-fd19-4657-bb8a-cda5eb93c501",
+      "id": "1ddb2c1c-17ef-4eb5-bc92-1fb579104765",
       "name": "Output Parser"
     },
     {
@@ -1355,10 +1450,10 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        32,
-        4800
+        -96,
+        4816
       ],
-      "id": "5a6d1b80-3257-4738-a11f-6fe3ccd40d19",
+      "id": "54d3598e-388e-42ed-af0a-bd4bbe6e3a6d",
       "name": "Split Out"
     },
     {
@@ -1368,10 +1463,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        256,
-        4800
+        128,
+        4816
       ],
-      "id": "ece51416-7d4e-49c2-9930-65c0c64980a7",
+      "id": "a9d93749-8695-48ad-b037-95ccdc6cff57",
       "name": "Loop Over Items"
     },
     {
@@ -1379,10 +1474,10 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        480,
-        4688
+        352,
+        4704
       ],
-      "id": "99fdb108-d29e-46d2-b8ea-d3dba5c756b7",
+      "id": "3be44bde-3022-49d1-96f0-7d1b94df1988",
       "name": "Fim"
     },
     {
@@ -1396,17 +1491,17 @@
         "jsonBody": "={\n\"content\": \"{{ $json[\"output.mensagens\"].replace(/\\n/g, \"\\\\n\").replaceAll('\"','*').replaceAll('{','(').replaceAll('}',')') }}\"\n}",
         "options": {}
       },
-      "id": "0150a68e-2e12-47c7-b207-b2473edfe4da",
+      "id": "28af0fc3-d3cb-4f03-9d02-4b39d7eca2a8",
       "name": "Enviar_Resposta_Chatwoot",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        480,
-        4880
+        352,
+        4896
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "98KO7JKHTBAfUwIa",
+          "id": "1uvzB18SDD4GzDDt",
           "name": "ChatWoot Coronel"
         }
       }
@@ -1418,10 +1513,10 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        704,
-        4896
+        576,
+        4912
       ],
-      "id": "310cfb33-b689-4582-b1f7-50f79bf820f2",
+      "id": "5282f086-3312-4976-99cb-a918105fc318",
       "name": "Wait_Msg",
       "webhookId": "wait-msg-lagostacrm"
     },
@@ -1435,10 +1530,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -864,
-        3936
+        -992,
+        3952
       ],
-      "id": "7dc9e935-0816-4a9d-b15d-998657dbae87",
+      "id": "d068391f-efa0-4aed-ac0d-26ef6329cca6",
       "name": "Sticky Note Tools"
     },
     {
@@ -1456,14 +1551,14 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -528,
-        4272
+        -704,
+        4288
       ],
-      "id": "0f94c6c2-7bd4-476b-9038-27383ce499c8",
+      "id": "b1edfee3-5f03-4dfb-b84d-4fae5e4ea102",
       "name": "crm_em_atendimento",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -1483,14 +1578,14 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -400,
-        4272
+        -544,
+        4288
       ],
-      "id": "0b616faf-4ac3-496d-8d40-53675a89169e",
+      "id": "6a78efe5-ea37-41da-8485-1342f80b19f3",
       "name": "crm_aguardando_cliente",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -1510,14 +1605,14 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -272,
-        4272
+        -368,
+        4288
       ],
-      "id": "3a1cfbe8-0d84-4555-a726-f4c4eddf4c6f",
+      "id": "5c3ca366-b4a6-4740-8d86-dee0ae2eb5b9",
       "name": "crm_info_fornecidas",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -1537,14 +1632,14 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -144,
-        4272
+        -224,
+        4288
       ],
-      "id": "012afe88-4460-4950-9343-470f439661f1",
+      "id": "4890b463-c3ea-40db-8a27-1b8dfeadae21",
       "name": "crm_canal_oficial",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -1564,14 +1659,14 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        -16,
-        4272
+        -96,
+        4288
       ],
-      "id": "69f7db0a-3019-4e55-a9e4-071f66b2b5b2",
+      "id": "43e5551d-52a9-4d1d-9915-eb4406c7cbab",
       "name": "crm_finalizado",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -1591,14 +1686,14 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        112,
-        4272
+        32,
+        4288
       ],
-      "id": "afc292ad-e9fe-4a0b-9507-7fe42ff9ed0e",
+      "id": "16d9fdbf-1d62-40dd-bcd7-f51a55a164a0",
       "name": "update_contato",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -1631,14 +1726,14 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        368,
-        4272
+        176,
+        4288
       ],
-      "id": "256fcb60-e696-488a-a478-1415f22f97ba",
+      "id": "eaafeb77-463c-4616-972b-7fd78293c0be",
       "name": "buscar_deals",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -1663,14 +1758,14 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        752,
-        4272
+        608,
+        4288
       ],
-      "id": "4d4d8bd3-8ccb-4c2e-a454-29c748fbaaaf",
+      "id": "ebdc2e44-9330-4c15-9b7e-54a6751df164",
       "name": "buscar_promocoes",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -1690,14 +1785,14 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        880,
-        4272
+        768,
+        4288
       ],
-      "id": "e57597c7-9658-416d-a8b5-89c6014814a8",
+      "id": "a62d8336-adaf-4fd9-b029-5cb0f9b0b853",
       "name": "adicionar_produto_deal",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -1717,14 +1812,14 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        1024,
-        4272
+        928,
+        4288
       ],
-      "id": "9e5bf3bd-c2a8-4e95-b97d-e1409e100b05",
+      "id": "b84d5a53-f4c0-414d-8d85-8aefa5fb547f",
       "name": "registrar_agendamento_crm",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "igGsG6J23EaQU5c1",
+          "id": "RhZY4FZWk3Pstr72",
           "name": "Coronel CRM"
         }
       }
@@ -1734,10 +1829,10 @@
       "type": "@n8n/n8n-nodes-langchain.toolThink",
       "typeVersion": 1,
       "position": [
-        496,
-        4272
+        304,
+        4288
       ],
-      "id": "96091e13-82e3-4f53-a8e2-4d56cba2c8c6",
+      "id": "9c3a7fa5-0c0d-4b28-927d-eb5e35a1ac3a",
       "name": "Think"
     },
     {
@@ -1748,10 +1843,10 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
       "typeVersion": 1,
       "position": [
-        624,
-        4272
+        432,
+        4288
       ],
-      "id": "f6cba051-781c-4206-aaf3-98244c820f6e",
+      "id": "cde656ba-2976-4dbb-a2a8-850d1428d0a8",
       "name": "MCP_GoogleCalendar"
     },
     {
@@ -1761,15 +1856,15 @@
       "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
       "typeVersion": 1.2,
       "position": [
-        1296,
-        4272
+        1168,
+        4288
       ],
-      "id": "d242bda0-4bb7-477f-8496-02be4fd13c37",
+      "id": "fb386555-4922-448d-b681-736a3459b225",
       "name": "Embeddings OpenAI",
       "credentials": {
         "openAiApi": {
-          "id": "VPgsYWFvt0Bnt37P",
-          "name": "OpenAi account"
+          "id": "L8prowczBuToXAV1",
+          "name": "OpenAi account 2"
         }
       },
       "disabled": true
@@ -1783,11 +1878,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        1216,
-        4032
+        1088,
+        4048
       ],
       "typeVersion": 1,
-      "id": "c8e42639-fc7a-4dfe-bef2-250308480bca",
+      "id": "e181a098-3495-45ba-9e59-1deb6d7677e1",
       "name": "Sticky Note9",
       "disabled": true
     },
@@ -1806,12 +1901,45 @@
       "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
       "typeVersion": 1.3,
       "position": [
-        1296,
-        4096
+        1168,
+        4112
       ],
-      "id": "95a802e3-de9b-4862-9e4f-02026c7d3c26",
+      "id": "16a830aa-9a12-4424-a7ec-22da642b1038",
       "name": "treinamento",
       "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $(\"Fluxo_Variaveis\").item.json[\"CRM-Host\"] }}/api/chatwoot/conversation-links",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatwoot_conversation_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-ConversationID\"] }},\n  \"chatwoot_contact_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-ContactID\"] }},\n  \"chatwoot_inbox_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-Inbox\"] }},\n  \"contact_id\": \"{{ $json.contact_id }}\",\n  \"deal_id\": \"{{ $json.deal_id || \"\" }}\",\n  \"chatwoot_url\": \"{{ $(\"Fluxo_Variaveis\").item.json[\"CW-Host\"] }}/app/accounts/{{ $(\"Fluxo_Variaveis\").item.json[\"CW-Account\"] }}/conversations/{{ $(\"Fluxo_Variaveis\").item.json[\"CW-ConversationID\"] }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "criar-conversation-link-001",
+      "name": "Criar_Conversation_Link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        368
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RhZY4FZWk3Pstr72",
+          "name": "Coronel CRM"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -1904,6 +2032,28 @@
       "main": [
         [
           {
+            "node": "Garantir_Deal_Existente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Garantir_Deal_Existente": {
+      "main": [
+        [
+          {
+            "node": "Restaurar_Dados_Contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restaurar_Dados_Contato": {
+      "main": [
+        [
+          {
             "node": "Merge_Contatos",
             "type": "main",
             "index": 0
@@ -1926,7 +2076,7 @@
       "main": [
         [
           {
-            "node": "MessageType",
+            "node": "Criar_Conversation_Link",
             "type": "main",
             "index": 0
           }
@@ -2543,17 +2693,29 @@
           }
         ]
       ]
+    },
+    "Criar_Conversation_Link": {
+      "main": [
+        [
+          {
+            "node": "MessageType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
+    "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "dd2934af-a7a0-4262-a814-b3a2f8256f6b",
+  "versionId": "7db0f7d6-6e68-499c-a6ae-4c4679dabd85",
   "meta": {
-    "instanceId": "d4e2048bcd529c8dd77e796e9ca7cdc9c7cd77bf3c2dfd9661ccc75d9bcb962c"
+    "instanceId": "10986e5e32934c504eba26b60fe49769b1881b842f28fb7d6e459fd86d731a16"
   },
-  "id": "d8zM6UnA57JK1XzpqAa80",
+  "id": "QEvvsupKpGOgRYov",
   "tags": []
 }

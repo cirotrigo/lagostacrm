@@ -54,6 +54,20 @@ export const queryKeys = {
         templates: () => ['whatsapp', 'templates'] as const,
         labels: () => ['whatsapp', 'labels'] as const,
     },
+
+    // Chatwoot Messaging (via Chatwoot API)
+    chatwoot: {
+        all: ['chatwoot'] as const,
+        conversations: (filters?: { status?: string; inbox_id?: number }) =>
+            ['chatwoot', 'conversations', filters] as const,
+        conversation: (id: number) => ['chatwoot', 'conversations', id] as const,
+        messages: (conversationId: number) => ['chatwoot', 'messages', conversationId] as const,
+        labels: () => ['chatwoot', 'labels'] as const,
+        labelMappings: () => ['chatwoot', 'labelMappings'] as const,
+        conversationLinks: (params?: { contactId?: string; dealId?: string }) =>
+            ['chatwoot', 'conversationLinks', params] as const,
+        syncLog: (dealId?: string) => ['chatwoot', 'syncLog', dealId] as const,
+    },
 };
 
 /**
