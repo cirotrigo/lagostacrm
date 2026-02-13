@@ -216,13 +216,17 @@ export async function POST(request: NextRequest) {
             .single<DbConversationLink>();
 
         if (error) {
-            throw error;
+            console.error('Supabase error:', JSON.stringify(error, null, 2));
+            return NextResponse.json(
+                { error: 'Failed to create conversation link', details: error.message, code: error.code },
+                { status: 500 }
+            );
         }
 
         return NextResponse.json({ data: toConversationLink(data) }, { status: 201 });
     } catch (error) {
         console.error('Error creating conversation link:', error);
-        const message = error instanceof Error ? error.message : 'Unknown error';
+        const message = error instanceof Error ? error.message : JSON.stringify(error);
         return NextResponse.json(
             { error: 'Failed to create conversation link', details: message },
             { status: 500 }
