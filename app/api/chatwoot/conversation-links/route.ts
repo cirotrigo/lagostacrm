@@ -18,8 +18,11 @@ async function validateAuth(request: NextRequest): Promise<{
     const expectedSecret = process.env.N8N_WEBHOOK_SECRET || process.env.CHATWOOT_WEBHOOK_SECRET;
 
     // Check for API key auth (n8n)
-    if (authHeader?.startsWith('Bearer ') && expectedSecret) {
-        const providedSecret = authHeader.replace('Bearer ', '');
+    // Supports both "Bearer <secret>" and direct "<secret>" formats
+    if (authHeader && expectedSecret) {
+        const providedSecret = authHeader.startsWith('Bearer ')
+            ? authHeader.replace('Bearer ', '')
+            : authHeader;
         if (providedSecret === expectedSecret) {
             const organizationId = request.headers.get('X-Organization-Id');
             if (!organizationId) {
