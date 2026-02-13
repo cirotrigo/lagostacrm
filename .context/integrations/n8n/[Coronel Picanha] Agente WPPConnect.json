@@ -144,6 +144,12 @@
               "value": "={{ $('Webhook').item.json.body.from?.replace('@c.us', '').replace('@s.whatsapp.net', '').replace('@lid', '') }}"
             },
             {
+              "id": "wpp-chat-id",
+              "name": "WPP-ChatID",
+              "type": "string",
+              "value": "={{ $('Webhook').item.json.body.from }}"
+            },
+            {
               "id": "mensagem",
               "name": "Mensagem",
               "type": "string",
@@ -1406,7 +1412,7 @@
           "parameters": [
             {
               "name": "phone",
-              "value": "={{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}"
+              "value": "={{ $('Fluxo_Variaveis').item.json['WPP-ChatID'] }}"
             },
             {
               "name": "message",

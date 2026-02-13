@@ -177,10 +177,7 @@ export async function moveStageByIdentity(opts: {
     .limit(2);
   if (dealsError) return { ok: false as const, status: 500, body: { error: dealsError.message, code: 'DB_ERROR' } };
   if (!deals || deals.length === 0) return { ok: false as const, status: 404, body: { error: 'Deal not found for this identity', code: 'NOT_FOUND' } };
-  if (deals.length > 1) {
-    return { ok: false as const, status: 409, body: { error: 'More than one open deal found for this identity in this board', code: 'AMBIGUOUS_MATCH' } };
-  }
-
+  // When multiple open deals exist, use the most recently updated one (first in list due to order)
   const dealId = (deals[0] as any).id as string;
   const stageId = await resolveStageIdForBoard({
     organizationId: opts.organizationId,
