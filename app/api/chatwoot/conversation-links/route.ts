@@ -194,17 +194,20 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Helper to convert empty strings to null (n8n sends "" for undefined)
+        const emptyToNull = (val: unknown) => (val === '' || val === undefined) ? null : val;
+
         // Upsert conversation link
         const { data, error } = await supabase
             .from('messaging_conversation_links')
             .upsert({
                 organization_id: organizationId,
                 chatwoot_conversation_id: body.chatwoot_conversation_id,
-                chatwoot_contact_id: body.chatwoot_contact_id,
-                chatwoot_inbox_id: body.chatwoot_inbox_id,
-                contact_id: body.contact_id,
-                deal_id: body.deal_id,
-                chatwoot_url: body.chatwoot_url,
+                chatwoot_contact_id: emptyToNull(body.chatwoot_contact_id),
+                chatwoot_inbox_id: emptyToNull(body.chatwoot_inbox_id),
+                contact_id: emptyToNull(body.contact_id),
+                deal_id: emptyToNull(body.deal_id),
+                chatwoot_url: emptyToNull(body.chatwoot_url),
                 status: body.status || 'open',
             }, {
                 onConflict: 'organization_id,chatwoot_conversation_id',
@@ -219,8 +222,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ data: toConversationLink(data) }, { status: 201 });
     } catch (error) {
         console.error('Error creating conversation link:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { error: 'Failed to create conversation link' },
+            { error: 'Failed to create conversation link', details: message },
             { status: 500 }
         );
     }
