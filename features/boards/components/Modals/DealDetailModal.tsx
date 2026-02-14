@@ -10,6 +10,7 @@ import { Activity } from '@/types';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { useResponsiveMode } from '@/hooks/useResponsiveMode';
 import { DealSheet } from '../DealSheet';
+import { ConversationTimeline } from '@/features/messaging/chatwoot';
 import {
   analyzeLead,
   generateEmailDraft,
@@ -112,7 +113,7 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
   const [aiResult, setAiResult] = useState<{ suggestion: string; score: number } | null>(null);
   const [emailDraft, setEmailDraft] = useState<string | null>(null);
   const [newNote, setNewNote] = useState('');
-  const [activeTab, setActiveTab] = useState<'timeline' | 'products' | 'info'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'products' | 'info' | 'mensagens'>('timeline');
   const noteTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const [objection, setObjection] = useState('');
@@ -810,6 +811,12 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
                   >
                     IA Insights
                   </button>
+                  <button
+                    onClick={() => setActiveTab('mensagens')}
+                    className={`text-sm font-bold h-14 border-b-2 transition-colors ${activeTab === 'mensagens' ? 'border-primary-500 text-primary-600 dark:text-white' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-white'}`}
+                  >
+                    Mensagens
+                  </button>
                 </div>
               </div>
 
@@ -1160,6 +1167,12 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
                         </div>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {activeTab === 'mensagens' && (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                    <ConversationTimeline dealId={deal.id} variant="light" />
                   </div>
                 )}
               </div>

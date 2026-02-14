@@ -507,7 +507,7 @@
             {
               "id": "deal-id-existente",
               "name": "deal_id",
-              "value": "={{ $(\"Garantir_Deal_Existente\").item.json.data?.id || \"\" }}",
+              "value": "={{ $(\"Garantir_Deal_Existente\").item.json.data?.id ?? $(\"Garantir_Deal_Existente\").item.json.id ?? \"\" }}",
               "type": "string"
             }
           ]
@@ -1916,7 +1916,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"chatwoot_conversation_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-ConversationID\"] }},\n  \"chatwoot_contact_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-ContactID\"] }},\n  \"chatwoot_inbox_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-Inbox\"] }},\n  \"contact_id\": \"{{ $json.contact_id }}\",\n  \"deal_id\": \"{{ $json.deal_id || \"\" }}\",\n  \"chatwoot_url\": \"{{ $(\"Fluxo_Variaveis\").item.json[\"CW-Host\"] }}/app/accounts/{{ $(\"Fluxo_Variaveis\").item.json[\"CW-Account\"] }}/conversations/{{ $(\"Fluxo_Variaveis\").item.json[\"CW-ConversationID\"] }}\"\n}",
+        "jsonBody": "={\n  \"chatwoot_conversation_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-ConversationID\"] }},\n  \"chatwoot_contact_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-ContactID\"] }},\n  \"chatwoot_inbox_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-Inbox\"] }},\n  \"contact_id\": \"{{ $(\"Merge_Contatos\").item.json.contact_id }}\",\n  \"deal_id\": \"{{ $(\"Merge_Contatos\").item.json.deal_id || \"\" }}\",\n  \"chatwoot_url\": \"{{ $(\"Fluxo_Variaveis\").item.json[\"CW-Host\"] }}/app/accounts/{{ $(\"Fluxo_Variaveis\").item.json[\"CW-Account\"] }}/conversations/{{ $(\"Fluxo_Variaveis\").item.json[\"CW-ConversationID\"] }}\"\n}",
         "options": {
           "response": {
             "response": {
