@@ -1,9 +1,9 @@
 # Plano de Implementação: Treinamento do Agente IA (RAG)
 
 **Data:** 2026-02-14
-**Status:** APROVADO (Revisado)
+**Status:** APROVADO (Pronto para Implementação)
 **Autor:** Claude Code
-**Revisão:** v2 - Corrigido após revisão técnica
+**Revisão:** v3 - Todas as correções aplicadas
 
 ---
 
@@ -164,6 +164,9 @@ CREATE INDEX IF NOT EXISTS idx_atd_org_status ON public.ai_training_documents(or
 ALTER TABLE public.ai_training_documents ENABLE ROW LEVEL SECURITY;
 
 -- RLS Padrão B (admin gerencia, membros leem)
+DROP POLICY IF EXISTS "Admins can manage training docs" ON public.ai_training_documents;
+DROP POLICY IF EXISTS "Members can view training docs" ON public.ai_training_documents;
+
 CREATE POLICY "Admins can manage training docs"
     ON public.ai_training_documents FOR ALL TO authenticated
     USING (
@@ -224,6 +227,8 @@ CREATE INDEX IF NOT EXISTS idx_documents_metadata ON public.documents USING gin(
 ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 
 -- RLS Padrão A (n8n acessa via service_role, frontend só lê)
+DROP POLICY IF EXISTS "Enable all access for authenticated users" ON public.documents;
+
 CREATE POLICY "Enable all access for authenticated users"
     ON public.documents FOR ALL TO authenticated
     USING (true) WITH CHECK (true);
@@ -267,7 +272,11 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit)
 VALUES ('ai-training', 'ai-training', false, 20971520)  -- 20MB
 ON CONFLICT (id) DO UPDATE SET file_size_limit = 20971520;
 
--- Storage policies
+-- Storage policies (idempotente)
+DROP POLICY IF EXISTS "ai_training_upload" ON storage.objects;
+DROP POLICY IF EXISTS "ai_training_read" ON storage.objects;
+DROP POLICY IF EXISTS "ai_training_delete" ON storage.objects;
+
 CREATE POLICY "ai_training_upload" ON storage.objects
     FOR INSERT TO authenticated
     WITH CHECK (bucket_id = 'ai-training');
@@ -534,25 +543,48 @@ import { AITrainingSection } from '@/features/ai-training/AITrainingSection';
 | `DocumentList` | Lista de documentos com status e ações |
 | `DocumentChunksPreview` | Modal para ver chunks de um doc (debug) |
 
-### 6.4 Hooks (React Query)
+### 6.4 Hooks (React Query v5)
 
+**Adicionar em `lib/query/queryKeys.ts`:**
+```typescript
+aiTraining: {
+    all: ['ai-training'] as const,
+    documents: () => ['ai-training', 'documents'] as const,
+    stats: () => ['ai-training', 'stats'] as const,
+},
+```
+
+**Hooks:**
 ```typescript
 // useTrainingDocuments.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/query';
+
 export function useTrainingDocuments() {
-  return useQuery(['ai-training-documents'], fetchDocuments, {
-    refetchInterval: 3000, // Polling para atualizar status
+  return useQuery({
+    queryKey: queryKeys.aiTraining.documents(),
+    queryFn: fetchDocuments,
+    // Sem refetchInterval - V1 síncrono não precisa de polling
   });
 }
 
 export function useCreateDocument() {
-  return useMutation(createDocument, {
-    onSuccess: () => queryClient.invalidateQueries(['ai-training-documents'])
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createDocument,
+    onSuccess: () => queryClient.invalidateQueries({
+      queryKey: queryKeys.aiTraining.all
+    }),
   });
 }
 
 export function useDeleteDocument() {
-  return useMutation(deleteDocument, {
-    onSuccess: () => queryClient.invalidateQueries(['ai-training-documents'])
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteDocument,
+    onSuccess: () => queryClient.invalidateQueries({
+      queryKey: queryKeys.aiTraining.all
+    }),
   });
 }
 ```
@@ -561,13 +593,42 @@ export function useDeleteDocument() {
 
 ## 7. Validações e Edge Cases
 
-### 7.1 Sem Chave OpenAI Configurada
+### 7.1 Padrão de Autenticação Server-Side
 
 ```typescript
-// No processor.ts
-const apiKey = orgSettings.ai_openai_key || userSettings.aiOpenaiKey;
+// Nas API Routes (padrão consistente com app/api/ai/chat/route.ts)
+import { createClient } from '@/lib/supabase/server';
+
+const supabase = await createClient();
+const { data: { user } } = await supabase.auth.getUser();
+
+if (!user) {
+  return Response.json({ error: 'Não autenticado' }, { status: 401 });
+}
+
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('organization_id, role')
+  .eq('id', user.id)
+  .single();
+
+// Verificar admin para operações de escrita
+if (profile.role !== 'admin') {
+  return Response.json({ error: 'Apenas administradores' }, { status: 403 });
+}
+
+// Buscar chave OpenAI da organização
+const { data: orgSettings } = await supabase
+  .from('organization_settings')
+  .select('ai_openai_key')
+  .eq('organization_id', profile.organization_id)
+  .single();
+
+const apiKey = orgSettings?.ai_openai_key;
 if (!apiKey) {
-  throw new Error('Chave OpenAI não configurada. Configure em Configurações > Central de I.A');
+  return Response.json({
+    error: 'Chave OpenAI não configurada. Configure em Configurações > Central de I.A.'
+  }, { status: 400 });
 }
 ```
 
@@ -735,7 +796,8 @@ npm install -D @types/pdf-parse
 - [ ] Node `treinamento` ativado
 - [ ] tableName mantido como `documents`
 - [ ] metadata filter configurado com `organization_id`
-- [ ] Teste: pergunta ao agente → RAG retorna contexto
+- [ ] Teste positivo: pergunta ao agente → RAG retorna contexto
+- [ ] Teste negativo: agente de org A NÃO retorna dados de org B
 
 ### Qualidade
 - [ ] `npm run typecheck` passa
