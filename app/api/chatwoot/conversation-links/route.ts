@@ -179,6 +179,7 @@ export async function GET(request: NextRequest) {
  * - contact_id: string (optional)
  * - deal_id: string (optional)
  * - chatwoot_url: string (optional)
+ * - contact_avatar_url: string (optional) - Will sync to CRM contact's avatar if contact_id is provided
  */
 export async function POST(request: NextRequest) {
     try {
@@ -231,6 +232,36 @@ export async function POST(request: NextRequest) {
                 { error: 'Failed to create conversation link', details: error.message, code: error.code },
                 { status: 500 }
             );
+        }
+
+        // Sync contact avatar from Chatwoot if provided
+        const contactAvatarUrl = emptyToNull(body.contact_avatar_url) as string | null;
+        const contactId = emptyToNull(body.contact_id) as string | null;
+
+        if (contactId && contactAvatarUrl) {
+            console.log('[POST] Syncing contact avatar:', { contactId, avatarUrl: contactAvatarUrl });
+
+            // Check if contact already has an avatar (don't overwrite if already set)
+            const { data: existingContact } = await supabase
+                .from('contacts')
+                .select('avatar')
+                .eq('id', contactId)
+                .single();
+
+            // Only update if contact exists and doesn't have an avatar yet
+            if (existingContact && !existingContact.avatar) {
+                const { error: avatarError } = await supabase
+                    .from('contacts')
+                    .update({ avatar: contactAvatarUrl, updated_at: new Date().toISOString() })
+                    .eq('id', contactId);
+
+                if (avatarError) {
+                    console.error('[POST] Failed to sync contact avatar:', avatarError);
+                    // Don't fail the request, just log the error
+                } else {
+                    console.log('[POST] Contact avatar synced successfully');
+                }
+            }
         }
 
         return NextResponse.json({ data: toConversationLink(data) }, { status: 201 });

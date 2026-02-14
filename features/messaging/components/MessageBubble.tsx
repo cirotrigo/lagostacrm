@@ -30,6 +30,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
   const timestamp = message.wpp_timestamp || message.created_at;
   const formattedTime = format(new Date(timestamp), 'HH:mm', { locale: ptBR });
 
+  // Don't render empty messages (activity messages from Chatwoot)
+  const hasContent = message.content || message.media_url || message.caption;
+  if (!hasContent) {
+    return null;
+  }
+
   const renderMedia = () => {
     if (!message.media_url) return null;
 

@@ -110,9 +110,12 @@ POST {{ CRM-Host }}/api/chatwoot/conversation-links
   "chatwoot_contact_id": {{ CW-ContactID }},
   "chatwoot_inbox_id": {{ CW-Inbox }},
   "contact_id": {{ contact_id }},
-  "chatwoot_url": "{{ CW-Host }}/app/accounts/{{ CW-Account }}/conversations/{{ CW-ConversationID }}"
+  "chatwoot_url": "{{ CW-Host }}/app/accounts/{{ CW-Account }}/conversations/{{ CW-ConversationID }}",
+  "contact_avatar_url": {{ CW-Contact-Thumbnail }}  // Sincroniza avatar do Chatwoot para o contato CRM
 }
 ```
+
+> **Nota:** O campo `contact_avatar_url` é opcional. Se fornecido junto com `contact_id`, o avatar será sincronizado para o contato no CRM (apenas se o contato ainda não tiver avatar).
 
 ### 2. Labels Sync ao Mover Deal
 

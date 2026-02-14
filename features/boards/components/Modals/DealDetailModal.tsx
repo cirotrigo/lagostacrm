@@ -1179,11 +1179,11 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
                 )}
 
                 {activeTab === 'mensagens' && (
-                  <div className="h-full animate-in fade-in slide-in-from-bottom-4">
+                  <div className="animate-in fade-in slide-in-from-bottom-4" style={{ minHeight: '400px' }}>
                     <DealConversationChat
                       dealId={deal.id}
                       allowSend={true}
-                      maxHeight="450px"
+                      maxHeight="500px"
                     />
                   </div>
                 )}

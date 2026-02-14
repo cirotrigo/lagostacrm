@@ -202,6 +202,12 @@
               "name": "TG-ChatID",
               "value": "-1003898413856",
               "type": "string"
+            },
+            {
+              "id": "cw-contact-thumbnail",
+              "name": "CW-ContactThumbnail",
+              "value": "={{ $('Webhook').item.json.body.sender?.thumbnail || $('Webhook').item.json.body.conversation?.meta?.sender?.thumbnail || '' }}",
+              "type": "string"
             }
           ]
         },
@@ -1916,7 +1922,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"chatwoot_conversation_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-ConversationID\"] }},\n  \"chatwoot_contact_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-ContactID\"] }},\n  \"chatwoot_inbox_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-Inbox\"] }},\n  \"contact_id\": \"{{ $(\"Merge_Contatos\").item.json.contact_id }}\",\n  \"deal_id\": \"{{ $(\"Merge_Contatos\").item.json.deal_id || \"\" }}\",\n  \"chatwoot_url\": \"{{ $(\"Fluxo_Variaveis\").item.json[\"CW-Host\"] }}/app/accounts/{{ $(\"Fluxo_Variaveis\").item.json[\"CW-Account\"] }}/conversations/{{ $(\"Fluxo_Variaveis\").item.json[\"CW-ConversationID\"] }}\"\n}",
+        "jsonBody": "={\n  \"chatwoot_conversation_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-ConversationID\"] }},\n  \"chatwoot_contact_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-ContactID\"] }},\n  \"chatwoot_inbox_id\": {{ $(\"Fluxo_Variaveis\").item.json[\"CW-Inbox\"] }},\n  \"contact_id\": \"{{ $(\"Merge_Contatos\").item.json.contact_id }}\",\n  \"deal_id\": \"{{ $(\"Merge_Contatos\").item.json.deal_id || \"\" }}\",\n  \"chatwoot_url\": \"{{ $(\"Fluxo_Variaveis\").item.json[\"CW-Host\"] }}/app/accounts/{{ $(\"Fluxo_Variaveis\").item.json[\"CW-Account\"] }}/conversations/{{ $(\"Fluxo_Variaveis\").item.json[\"CW-ConversationID\"] }}\",\n  \"contact_avatar_url\": \"{{ $(\"Fluxo_Variaveis\").item.json[\"CW-ContactThumbnail\"] || \"\" }}\"\n}",
         "options": {
           "response": {
             "response": {

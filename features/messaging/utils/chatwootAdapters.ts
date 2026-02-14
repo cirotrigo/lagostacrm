@@ -184,7 +184,18 @@ export function adaptChatwootConversations(
 
 /**
  * Batch convert Chatwoot messages
+ * Filters out activity messages (type 2 or 'activity') which have no user content
  */
 export function adaptChatwootMessages(messages: ChatwootMessage[]): WhatsAppMessage[] {
-    return messages.map(adaptChatwootMessage);
+    return messages
+        .filter(m => {
+            // Filter out activity messages (system messages like "assigned to", "resolved", etc.)
+            const isActivity = m.message_type === 'activity' || m.message_type === 2;
+            if (isActivity) return false;
+
+            // Filter out messages with no content and no attachments
+            const hasContent = m.content || (m.attachments && m.attachments.length > 0);
+            return hasContent;
+        })
+        .map(adaptChatwootMessage);
 }
