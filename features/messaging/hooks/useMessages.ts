@@ -72,25 +72,46 @@ export function useSendMessage() {
     return useMutation({
         mutationFn: async (payload: SendMessagePayload) => {
             const conversationId = parseInt(payload.conversation_id, 10);
+            console.log('[useSendMessage] Sending:', {
+                conversationId,
+                rawId: payload.conversation_id,
+                contentLength: payload.content.length,
+            });
 
-            const response = await fetch(
-                `/api/chatwoot/conversations/${conversationId}/messages`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        content: payload.content,
-                        private: false,
-                    }),
-                }
-            );
+            // Validate conversationId
+            if (isNaN(conversationId) || conversationId <= 0) {
+                console.error('[useSendMessage] Invalid conversation ID:', payload.conversation_id);
+                throw new Error('Invalid conversation ID');
+            }
+
+            let response: Response;
+            try {
+                response = await fetch(
+                    `/api/chatwoot/conversations/${conversationId}/messages`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            content: payload.content,
+                            private: false,
+                        }),
+                    }
+                );
+            } catch (networkError) {
+                console.error('[useSendMessage] Network error:', networkError);
+                throw new Error('Erro de conexão. Verifique se o servidor está rodando.');
+            }
+
+            console.log('[useSendMessage] Response status:', response.status);
 
             if (!response.ok) {
                 const error = await response.json().catch(() => ({}));
+                console.error('[useSendMessage] Error response:', error);
                 throw new Error(error.error || 'Failed to send message');
             }
 
             const result = await response.json();
+            console.log('[useSendMessage] Success, message ID:', result.data?.id);
             return {
                 message: adaptChatwootMessage(result.data),
             };

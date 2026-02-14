@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useConversations, useUpdateConversation } from './useConversations';
 import { useMessages, useSendMessage, useAddChatwootMessageToCache } from './useMessages';
 import { useMessagingRealtime } from './useMessagingRealtime';
@@ -24,6 +24,9 @@ export function useMessagingController() {
     const [filters, setFilters] = useState<ConversationFilters>({});
     const [draftMessage, setDraftMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
+
+    // Ref to track last marked conversation to prevent duplicate calls
+    const lastMarkedConversationRef = useRef<string | null>(null);
 
     // Queries - now using Chatwoot via adapted hooks
     const {
@@ -91,17 +94,32 @@ export function useMessagingController() {
     }, []);
 
     const handleSendMessage = useCallback(async () => {
-        if (!selectedConversationId || !draftMessage.trim() || isSending) return;
+        console.log('[handleSendMessage] Called with:', {
+            selectedConversationId,
+            draftMessage: draftMessage.substring(0, 50),
+            isSending,
+        });
+
+        if (!selectedConversationId || !draftMessage.trim() || isSending) {
+            console.log('[handleSendMessage] Blocked:', {
+                noConversation: !selectedConversationId,
+                emptyMessage: !draftMessage.trim(),
+                alreadySending: isSending,
+            });
+            return;
+        }
 
         setIsSending(true);
         try {
+            console.log('[handleSendMessage] Sending to:', selectedConversationId);
             await sendMessageMutation.mutateAsync({
                 conversation_id: selectedConversationId,
                 content: draftMessage.trim(),
             });
+            console.log('[handleSendMessage] Success');
             setDraftMessage('');
         } catch (error) {
-            console.error('Failed to send message:', error);
+            console.error('[handleSendMessage] Failed:', error);
         } finally {
             setIsSending(false);
         }
@@ -164,14 +182,17 @@ export function useMessagingController() {
     }, [conversations, selectedConversationId]);
 
     // Mark conversation as read when selected
-    useEffect(() => {
-        if (selectedConversationId) {
-            const numericId = parseInt(selectedConversationId, 10);
-            if (!isNaN(numericId)) {
-                markAsRead.mutate(numericId);
-            }
-        }
-    }, [selectedConversationId, markAsRead]);
+    // TEMPORARILY DISABLED - was causing infinite loop
+    // TODO: Re-enable with proper debouncing
+    // useEffect(() => {
+    //     if (selectedConversationId && selectedConversationId !== lastMarkedConversationRef.current) {
+    //         const numericId = parseInt(selectedConversationId, 10);
+    //         if (!isNaN(numericId)) {
+    //             lastMarkedConversationRef.current = selectedConversationId;
+    //             markAsRead.mutate(numericId);
+    //         }
+    //     }
+    // }, [selectedConversationId]);
 
     return {
         // State

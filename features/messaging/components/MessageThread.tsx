@@ -77,7 +77,7 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
       </div>
     );
@@ -85,14 +85,14 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-slate-500 dark:text-slate-400">
+      <div className="h-full flex items-center justify-center text-slate-500 dark:text-slate-400">
         <p>Nenhuma mensagem ainda</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 relative">
+    <div className="h-full relative">
       <div
         ref={containerRef}
         onScroll={handleScroll}

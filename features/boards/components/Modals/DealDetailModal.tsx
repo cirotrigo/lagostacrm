@@ -131,6 +131,7 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
   const [showLossReasonModal, setShowLossReasonModal] = useState(false);
   const [pendingLostStageId, setPendingLostStageId] = useState<string | null>(null);
   const [lossReasonOrigin, setLossReasonOrigin] = useState<'button' | 'stage'>('button');
+  const [avatarError, setAvatarError] = useState(false);
 
   // Tags suggestions (local for now; Settings UI writes to the same key)
   const [availableTags, setAvailableTags] = usePersistedState<string[]>('crm_tags', []);
@@ -158,6 +159,7 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
       setPendingLostStageId(null);
       setLossReasonOrigin('button');
       setTagQuery('');
+      setAvatarError(false);
     }
   }, [isOpen, dealId]); // Depend on dealId to reset when switching deals
 
@@ -604,11 +606,12 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
                     <User size={14} /> Contato Principal
                   </h3>
                   <div className="flex items-center gap-3">
-                    {contact?.avatar ? (
+                    {contact?.avatar && !avatarError ? (
                       <img
                         src={contact.avatar}
                         alt={contact.name || deal.contactName || 'Contato'}
                         className="w-8 h-8 rounded-full object-cover"
+                        onError={() => setAvatarError(true)}
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold">

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
     User,
     Phone,
@@ -54,6 +54,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
 }) => {
     const status = statusConfig[conversation.status] || statusConfig.open;
     const conversationId = parseInt(conversation.id, 10);
+    const [avatarError, setAvatarError] = useState(false);
 
     // Format currency
     const formatCurrency = (value: number | null) => {
@@ -85,11 +86,12 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
                 {/* Contact Avatar & Name */}
                 <div className="p-4 border-b border-slate-200 dark:border-white/10">
                     <div className="flex flex-col items-center text-center">
-                        {conversation.contact_avatar ? (
+                        {conversation.contact_avatar && !avatarError ? (
                             <img
                                 src={conversation.contact_avatar}
                                 alt={conversation.contact_name || 'Contato'}
                                 className="w-20 h-20 rounded-full object-cover mb-3"
+                                onError={() => setAvatarError(true)}
                             />
                         ) : (
                             <div className="w-20 h-20 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-3">

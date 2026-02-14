@@ -218,8 +218,8 @@ export const DealConversationChat: React.FC<DealConversationChatProps> = ({
                 )}
             </div>
 
-            {/* Messages area - uses flex-1 to take remaining space, min-h for minimum visibility */}
-            <div className="flex-1 min-h-[280px] overflow-hidden relative">
+            {/* Messages area - uses flex-1 with min-h-0 to properly fill remaining space */}
+            <div className="flex-1 min-h-0 overflow-hidden">
                 {/* Error state for messages */}
                 {messagesError && (
                     <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-900">
