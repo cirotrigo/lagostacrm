@@ -68,6 +68,14 @@ export const queryKeys = {
             ['chatwoot', 'conversationLinks', params] as const,
         syncLog: (dealId?: string) => ['chatwoot', 'syncLog', dealId] as const,
     },
+
+    // AI Training / RAG
+    aiTraining: {
+        all: ['ai-training'] as const,
+        documents: () => ['ai-training', 'documents'] as const,
+        document: (id: string) => ['ai-training', 'documents', id] as const,
+        stats: () => ['ai-training', 'stats'] as const,
+    },
 };
 
 /**
