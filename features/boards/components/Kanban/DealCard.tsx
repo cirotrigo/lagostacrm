@@ -232,9 +232,26 @@ const DealCardComponent: React.FC<DealCardProps> = ({
       >
         {deal.title}
       </h4>
-      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-1">
-        <Building2 size={10} aria-hidden="true" /> {deal.companyName}
-      </p>
+      <div className="text-xs text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-1.5">
+        {deal.contactAvatar ? (
+          <Image
+            src={deal.contactAvatar}
+            alt={deal.contactName || 'Contato'}
+            width={16}
+            height={16}
+            className="w-4 h-4 rounded-full object-cover"
+            unoptimized
+          />
+        ) : (
+          <div className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[8px] font-bold text-slate-500 dark:text-slate-400">
+            {(deal.contactName || '?').charAt(0).toUpperCase()}
+          </div>
+        )}
+        <span className="truncate">{deal.contactName}</span>
+        <span className="text-slate-300 dark:text-slate-600">·</span>
+        <Building2 size={10} aria-hidden="true" className="flex-shrink-0" />
+        <span className="truncate">{deal.companyName}</span>
+      </div>
 
       <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-white/5">
         <div className="flex items-center gap-2">

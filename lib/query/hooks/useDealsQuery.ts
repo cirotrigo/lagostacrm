@@ -113,6 +113,7 @@ export const useDealsView = (filters?: DealsFilters) => {
           companyName: company?.name || 'Sem empresa',
           contactName: contact?.name || 'Sem contato',
           contactEmail: contact?.email || '',
+          contactAvatar: contact?.avatar,
           stageLabel: stageMap.get(deal.status) || 'Estágio não identificado',
         };
       });
@@ -211,6 +212,7 @@ export const useDealsByBoard = (boardId: string) => {
           companyName: company?.name || 'Sem empresa',
           contactName: contact?.name || 'Sem contato',
           contactEmail: contact?.email || '',
+          contactAvatar: contact?.avatar,
           stageLabel: stageMap.get(deal.status) || 'Estágio não identificado',
         };
       });

@@ -248,6 +248,7 @@ export interface DealView extends Deal {
   clientCompanyName?: string; // Name of the CRM client company
   contactName: string;
   contactEmail: string;
+  contactAvatar?: string; // Contact avatar URL from Chatwoot sync
   /** Nome/label do estágio atual (resolvido a partir do status UUID) */
   stageLabel: string;
 
