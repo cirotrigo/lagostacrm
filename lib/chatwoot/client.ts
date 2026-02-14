@@ -4,6 +4,8 @@ import type {
     ChatwootMessage,
     ChatwootContact,
     ChatwootLabel,
+    ChatwootAgent,
+    ChatwootInbox,
     ConversationFilters,
     ConversationsResponse,
     MessagesResponse,
@@ -152,6 +154,33 @@ export class ChatwootClient {
         );
     }
 
+    /**
+     * Unassign conversation (remove assignee)
+     */
+    async unassignConversation(
+        conversationId: number
+    ): Promise<ChatwootConversation> {
+        return this.request<ChatwootConversation>(
+            `/conversations/${conversationId}/assignments`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ assignee_id: null }),
+            }
+        );
+    }
+
+    /**
+     * Mark messages in conversation as read
+     */
+    async markMessagesAsRead(
+        conversationId: number
+    ): Promise<void> {
+        await this.request<void>(
+            `/conversations/${conversationId}/update_last_seen`,
+            { method: 'POST' }
+        );
+    }
+
     // ========================================================================
     // Messages
     // ========================================================================
@@ -202,6 +231,82 @@ export class ChatwootClient {
             message_type: 'outgoing',
             private: isPrivate,
         });
+    }
+
+    /**
+     * Send a private note (internal message visible only to agents)
+     */
+    async sendPrivateNote(
+        conversationId: number,
+        content: string
+    ): Promise<ChatwootMessage> {
+        return this.sendMessage(conversationId, {
+            content,
+            message_type: 'outgoing',
+            private: true,
+        });
+    }
+
+    /**
+     * Send a message with attachments
+     * Note: For file uploads, you need to use multipart/form-data.
+     * This method handles base64 encoded attachments.
+     */
+    async sendMessageWithAttachments(
+        conversationId: number,
+        content: string,
+        attachments: Array<{
+            file_type: string;
+            data_url: string;
+        }>,
+        isPrivate = false
+    ): Promise<ChatwootMessage> {
+        return this.sendMessage(conversationId, {
+            content,
+            message_type: 'outgoing',
+            private: isPrivate,
+            attachments,
+        });
+    }
+
+    /**
+     * Upload attachment using multipart/form-data
+     * Use this for actual file uploads (images, documents, audio)
+     */
+    async uploadAttachment(
+        conversationId: number,
+        file: File | Blob,
+        content?: string,
+        isPrivate = false
+    ): Promise<ChatwootMessage> {
+        const formData = new FormData();
+        formData.append('attachments[]', file);
+        if (content) {
+            formData.append('content', content);
+        }
+        formData.append('message_type', 'outgoing');
+        formData.append('private', isPrivate.toString());
+
+        const url = `${this.baseUrl}/api/v1/accounts/${this.accountId}/conversations/${conversationId}/messages`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'api_access_token': this.token,
+            },
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({})) as ChatwootApiError;
+            const errorMessage = errorData.error
+                || errorData.errors?.join(', ')
+                || errorData.description
+                || `Chatwoot API error: ${response.status}`;
+            throw new Error(errorMessage);
+        }
+
+        return response.json();
     }
 
     /**
@@ -333,6 +438,53 @@ export class ChatwootClient {
     async getContactConversations(contactId: number): Promise<ChatwootConversation[]> {
         const response = await this.request<{ payload: ChatwootConversation[] }>(
             `/contacts/${contactId}/conversations`
+        );
+        return response.payload;
+    }
+
+    // ========================================================================
+    // Agents
+    // ========================================================================
+
+    /**
+     * Get all agents (team members) for the account
+     */
+    async getAgents(): Promise<ChatwootAgent[]> {
+        return this.request<ChatwootAgent[]>('/agents');
+    }
+
+    /**
+     * Get a specific agent by ID
+     */
+    async getAgent(agentId: number): Promise<ChatwootAgent> {
+        return this.request<ChatwootAgent>(`/agents/${agentId}`);
+    }
+
+    // ========================================================================
+    // Inboxes
+    // ========================================================================
+
+    /**
+     * Get all inboxes for the account
+     */
+    async getInboxes(): Promise<ChatwootInbox[]> {
+        const response = await this.request<{ payload: ChatwootInbox[] }>('/inboxes');
+        return response.payload;
+    }
+
+    /**
+     * Get a specific inbox by ID
+     */
+    async getInbox(inboxId: number): Promise<ChatwootInbox> {
+        return this.request<ChatwootInbox>(`/inboxes/${inboxId}`);
+    }
+
+    /**
+     * Get agents assigned to an inbox
+     */
+    async getInboxAgents(inboxId: number): Promise<ChatwootAgent[]> {
+        const response = await this.request<{ payload: ChatwootAgent[] }>(
+            `/inboxes/${inboxId}/members`
         );
         return response.payload;
     }

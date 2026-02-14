@@ -1,11 +1,11 @@
 # Plano de Evolução: Chat Completo Embutido no LagostaCRM
 
-> **Versão:** 2.2
+> **Versão:** 2.3
 > **Data:** 2026-02-14
-> **Status:** Planejamento
-> **Branch:** `feature/chatwoot-messaging` (evolução da v1.1 já implementada)
+> **Status:** Em Implementação
+> **Branch:** `project/lagostacrm`
 > **Pré-requisito:** Plano v1.1 (Opção C Híbrida) implementado e em produção
-> **Revisado:** v2.2 - Corrigido migration SQL, auth strategy, route conventions
+> **Última Atualização:** Fase 1.5 e Fase 2 implementadas
 
 ---
 
@@ -384,10 +384,12 @@ ALTER TABLE public.messaging_conversation_links
 -- ============================================================================
 -- FUNCTION: increment_unread
 -- Incrementa unread_count atomicamente (usado pelo webhook handler)
+-- NOTA: Param names devem bater com os nomes usados em webhooks.ts:
+--       supabase.rpc('increment_unread', { org_id: ..., conv_id: ... })
 -- ============================================================================
 CREATE OR REPLACE FUNCTION public.increment_unread(
-    p_org_id UUID,
-    p_conv_id INTEGER
+    org_id UUID,
+    conv_id INTEGER
 )
 RETURNS INTEGER
 LANGUAGE sql
@@ -395,8 +397,8 @@ AS $$
     UPDATE public.messaging_conversation_links
     SET unread_count = unread_count + 1,
         updated_at = NOW()
-    WHERE organization_id = p_org_id
-      AND chatwoot_conversation_id = p_conv_id
+    WHERE organization_id = org_id
+      AND chatwoot_conversation_id = conv_id
     RETURNING unread_count;
 $$;
 

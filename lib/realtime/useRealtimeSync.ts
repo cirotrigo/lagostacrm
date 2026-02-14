@@ -55,7 +55,9 @@ type RealtimeTable =
   | 'crm_companies'
   | 'whatsapp_sessions'
   | 'whatsapp_conversations'
-  | 'whatsapp_messages';
+  | 'whatsapp_messages'
+  | 'messaging_conversation_links'
+  | 'messaging_messages_cache';
 
 // Lazy getter for query keys mapping - avoids initialization issues in tests
 const getTableQueryKeys = (table: RealtimeTable): readonly (readonly unknown[])[] => {
@@ -69,6 +71,8 @@ const getTableQueryKeys = (table: RealtimeTable): readonly (readonly unknown[])[
     whatsapp_sessions: [queryKeys.whatsapp.session()],
     whatsapp_conversations: [queryKeys.whatsapp.conversations()],
     whatsapp_messages: [queryKeys.whatsapp.all],
+    messaging_conversation_links: [queryKeys.chatwoot.conversationLinks(), queryKeys.chatwoot.conversations()],
+    messaging_messages_cache: [queryKeys.chatwoot.all],
   };
   return mapping[table];
 };

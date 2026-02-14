@@ -149,10 +149,11 @@ async function handleConversationCreated(
     if (!conversation) return;
 
     const chatwootUrl = `${chatwootBaseUrl}/app/accounts/${conversation.account_id}/conversations/${conversation.id}`;
+    const sender = conversation.meta?.sender;
 
     // Try to find matching CRM contact by phone
     let contactId: string | null = null;
-    const senderPhone = conversation.meta?.sender?.phone_number;
+    const senderPhone = sender?.phone_number;
 
     if (senderPhone) {
         const { data: crmContact } = await supabase
@@ -166,16 +167,23 @@ async function handleConversationCreated(
         }
     }
 
-    // Upsert conversation link
+    // Upsert conversation link with extended fields
     await supabase.from('messaging_conversation_links').upsert({
         organization_id: organizationId,
         chatwoot_conversation_id: conversation.id,
-        chatwoot_contact_id: conversation.meta?.sender?.id,
+        chatwoot_contact_id: sender?.id,
         chatwoot_inbox_id: conversation.inbox_id,
         contact_id: contactId,
         status: mapStatus(conversation.status),
         unread_count: conversation.unread_count || 0,
         chatwoot_url: chatwootUrl,
+        // Extended fields for embedded chat
+        assigned_agent_id: conversation.assignee?.id || null,
+        assigned_agent_name: conversation.assignee?.name || null,
+        inbox_name: null, // Would need inbox lookup
+        contact_name: sender?.name || null,
+        contact_phone: sender?.phone_number || null,
+        contact_avatar_url: sender?.thumbnail || null,
     }, {
         onConflict: 'organization_id,chatwoot_conversation_id',
     });
@@ -196,6 +204,8 @@ async function handleConversationUpdated(
         .update({
             status: mapStatus(conversation.status),
             unread_count: conversation.unread_count || 0,
+            assigned_agent_id: conversation.assignee?.id || null,
+            assigned_agent_name: conversation.assignee?.name || null,
         })
         .eq('organization_id', organizationId)
         .eq('chatwoot_conversation_id', conversation.id);
@@ -203,6 +213,11 @@ async function handleConversationUpdated(
 
 /**
  * Handle message_created event
+ *
+ * This function:
+ * 1. Updates the conversation link with the last message preview
+ * 2. Caches the message for realtime sync
+ * 3. Increments unread count for incoming messages
  */
 async function handleMessageCreated(
     supabase: SupabaseClient,
@@ -212,24 +227,73 @@ async function handleMessageCreated(
 ): Promise<void> {
     if (!conversation || !message) return;
 
-    const sender = message.message_type === 'incoming' ? 'customer' : 'agent';
+    const isIncoming = message.message_type === 'incoming';
+    const sender = isIncoming ? 'customer' : 'agent';
     const preview = message.content?.substring(0, 100) || '';
+    const messageTimestamp = new Date(message.created_at * 1000).toISOString();
 
-    await supabase
-        .from('messaging_conversation_links')
-        .update({
-            last_message_at: new Date(message.created_at * 1000).toISOString(),
-            last_message_preview: preview,
-            last_message_sender: sender,
-            unread_count: sender === 'customer'
-                ? supabase.rpc('increment_unread', {
-                    org_id: organizationId,
-                    conv_id: conversation.id,
-                })
-                : 0,
-        })
-        .eq('organization_id', organizationId)
-        .eq('chatwoot_conversation_id', conversation.id);
+    // 1. Cache the message for realtime sync
+    // Determine sender type and info
+    const senderType = message.sender
+        ? ('email' in message.sender ? 'user' : 'contact')
+        : null;
+    const senderId = message.sender?.id || null;
+    const senderName = message.sender?.name || null;
+
+    try {
+        await supabase.rpc('upsert_message_cache', {
+            p_organization_id: organizationId,
+            p_chatwoot_message_id: message.id,
+            p_chatwoot_conversation_id: conversation.id,
+            p_content: message.content || '',
+            p_content_type: message.content_type || 'text',
+            p_message_type: message.message_type,
+            p_is_private: message.private || false,
+            p_attachments: JSON.stringify(message.attachments || []),
+            p_sender_type: senderType,
+            p_sender_id: senderId,
+            p_sender_name: senderName,
+            p_created_at: messageTimestamp,
+        });
+    } catch (error) {
+        console.warn('Failed to cache message:', error);
+        // Non-critical, continue with conversation update
+    }
+
+    // 2. Update conversation link with last message info
+    try {
+        await supabase.rpc('update_conversation_link_from_message', {
+            p_organization_id: organizationId,
+            p_chatwoot_conversation_id: conversation.id,
+            p_content: preview,
+            p_message_type: message.message_type,
+            p_created_at: messageTimestamp,
+        });
+    } catch (error) {
+        // Fall back to direct update if RPC not available
+        console.warn('RPC not available, using direct update:', error);
+        await supabase
+            .from('messaging_conversation_links')
+            .update({
+                last_message_at: messageTimestamp,
+                last_message_preview: preview,
+                last_message_sender: sender,
+            })
+            .eq('organization_id', organizationId)
+            .eq('chatwoot_conversation_id', conversation.id);
+    }
+
+    // 3. Increment unread count for incoming messages
+    if (isIncoming) {
+        try {
+            await supabase.rpc('increment_unread_count', {
+                p_organization_id: organizationId,
+                p_chatwoot_conversation_id: conversation.id,
+            });
+        } catch (error) {
+            console.warn('Failed to increment unread count:', error);
+        }
+    }
 }
 
 /**

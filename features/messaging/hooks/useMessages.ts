@@ -1,107 +1,171 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useInfiniteQuery, UseInfiniteQueryResult } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/query/queryKeys';
+import { adaptChatwootMessages, adaptChatwootMessage } from '../utils/chatwootAdapters';
+import type { ChatwootMessage } from '@/lib/chatwoot';
 import type { MessagesResponse, WhatsAppMessage, SendMessagePayload } from '../types/messaging';
 
-const QUERY_KEY = ['whatsapp', 'messages'];
-
+/**
+ * Hook to fetch messages for a conversation from Chatwoot
+ *
+ * This hook wraps the Chatwoot API and adapts the response to the
+ * WhatsApp format expected by existing UI components.
+ */
 interface UseMessagesOptions {
-  conversationId: string | null;
-  limit?: number;
-  enabled?: boolean;
+    conversationId: string | null;
+    limit?: number;
+    enabled?: boolean;
 }
 
-export function useMessages(options: UseMessagesOptions) {
-  const { conversationId, limit = 50, enabled = true } = options;
+export function useMessages(options: UseMessagesOptions): UseInfiniteQueryResult<{ pages: MessagesResponse[] }> {
+    const { conversationId, limit = 50, enabled = true } = options;
+    const numericConversationId = conversationId ? parseInt(conversationId, 10) : null;
 
-  return useInfiniteQuery<MessagesResponse>({
-    queryKey: [...QUERY_KEY, conversationId],
-    queryFn: async ({ pageParam }) => {
-      const params = new URLSearchParams();
-      params.set('limit', limit.toString());
-      params.set('mark_as_read', 'true');
-      if (pageParam) params.set('before_id', pageParam as string);
+    return useInfiniteQuery<MessagesResponse, Error, { pages: MessagesResponse[] }, readonly unknown[], string | null>({
+        queryKey: [...queryKeys.chatwoot.messages(numericConversationId!), 'infinite'],
+        queryFn: async ({ pageParam }) => {
+            const params = new URLSearchParams();
+            params.set('limit', limit.toString());
+            if (pageParam) params.set('before', pageParam);
 
-      const response = await fetch(
-        `/api/whatsapp/conversations/${conversationId}/messages?${params}`
-      );
-      if (!response.ok) throw new Error('Failed to fetch messages');
-      return response.json();
-    },
-    initialPageParam: null as string | null,
-    getNextPageParam: (lastPage) => (lastPage.has_more ? lastPage.oldest_id : undefined),
-    enabled: !!conversationId && enabled,
-    staleTime: 10000, // 10 seconds
-  });
-}
+            const response = await fetch(
+                `/api/chatwoot/conversations/${numericConversationId}/messages?${params}`
+            );
 
-export function useSendMessage() {
-  const queryClient = useQueryClient();
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.error || 'Failed to fetch messages');
+            }
 
-  return useMutation({
-    mutationFn: async (payload: SendMessagePayload) => {
-      const response = await fetch('/api/whatsapp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || 'Failed to send message');
-      }
-      return response.json();
-    },
-    onSuccess: (data, variables) => {
-      // Optimistically add message to cache
-      if (data.message) {
-        queryClient.setQueryData(
-          [...QUERY_KEY, variables.conversation_id],
-          (old: { pages: MessagesResponse[] } | undefined) => {
-            if (!old) return old;
+            const result = await response.json();
+            const chatwootMessages: ChatwootMessage[] = result.data || [];
+
+            // Adapt to WhatsApp format
+            const adaptedMessages = adaptChatwootMessages(chatwootMessages);
+
+            // Sort by created_at ascending (oldest first) for display
+            adaptedMessages.sort(
+                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+
             return {
-              ...old,
-              pages: old.pages.map((page, index) =>
-                index === 0
-                  ? { ...page, data: [...page.data, data.message] }
-                  : page
-              ),
+                data: adaptedMessages,
+                has_more: chatwootMessages.length === limit,
+                oldest_id: chatwootMessages.length > 0 ? chatwootMessages[0].id.toString() : null,
             };
-          }
-        );
-      }
-      // Invalidate conversations to update last_message
-      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'conversations'] });
-    },
-  });
+        },
+        initialPageParam: null,
+        getNextPageParam: (lastPage) => (lastPage.has_more ? lastPage.oldest_id : undefined),
+        enabled: !!numericConversationId && !isNaN(numericConversationId) && enabled,
+        staleTime: 10000, // 10 seconds
+    });
 }
 
-// Hook to add incoming message to cache (for realtime updates)
+/**
+ * Hook to send a message via Chatwoot
+ */
+export function useSendMessage() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (payload: SendMessagePayload) => {
+            const conversationId = parseInt(payload.conversation_id, 10);
+
+            const response = await fetch(
+                `/api/chatwoot/conversations/${conversationId}/messages`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: payload.content,
+                        private: false,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.error || 'Failed to send message');
+            }
+
+            const result = await response.json();
+            return {
+                message: adaptChatwootMessage(result.data),
+            };
+        },
+        onSuccess: (data, variables) => {
+            const conversationId = parseInt(variables.conversation_id, 10);
+
+            // Optimistically add message to cache
+            if (data.message) {
+                queryClient.setQueryData(
+                    [...queryKeys.chatwoot.messages(conversationId), 'infinite'],
+                    (old: { pages: MessagesResponse[] } | undefined) => {
+                        if (!old) return old;
+                        return {
+                            ...old,
+                            pages: old.pages.map((page, index) =>
+                                index === old.pages.length - 1
+                                    ? { ...page, data: [...page.data, data.message] }
+                                    : page
+                            ),
+                        };
+                    }
+                );
+            }
+
+            // Invalidate conversations to update last_message
+            queryClient.invalidateQueries({ queryKey: queryKeys.chatwoot.conversations() });
+        },
+    });
+}
+
+/**
+ * Hook to add incoming message to cache (for realtime updates)
+ */
 export function useAddMessageToCache() {
-  const queryClient = useQueryClient();
+    const queryClient = useQueryClient();
 
-  return (message: WhatsAppMessage) => {
-    queryClient.setQueryData(
-      [...QUERY_KEY, message.conversation_id],
-      (old: { pages: MessagesResponse[] } | undefined) => {
-        if (!old) return old;
+    return (message: WhatsAppMessage) => {
+        const conversationId = parseInt(message.conversation_id, 10);
 
-        // Check if message already exists
-        const exists = old.pages.some(page =>
-          page.data.some(m => m.id === message.id || m.wpp_message_id === message.wpp_message_id)
+        queryClient.setQueryData(
+            [...queryKeys.chatwoot.messages(conversationId), 'infinite'],
+            (old: { pages: MessagesResponse[] } | undefined) => {
+                if (!old) return old;
+
+                // Check if message already exists
+                const exists = old.pages.some((page) =>
+                    page.data.some((m) => m.id === message.id)
+                );
+                if (exists) return old;
+
+                return {
+                    ...old,
+                    pages: old.pages.map((page, index) =>
+                        index === old.pages.length - 1
+                            ? { ...page, data: [...page.data, message] }
+                            : page
+                    ),
+                };
+            }
         );
-        if (exists) return old;
 
-        return {
-          ...old,
-          pages: old.pages.map((page, index) =>
-            index === 0
-              ? { ...page, data: [...page.data, message] }
-              : page
-          ),
-        };
-      }
-    );
-    // Invalidate conversations to update last_message
-    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'conversations'] });
-  };
+        // Invalidate conversations to update last_message
+        queryClient.invalidateQueries({ queryKey: queryKeys.chatwoot.conversations() });
+    };
+}
+
+/**
+ * Hook to add an incoming Chatwoot message to cache
+ * Used by realtime subscription
+ */
+export function useAddChatwootMessageToCache() {
+    const addMessageToCache = useAddMessageToCache();
+
+    return (chatwootMessage: ChatwootMessage) => {
+        const adaptedMessage = adaptChatwootMessage(chatwootMessage);
+        addMessageToCache(adaptedMessage);
+    };
 }
