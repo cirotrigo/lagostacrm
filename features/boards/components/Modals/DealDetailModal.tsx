@@ -10,7 +10,7 @@ import { Activity } from '@/types';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { useResponsiveMode } from '@/hooks/useResponsiveMode';
 import { DealSheet } from '../DealSheet';
-import { ConversationTimeline } from '@/features/messaging/chatwoot';
+import { DealConversationChat } from '@/features/messaging/components/DealConversationChat';
 import {
   analyzeLead,
   generateEmailDraft,
@@ -1172,7 +1172,11 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
 
                 {activeTab === 'mensagens' && (
                   <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-                    <ConversationTimeline dealId={deal.id} variant="light" />
+                    <DealConversationChat
+                      dealId={deal.id}
+                      allowSend={true}
+                      maxHeight="calc(70vh - 200px)"
+                    />
                   </div>
                 )}
               </div>

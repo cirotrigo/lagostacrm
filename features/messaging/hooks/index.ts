@@ -12,3 +12,6 @@ export { useMarkAsRead } from './useMarkAsRead';
 export { useMessagingRealtime } from './useMessagingRealtime';
 export { useAudioRecorder } from './useAudioRecorder';
 export { useUploadAttachment } from './useUploadAttachment';
+
+// Deal integration hooks
+export { useDealSummary } from './useDealSummary';

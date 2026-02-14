@@ -8,11 +8,11 @@ import {
     Briefcase,
     DollarSign,
     ExternalLink,
-    Tag,
     X,
 } from 'lucide-react';
 import { AssignmentDropdown } from './AssignmentDropdown';
 import { PrivateNoteInput } from './PrivateNoteInput';
+import { DealStageSelector } from './DealStageSelector';
 import type { WhatsAppConversationView, WhatsAppConversationStatus } from '@/types/types';
 
 interface ContactInfoPanelProps {
@@ -169,14 +169,10 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
                                 </div>
                             )}
 
-                            {conversation.deal_stage && (
-                                <div className="flex items-center gap-2">
-                                    <Tag className="w-4 h-4 text-slate-400" />
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">
-                                        {conversation.deal_stage}
-                                    </span>
-                                </div>
-                            )}
+                            {/* Deal Stage Selector - allows moving deal between stages */}
+                            <div className="flex items-center gap-2">
+                                <DealStageSelector dealId={conversation.deal_id!} />
+                            </div>
 
                             <a
                                 href={`/pipeline?dealId=${conversation.deal_id}`}
