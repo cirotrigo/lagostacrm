@@ -1,11 +1,11 @@
 # Plano de Evolução: Chat Completo Embutido no LagostaCRM
 
-> **Versão:** 2.1
+> **Versão:** 2.2
 > **Data:** 2026-02-14
 > **Status:** Planejamento
 > **Branch:** `feature/chatwoot-messaging` (evolução da v1.1 já implementada)
 > **Pré-requisito:** Plano v1.1 (Opção C Híbrida) implementado e em produção
-> **Revisado:** Análise do codebase real identificou issues críticos
+> **Revisado:** v2.2 - Corrigido migration SQL, auth strategy, route conventions
 
 ---
 
@@ -180,6 +180,64 @@ Cliente envia mensagem no WhatsApp
 
 ## Fase 2: Chat Completo Embutido
 
+### Convenção de Rotas API
+
+Para evitar confusão entre rotas em dois prefixos, adotamos a **Opção C** (separação por consumidor):
+
+| Prefixo | Consumidor | Auth | Propósito |
+|---------|-----------|------|-----------|
+| `/api/chatwoot/` | n8n, webhooks externos | `x-api-key` + `X-Organization-Id` ou HMAC | Integrações externas |
+| `/api/messaging/` | Frontend do CRM | Supabase cookie (session) | UI de chat embutida |
+
+**Rotas existentes (permanecem):**
+```
+/api/chatwoot/conversation-links   → n8n cria/atualiza links
+/api/chatwoot/labels/sync-log      → n8n registra syncs
+/api/chatwoot/webhook              → Chatwoot envia eventos (n8n processa)
+```
+
+**Rotas novas (Fase 2):**
+```
+/api/messaging/conversations       → Frontend lista conversas
+/api/messaging/conversations/[id]  → Frontend mensagens, assign, status
+/api/messaging/agents              → Frontend lista agentes
+/api/messaging/webhook             → CRM recebe eventos (realtime cache)
+```
+
+### Estratégia de Autenticação por Rota
+
+| Rota | Auth | Como Validar |
+|------|------|--------------|
+| `POST /api/chatwoot/conversation-links` | x-api-key | `validateAuth()` já implementado |
+| `POST /api/chatwoot/webhook` | HMAC | `validateWebhookSignature()` (ver abaixo) |
+| `GET /api/messaging/conversations` | Supabase cookie | `createClient()` + `getUser()` |
+| `POST /api/messaging/webhook` | HMAC | Mesmo que `/api/chatwoot/webhook` |
+
+**HMAC Webhook Validation (implementar antes de produção):**
+
+```typescript
+import { createHmac, timingSafeEqual } from 'crypto';
+
+function validateWebhookSignature(
+    payload: string,
+    signature: string,
+    secret: string
+): boolean {
+    const expected = createHmac('sha256', secret)
+        .update(payload)
+        .digest('hex');
+
+    try {
+        return timingSafeEqual(
+            Buffer.from(signature),
+            Buffer.from(expected)
+        );
+    } catch {
+        return false;
+    }
+}
+```
+
 ### Visão Geral
 
 ```
@@ -230,10 +288,17 @@ Cliente envia no WhatsApp
 **Arquivo:** `supabase/migrations/20260215000000_messaging_chat_v2.sql`
 
 ```sql
--- messaging_messages_cache
--- Cache local de mensagens para realtime
--- Chatwoot continua sendo fonte de verdade
+-- =============================================================================
+-- Migration: 20260215000000_messaging_chat_v2.sql
+-- Chat completo embutido - Fase 2
+-- =============================================================================
 
+-- ============================================================================
+-- TABELA: messaging_messages_cache
+-- Cache local de mensagens para Supabase Realtime
+-- Chatwoot continua sendo fonte de verdade
+-- RLS: Padrão A (todos autenticados)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS public.messaging_messages_cache (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
@@ -241,7 +306,7 @@ CREATE TABLE IF NOT EXISTS public.messaging_messages_cache (
     chatwoot_conversation_id INTEGER NOT NULL,
     content TEXT,
     content_type TEXT DEFAULT 'text',
-    message_type TEXT NOT NULL,  -- incoming | outgoing | activity
+    message_type TEXT NOT NULL CHECK (message_type IN ('incoming', 'outgoing', 'activity', 'template')),
     is_private BOOLEAN DEFAULT false,
     attachments JSONB DEFAULT '[]'::jsonb,
     sender_type TEXT,
@@ -252,23 +317,62 @@ CREATE TABLE IF NOT EXISTS public.messaging_messages_cache (
     UNIQUE(organization_id, chatwoot_message_id)
 );
 
--- messaging_agents
--- Cache de agentes Chatwoot mapeados para profiles
+-- Indexes
+CREATE INDEX idx_mmc_conversation
+    ON public.messaging_messages_cache(chatwoot_conversation_id, created_at DESC);
+CREATE INDEX idx_mmc_org_conversation
+    ON public.messaging_messages_cache(organization_id, chatwoot_conversation_id);
 
+-- RLS (Padrão A)
+ALTER TABLE public.messaging_messages_cache ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Enable all access for authenticated users"
+    ON public.messaging_messages_cache
+    FOR ALL TO authenticated
+    USING (true) WITH CHECK (true);
+
+-- Updated_at trigger
+CREATE TRIGGER set_updated_at_messaging_messages_cache
+    BEFORE UPDATE ON public.messaging_messages_cache
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- TABELA: messaging_agents
+-- Cache de agentes Chatwoot mapeados para profiles do CRM
+-- RLS: Padrão A (todos autenticados)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS public.messaging_agents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
     profile_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     chatwoot_agent_id INTEGER NOT NULL,
     chatwoot_agent_name TEXT,
-    availability TEXT DEFAULT 'offline',
+    availability TEXT DEFAULT 'offline' CHECK (availability IN ('online', 'offline', 'busy')),
     last_seen_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(organization_id, chatwoot_agent_id)
 );
 
--- Campos adicionais em messaging_conversation_links
+-- Indexes
+CREATE INDEX idx_ma_org ON public.messaging_agents(organization_id);
+
+-- RLS (Padrão A)
+ALTER TABLE public.messaging_agents ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Enable all access for authenticated users"
+    ON public.messaging_agents
+    FOR ALL TO authenticated
+    USING (true) WITH CHECK (true);
+
+-- Updated_at trigger
+CREATE TRIGGER set_updated_at_messaging_agents
+    BEFORE UPDATE ON public.messaging_agents
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- ALTER: Campos adicionais em messaging_conversation_links
+-- ============================================================================
 ALTER TABLE public.messaging_conversation_links
     ADD COLUMN IF NOT EXISTS assigned_agent_id INTEGER,
     ADD COLUMN IF NOT EXISTS assigned_agent_name TEXT,
@@ -277,31 +381,56 @@ ALTER TABLE public.messaging_conversation_links
     ADD COLUMN IF NOT EXISTS contact_phone TEXT,
     ADD COLUMN IF NOT EXISTS contact_avatar_url TEXT;
 
+-- ============================================================================
+-- FUNCTION: increment_unread
+-- Incrementa unread_count atomicamente (usado pelo webhook handler)
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.increment_unread(
+    p_org_id UUID,
+    p_conv_id INTEGER
+)
+RETURNS INTEGER
+LANGUAGE sql
+AS $$
+    UPDATE public.messaging_conversation_links
+    SET unread_count = unread_count + 1,
+        updated_at = NOW()
+    WHERE organization_id = p_org_id
+      AND chatwoot_conversation_id = p_conv_id
+    RETURNING unread_count;
+$$;
+
+-- ============================================================================
 -- Realtime
+-- ============================================================================
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messaging_messages_cache;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.messaging_agents;
 ```
 
 ### 2.2 Novas API Routes
 
 ```
-app/api/messaging/
+app/api/messaging/                         # Auth: Supabase cookie (frontend)
 ├── conversations/
+│   ├── route.ts                           # GET (listar conversas)
 │   └── [conversationId]/
 │       ├── messages/
-│       │   └── route.ts         # GET (histórico) + POST (enviar)
+│       │   └── route.ts                   # GET (histórico) + POST (enviar)
 │       ├── assign/
-│       │   └── route.ts         # POST (atribuir agente)
+│       │   └── route.ts                   # POST (atribuir agente)
 │       ├── status/
-│       │   └── route.ts         # POST (open/resolve/pending)
-│       └── notes/
-│           └── route.ts         # POST (nota interna)
+│       │   └── route.ts                   # POST (open/resolve/pending)
+│       ├── notes/
+│       │   └── route.ts                   # POST (nota interna)
+│       └── read/
+│           └── route.ts                   # POST (reset unread_count)
 ├── messages/
 │   └── upload/
-│       └── route.ts             # POST (upload de mídia)
+│       └── route.ts                       # POST (upload de mídia)
 ├── agents/
-│   └── route.ts                 # GET (listar agentes)
+│   └── route.ts                           # GET (listar agentes)
 └── webhook/
-    └── route.ts                 # EXPANDIR: processar message_created
+    └── route.ts                           # Auth: HMAC - processar message_created
 ```
 
 ### 2.3 Novos Hooks
@@ -337,15 +466,22 @@ features/messaging/components/chat/
 
 ### 2.5 Expandir Chatwoot Client
 
-Adicionar métodos ao `lib/chatwoot/client.ts`:
+**Métodos que já existem em `lib/chatwoot/client.ts`:**
 
-- `sendMessageWithAttachments()`
-- `sendPrivateNote()`
-- `assignConversation()`
-- `unassignConversation()`
-- `toggleConversationStatus()`
-- `getAgents()`
-- `getConversationsFiltered()`
+| Método | Status | Notas |
+|--------|--------|-------|
+| `getConversations(filters)` | ✅ Existe | Aceita status, assignee, inbox |
+| `toggleConversationStatus()` | ✅ Existe | open/resolved/pending |
+| `assignConversation()` | ✅ Existe | Aceita agentId |
+| `sendTextMessage(id, content, isPrivate)` | ✅ Existe | `isPrivate=true` para notas |
+
+**Métodos a adicionar:**
+
+| Método | Propósito | Detalhes |
+|--------|-----------|----------|
+| `sendMessageWithAttachments()` | Enviar mídia | multipart/form-data |
+| `getAgents()` | Listar agentes | GET /api/v1/accounts/:id/agents |
+| `unassignConversation()` | Remover atribuição | Wrapper: `assignConversation(id, 0)` |
 
 ### 2.6 Configuração Chatwoot
 
@@ -358,6 +494,93 @@ Secret: <CHATWOOT_WEBHOOK_SECRET>
 ```
 
 > Este webhook é ADICIONAL ao do n8n. Ambos recebem os eventos.
+
+### 2.7 Estratégia de Cache (Backfill + TTL)
+
+**Problema:** O cache de mensagens (`messaging_messages_cache`) só recebe mensagens via webhook. Quando o usuário abre uma conversa pela primeira vez, o cache pode estar vazio.
+
+**Solução: Backfill on-demand**
+
+```typescript
+// GET /api/messaging/conversations/[id]/messages
+async function GET(request, { params }) {
+    const { conversationId } = params;
+
+    // 1. Verificar cache local
+    const cached = await supabase
+        .from('messaging_messages_cache')
+        .select('*')
+        .eq('chatwoot_conversation_id', conversationId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+    // 2. Se cache vazio ou stale, buscar do Chatwoot
+    if (!cached.data?.length) {
+        const chatwoot = await getChatwootClient(organizationId);
+        const messages = await chatwoot.getMessages(conversationId, { limit: 50 });
+
+        // 3. Popular cache
+        await supabase.from('messaging_messages_cache').upsert(
+            messages.map(m => ({
+                organization_id: organizationId,
+                chatwoot_message_id: m.id,
+                chatwoot_conversation_id: conversationId,
+                content: m.content,
+                message_type: m.message_type,
+                sender_name: m.sender?.name,
+                created_at: m.created_at,
+            })),
+            { onConflict: 'organization_id,chatwoot_message_id' }
+        );
+
+        return NextResponse.json({ data: messages, source: 'chatwoot' });
+    }
+
+    return NextResponse.json({ data: cached.data, source: 'cache' });
+}
+```
+
+**TTL / Cleanup automático:**
+
+Agendar job no n8n ou cron para limpar mensagens antigas (> 90 dias):
+
+```sql
+-- Executar semanalmente via n8n Schedule Trigger
+DELETE FROM public.messaging_messages_cache
+WHERE created_at < NOW() - INTERVAL '90 days';
+```
+
+### 2.8 Reset unread_count
+
+Quando o atendente abre uma conversa, resetar o contador de não-lidas:
+
+```typescript
+// POST /api/messaging/conversations/[id]/read
+async function POST(request, { params }) {
+    const { conversationId } = params;
+
+    await supabase
+        .from('messaging_conversation_links')
+        .update({ unread_count: 0, updated_at: new Date().toISOString() })
+        .eq('chatwoot_conversation_id', conversationId)
+        .eq('organization_id', organizationId);
+
+    return NextResponse.json({ success: true });
+}
+```
+
+**No frontend (ChatView):**
+
+```typescript
+// Chamar quando a conversa é selecionada
+useEffect(() => {
+    if (selectedConversationId) {
+        fetch(`/api/messaging/conversations/${selectedConversationId}/read`, {
+            method: 'POST',
+        });
+    }
+}, [selectedConversationId]);
+```
 
 ---
 
@@ -408,8 +631,8 @@ Secret: <CHATWOOT_WEBHOOK_SECRET>
 
 | Arquivo | Mudança | Risco |
 |---------|---------|-------|
-| `lib/query/queryKeys.ts` | +2 keys em `messaging` | ✅ Merge-safe |
-| `lib/chatwoot/client.ts` | +7 métodos | ✅ Aditivo |
+| `lib/query/queryKeys.ts` | +4 keys em `messaging` | ✅ Merge-safe |
+| `lib/chatwoot/client.ts` | +3 métodos (attach, agents, unassign) | ✅ Aditivo |
 
 ### Arquivos que NÃO tocamos
 
@@ -424,37 +647,41 @@ Secret: <CHATWOOT_WEBHOOK_SECRET>
 
 ### Fase 2.1: Database
 - [ ] Criar migration `20260215000000_messaging_chat_v2.sql`
-- [ ] Tabela `messaging_messages_cache`
-- [ ] Tabela `messaging_agents`
+- [ ] Tabela `messaging_messages_cache` com RLS + indexes + trigger
+- [ ] Tabela `messaging_agents` com RLS + index + trigger
 - [ ] Campos extras em `messaging_conversation_links`
-- [ ] Habilitar Realtime para novas tabelas
+- [ ] Function `increment_unread()`
+- [ ] Habilitar Realtime para ambas tabelas novas
 - [ ] Aplicar migration
 
 ### Fase 2.2: Chatwoot Client
-- [ ] `sendMessageWithAttachments()`
-- [ ] `sendPrivateNote()`
-- [ ] `assignConversation()`
-- [ ] `unassignConversation()`
-- [ ] `toggleConversationStatus()`
+- [ ] `sendMessageWithAttachments()` (multipart/form-data)
 - [ ] `getAgents()`
-- [ ] `getConversationsFiltered()`
+- [ ] `unassignConversation()` (wrapper)
+
+> **Nota:** `assignConversation`, `toggleConversationStatus`, `sendTextMessage` já existem.
 
 ### Fase 2.3: API Routes
-- [ ] `GET/POST /api/messaging/conversations/[id]/messages`
+- [ ] `GET /api/messaging/conversations` (listar)
+- [ ] `GET/POST /api/messaging/conversations/[id]/messages` (histórico + enviar)
 - [ ] `POST /api/messaging/conversations/[id]/assign`
 - [ ] `POST /api/messaging/conversations/[id]/status`
 - [ ] `POST /api/messaging/conversations/[id]/notes`
+- [ ] `POST /api/messaging/conversations/[id]/read` (reset unread)
 - [ ] `POST /api/messaging/messages/upload`
 - [ ] `GET /api/messaging/agents`
-- [ ] Expandir webhook handler
+- [ ] `POST /api/messaging/webhook` com HMAC validation
 
 ### Fase 2.4: Hooks
-- [ ] `useSendMessage`
-- [ ] `useAssignConversation`
-- [ ] `useToggleStatus`
-- [ ] `useAgents`
-- [ ] `useMessagingRealtime`
-- [ ] `useAudioRecorder`
+- [ ] `useConversations` (listar conversas da org)
+- [ ] `useMessages` (histórico de uma conversa)
+- [ ] `useSendMessage` (mutation de envio)
+- [ ] `useAssignConversation` (mutation de assignment)
+- [ ] `useToggleStatus` (mutation open/resolve)
+- [ ] `useAgents` (listar agentes)
+- [ ] `useMessagingRealtime` (Supabase Realtime dedicado)
+- [ ] `useMarkAsRead` (reset unread_count)
+- [ ] `useAudioRecorder` (Web Audio API)
 
 ### Fase 2.5: Componentes
 - [ ] `ChatLayout`
@@ -472,15 +699,18 @@ Secret: <CHATWOOT_WEBHOOK_SECRET>
 - [ ] `ConversationHeader`
 
 ### Fase 2.6: Integração
-- [ ] Configurar webhook no Chatwoot
-- [ ] Testar fluxo completo envio
-- [ ] Testar fluxo completo recebimento
-- [ ] Testar realtime
+- [ ] Configurar webhook adicional no Chatwoot (apontar para `/api/messaging/webhook`)
+- [ ] Implementar HMAC validation no webhook
+- [ ] Testar fluxo completo envio (CRM → Chatwoot → WhatsApp)
+- [ ] Testar fluxo completo recebimento (WhatsApp → Chatwoot → CRM cache → Realtime)
+- [ ] Testar backfill quando cache está vazio
+- [ ] Configurar TTL cleanup job no n8n
 
 ### Fase 2.7: Documentação
 - [ ] Atualizar `ARCHITECTURE.md`
 - [ ] Criar `REALTIME_SYNC.md`
 - [ ] Atualizar README do messaging
+- [ ] Documentar convenção de rotas `/api/chatwoot/` vs `/api/messaging/`
 
 ---
 
