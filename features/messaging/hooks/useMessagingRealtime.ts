@@ -5,8 +5,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query/queryKeys';
 import { supabase } from '@/lib/supabase';
 import { adaptChatwootMessage } from '../utils/chatwootAdapters';
-import type { ChatwootMessage } from '@/lib/chatwoot';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { ChatwootMessage, ChatwootContact } from '@/lib/chatwoot';
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 interface UseMessagingRealtimeOptions {
     /** Optional conversation ID to filter messages */
@@ -47,23 +47,26 @@ export function useMessagingRealtime(options: UseMessagingRealtimeOptions = {}) 
 
     const queryClient = useQueryClient();
 
+    // Message cache row type
+    type MessageCacheRow = {
+        chatwoot_message_id: number;
+        chatwoot_conversation_id: number;
+        content: string;
+        content_type: string;
+        message_type: string;
+        is_private: boolean;
+        attachments: unknown[];
+        sender_type: string;
+        sender_id: number;
+        sender_name: string;
+        created_at: string;
+    };
+
     // Handle new message from realtime
-    const handleNewMessage = useCallback((payload: {
-        new: {
-            chatwoot_message_id: number;
-            chatwoot_conversation_id: number;
-            content: string;
-            content_type: string;
-            message_type: string;
-            is_private: boolean;
-            attachments: unknown[];
-            sender_type: string;
-            sender_id: number;
-            sender_name: string;
-            created_at: string;
-        };
-    }) => {
-        const cachedMessage = payload.new;
+    const handleNewMessage = useCallback((payload: RealtimePostgresChangesPayload<MessageCacheRow>) => {
+        if (payload.eventType !== 'INSERT') return;
+        const cachedMessage = payload.new as MessageCacheRow;
+        if (!cachedMessage.chatwoot_message_id) return;
 
         // Skip if filtering by conversationId and this message is for a different conversation
         if (conversationId && cachedMessage.chatwoot_conversation_id !== conversationId) {
@@ -79,7 +82,11 @@ export function useMessagingRealtime(options: UseMessagingRealtimeOptions = {}) 
             private: cachedMessage.is_private,
             attachments: cachedMessage.attachments as [],
             sender: cachedMessage.sender_name
-                ? { id: cachedMessage.sender_id, name: cachedMessage.sender_name }
+                ? {
+                    id: cachedMessage.sender_id,
+                    name: cachedMessage.sender_name,
+                    created_at: cachedMessage.created_at,
+                  } as ChatwootContact
                 : undefined,
             conversation_id: cachedMessage.chatwoot_conversation_id,
             created_at: new Date(cachedMessage.created_at).getTime() / 1000,
@@ -121,14 +128,13 @@ export function useMessagingRealtime(options: UseMessagingRealtimeOptions = {}) 
     }, [conversationId, onNewMessage, queryClient]);
 
     // Handle conversation link update
-    const handleConversationUpdate = useCallback((payload: {
-        new: {
-            chatwoot_conversation_id: number;
-            status: string;
-            unread_count: number;
-        };
-    }) => {
-        const updated = payload.new;
+    const handleConversationUpdate = useCallback((payload: RealtimePostgresChangesPayload<{
+        chatwoot_conversation_id: number;
+        status: string;
+        unread_count: number;
+    }>) => {
+        const updated = payload.new as { chatwoot_conversation_id?: number } | undefined;
+        if (!updated?.chatwoot_conversation_id) return;
 
         // Invalidate relevant queries
         queryClient.invalidateQueries({

@@ -6,7 +6,7 @@ import { useMessages, useSendMessage, useAddMessageToCache } from './useMessages
 import { useRealtimeSync } from '@/lib/realtime/useRealtimeSync';
 import type { ConversationFilters, WhatsAppConversationView, WhatsAppMessage } from '../types/messaging';
 import { adaptChatwootMessage } from '../utils/chatwootAdapters';
-import type { ChatwootMessage } from '@/lib/chatwoot';
+import type { ChatwootMessage, ChatwootContact } from '@/lib/chatwoot';
 
 /**
  * Main controller hook for the messaging feature.
@@ -85,7 +85,11 @@ export function useMessagingController() {
                     private: cachedMessage.is_private,
                     attachments: cachedMessage.attachments as [],
                     sender: cachedMessage.sender_name
-                        ? { id: cachedMessage.sender_id, name: cachedMessage.sender_name }
+                        ? {
+                            id: cachedMessage.sender_id ?? 0,
+                            name: cachedMessage.sender_name,
+                            created_at: cachedMessage.created_at,
+                          } as ChatwootContact
                         : undefined,
                     conversation_id: cachedMessage.chatwoot_conversation_id,
                     created_at: new Date(cachedMessage.created_at).getTime() / 1000,
