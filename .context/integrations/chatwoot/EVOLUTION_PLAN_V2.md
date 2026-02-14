@@ -1,16 +1,65 @@
 # Plano de Evolução: Chat Completo Embutido no LagostaCRM
 
-> **Versão:** 2.0
+> **Versão:** 2.1
 > **Data:** 2026-02-14
 > **Status:** Planejamento
 > **Branch:** `feature/chatwoot-messaging` (evolução da v1.1 já implementada)
 > **Pré-requisito:** Plano v1.1 (Opção C Híbrida) implementado e em produção
+> **Revisado:** Análise do codebase real identificou issues críticos
 
 ---
 
 ## Objetivo
 
 Evoluir o LagostaCRM de **timeline read-only** (v1.1) para **chat completo embutido**, tornando o CRM a interface principal de atendimento. O Chatwoot permanece como **backend de mensageria** (recebe/envia via Evolution API), mas atendentes e gestor operam pelo CRM.
+
+---
+
+## 🔴 CRÍTICO: Dois Sistemas de Messaging Coexistindo
+
+### O Problema Identificado
+
+O codebase tem **dois sistemas de messaging em paralelo** que precisam ser unificados:
+
+**Sistema 1 — WPPConnect (legado, migration `20260210`):**
+- Tabelas: `whatsapp_sessions`, `whatsapp_conversations`, `whatsapp_messages`, `whatsapp_label_sync`
+- API routes: `/api/whatsapp/conversations`, `/api/whatsapp/send`, `/api/whatsapp/session`
+- Realtime: `whatsapp_messages`, `whatsapp_conversations`
+
+**Sistema 2 — Chatwoot (novo, migration `20260213`):**
+- Tabelas: `messaging_channel_configs`, `messaging_conversation_links`, `messaging_label_map`
+- API routes: `/api/chatwoot/conversation-links`, `/api/chatwoot/webhook`, `/api/chatwoot/conversations`
+- Webhook handler: `lib/chatwoot/webhooks.ts`
+
+### Hooks de UI Apontam para Sistema Legado
+
+```typescript
+// useMessages.ts — APONTA PARA API ANTIGA
+fetch(`/api/whatsapp/conversations/${conversationId}/messages?${params}`)
+
+// useMessagingController.ts — ESCUTA TABELAS ANTIGAS
+useRealtimeSync('whatsapp_messages', { ... });
+
+// useConversations.ts — APONTA PARA API ANTIGA
+fetch(`/api/whatsapp/conversations?${params}`)
+```
+
+### Impacto se Não Corrigido
+
+Se a Fase 2 for implementada criando um **terceiro sistema** (`messaging_messages_cache` + novas rotas em `/api/messaging/`):
+- `MessagingPage.tsx` não vai funcionar (usa hooks que chamam `/api/whatsapp/`)
+- Confusão sobre qual sistema usar
+- Código duplicado e difícil de manter
+
+### Decisão: Migrar Hooks para Chatwoot (Fase 1.5)
+
+**ANTES de implementar a Fase 2, executar a Fase 1.5:**
+
+1. Atualizar `useMessages.ts` → chamar `/api/chatwoot/conversations/[id]/messages`
+2. Atualizar `useConversations.ts` → chamar `/api/chatwoot/conversations`
+3. Atualizar `useMessagingController.ts` → usar realtime de `messaging_conversation_links`
+4. Marcar `/api/whatsapp/*` como deprecated
+5. Planejar remoção das tabelas `whatsapp_*` em versão futura
 
 ---
 
@@ -54,7 +103,17 @@ Evoluir o LagostaCRM de **timeline read-only** (v1.1) para **chat completo embut
 | **Query Keys** | `chatwoot.conversationLinks` | Falta `messages`, `agents` |
 | **Webhook handler** | Estrutura básica | Falta processar `message_created` |
 
-### ❌ Não Implementado (Fase 2)
+### ❌ Não Implementado (Fase 1.5 — Migração para Chatwoot)
+
+| Componente | Descrição |
+|------------|-----------|
+| **Migrar useMessages.ts** | Trocar `/api/whatsapp/` por `/api/chatwoot/` |
+| **Migrar useConversations.ts** | Trocar para usar `messaging_conversation_links` |
+| **Migrar useMessagingController.ts** | Trocar realtime de `whatsapp_*` para `messaging_*` |
+| **Deprecar rotas WPPConnect** | Marcar `/api/whatsapp/*` como deprecated |
+| **Documentar remoção futura** | Plano de cleanup das tabelas `whatsapp_*` |
+
+### ❌ Não Implementado (Fase 2 — Chat Completo)
 
 | Componente | Descrição |
 |------------|-----------|
