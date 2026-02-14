@@ -5,6 +5,7 @@ import { useConversations, useUpdateConversation } from './useConversations';
 import { useMessages, useSendMessage, useAddChatwootMessageToCache } from './useMessages';
 import { useMessagingRealtime } from './useMessagingRealtime';
 import { useMarkAsRead } from './useMarkAsRead';
+import { useUploadAttachment } from './useUploadAttachment';
 import type { ConversationFilters } from '../types/messaging';
 
 /**
@@ -42,6 +43,7 @@ export function useMessagingController() {
     // Mutations
     const updateConversation = useUpdateConversation();
     const sendMessageMutation = useSendMessage();
+    const uploadAttachmentMutation = useUploadAttachment();
     const addChatwootMessageToCache = useAddChatwootMessageToCache();
     const markAsRead = useMarkAsRead();
 
@@ -135,6 +137,25 @@ export function useMessagingController() {
         }
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+    const handleSendAudio = useCallback(async (blob: Blob) => {
+        if (!selectedConversationId) return;
+
+        await uploadAttachmentMutation.mutateAsync({
+            conversationId: selectedConversationId,
+            file: blob,
+        });
+    }, [selectedConversationId, uploadAttachmentMutation]);
+
+    const handleSendAttachment = useCallback(async (file: File, caption?: string) => {
+        if (!selectedConversationId) return;
+
+        await uploadAttachmentMutation.mutateAsync({
+            conversationId: selectedConversationId,
+            file,
+            content: caption,
+        });
+    }, [selectedConversationId, uploadAttachmentMutation]);
+
     // Auto-select first conversation
     useEffect(() => {
         if (!selectedConversationId && conversations.length > 0) {
@@ -175,10 +196,15 @@ export function useMessagingController() {
         // Handlers
         handleSelectConversation,
         handleSendMessage,
+        handleSendAudio,
+        handleSendAttachment,
         handleUpdateConversationStatus,
         handleToggleAI,
         handleFilterChange,
         handleLoadMoreMessages,
         refetchConversations,
+
+        // Upload states
+        isUploadingAttachment: uploadAttachmentMutation.isPending,
     };
 }

@@ -55,6 +55,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         // Fetch messages
         const messages = await chatwoot.getMessages(conversationId, beforeId);
 
+        // Debug log to verify message types
+        console.log('[Messages API] Fetched messages:', {
+            conversationId,
+            count: messages.length,
+            messageBreakdown: {
+                incoming: messages.filter(m => m.message_type === 'incoming' || m.message_type === 0).length,
+                outgoing: messages.filter(m => m.message_type === 'outgoing' || m.message_type === 1).length,
+                other: messages.filter(m => !['incoming', 'outgoing', 0, 1].includes(m.message_type as never)).length,
+            },
+            sampleMessages: messages.slice(0, 5).map(m => ({
+                id: m.id,
+                type: m.message_type,
+                typeOf: typeof m.message_type,
+                content: m.content?.substring(0, 30),
+            })),
+        });
+
         return NextResponse.json({
             data: messages,
             meta: {

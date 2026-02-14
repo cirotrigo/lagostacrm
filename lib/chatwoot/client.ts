@@ -199,6 +199,25 @@ export class ChatwootClient {
         const endpoint = `/conversations/${conversationId}/messages${queryString ? `?${queryString}` : ''}`;
 
         const response = await this.request<MessagesResponse>(endpoint);
+
+        // Debug: Log raw response from Chatwoot
+        console.log('[Chatwoot Client] Raw messages response:', {
+            conversationId,
+            payloadLength: response.payload?.length || 0,
+            firstMessage: response.payload?.[0] ? {
+                id: response.payload[0].id,
+                message_type: response.payload[0].message_type,
+                message_type_typeof: typeof response.payload[0].message_type,
+                content: response.payload[0].content?.substring(0, 50),
+            } : null,
+            lastMessage: response.payload?.[response.payload.length - 1] ? {
+                id: response.payload[response.payload.length - 1].id,
+                message_type: response.payload[response.payload.length - 1].message_type,
+                message_type_typeof: typeof response.payload[response.payload.length - 1].message_type,
+                content: response.payload[response.payload.length - 1].content?.substring(0, 50),
+            } : null,
+        });
+
         return response.payload;
     }
 

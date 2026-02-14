@@ -35,8 +35,17 @@ function mapConversationStatus(status: ConversationStatus): WhatsAppConversation
 
 /**
  * Maps Chatwoot message type to message direction
+ *
+ * Chatwoot API may return message_type as:
+ * - String: 'incoming', 'outgoing', 'activity', 'template'
+ * - Number: 0 (incoming), 1 (outgoing), 2 (activity), 3 (template)
  */
-function mapMessageDirection(messageType: string): MessageDirection {
+function mapMessageDirection(messageType: string | number): MessageDirection {
+    // Handle number values (Chatwoot API sometimes returns these)
+    if (typeof messageType === 'number') {
+        return messageType === 0 ? 'inbound' : 'outbound';
+    }
+    // Handle string values
     return messageType === 'incoming' ? 'inbound' : 'outbound';
 }
 
@@ -123,7 +132,9 @@ export function adaptChatwootConversation(
  */
 export function adaptChatwootMessage(message: ChatwootMessage): WhatsAppMessage {
     const attachment = message.attachments?.[0];
-    const isFromMe = message.message_type === 'outgoing';
+    // Handle both string 'outgoing' and number 1 for outgoing messages
+    const messageType = message.message_type;
+    const isFromMe = messageType === 'outgoing' || messageType === 1;
     const sender = message.sender;
 
     // Determine media type

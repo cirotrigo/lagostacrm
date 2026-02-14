@@ -112,7 +112,10 @@ export interface ConversationsResponse {
 // Message Types
 // ============================================================================
 
-export type MessageType = 'incoming' | 'outgoing' | 'activity' | 'template';
+// MessageType can be string or number depending on Chatwoot API response
+// String: 'incoming', 'outgoing', 'activity', 'template'
+// Number: 0 (incoming), 1 (outgoing), 2 (activity), 3 (template)
+export type MessageType = 'incoming' | 'outgoing' | 'activity' | 'template' | 0 | 1 | 2 | 3;
 export type ContentType = 'text' | 'input_select' | 'cards' | 'form' | 'article' | 'input_email' | 'input_csat';
 export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
 

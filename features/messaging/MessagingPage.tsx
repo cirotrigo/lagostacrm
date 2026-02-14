@@ -63,7 +63,8 @@ export const MessagingPage: React.FC = () => {
               value={controller.draftMessage}
               onChange={controller.setDraftMessage}
               onSend={controller.handleSendMessage}
-              isSending={controller.isSending}
+              onSendAudio={controller.handleSendAudio}
+              isSending={controller.isSending || controller.isUploadingAttachment}
             />
           </>
         ) : (
