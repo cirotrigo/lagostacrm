@@ -8,6 +8,11 @@ import { createClient } from '@/lib/supabase/server';
 import { processDocument } from '@/lib/ai-training/processor';
 import type { CreateTextDocumentRequest } from '@/lib/ai-training/types';
 
+// Handle CORS preflight
+export async function OPTIONS() {
+    return new NextResponse(null, { status: 204 });
+}
+
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();

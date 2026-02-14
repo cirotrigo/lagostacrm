@@ -4,15 +4,20 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { chunkText, formatQAContent, estimateTokens } from './chunker';
+import { chunkText, formatQAContent } from './chunker';
 import { generateEmbeddings } from './embeddings';
-import { extractTextFromPdf } from './pdfExtractor';
 import type {
     DbTrainingDocument,
     ChunkMetadata,
     ProcessingResult,
     TrainingDocumentType,
 } from './types';
+
+// Lazy import para evitar carregar pdf-parse no módulo principal
+async function extractTextFromPdf(buffer: ArrayBuffer | Buffer): Promise<string> {
+    const { extractTextFromPdf: extract } = await import('./pdfExtractor');
+    return extract(buffer);
+}
 
 const STORAGE_BUCKET = 'ai-training';
 
