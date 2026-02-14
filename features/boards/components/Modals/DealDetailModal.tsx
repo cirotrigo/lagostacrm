@@ -604,9 +604,17 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
                     <User size={14} /> Contato Principal
                   </h3>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold">
-                      {(deal.contactName || '?').charAt(0)}
-                    </div>
+                    {contact?.avatar ? (
+                      <img
+                        src={contact.avatar}
+                        alt={contact.name || deal.contactName || 'Contato'}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold">
+                        {(deal.contactName || '?').charAt(0)}
+                      </div>
+                    )}
                     <div>
                       <p className="text-slate-900 dark:text-white font-medium text-sm flex items-center gap-2">
                         {deal.contactName || 'Sem contato'}
@@ -1171,11 +1179,11 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
                 )}
 
                 {activeTab === 'mensagens' && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                  <div className="h-full animate-in fade-in slide-in-from-bottom-4">
                     <DealConversationChat
                       dealId={deal.id}
                       allowSend={true}
-                      maxHeight="calc(70vh - 200px)"
+                      maxHeight="450px"
                     />
                   </div>
                 )}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { MessageCircle, ExternalLink, Loader2, ChevronDown } from 'lucide-react';
 import { useConversationLinks } from '../chatwoot/hooks/useConversationLinks';
 import { useMessages, useSendMessage } from '../hooks/useMessages';
@@ -47,6 +47,20 @@ export const DealConversationChat: React.FC<DealConversationChatProps> = ({
     const selectedLink = links?.[selectedLinkIndex] ?? null;
     const conversationId = selectedLink?.chatwootConversationId?.toString() ?? null;
 
+    // Debug logging
+    useEffect(() => {
+        console.log('[DealConversationChat] State:', {
+            dealId,
+            linksCount: links?.length ?? 0,
+            selectedLink: selectedLink ? {
+                id: selectedLink.id,
+                chatwootConversationId: selectedLink.chatwootConversationId,
+                status: selectedLink.status,
+            } : null,
+            conversationId,
+        });
+    }, [dealId, links, selectedLink, conversationId]);
+
     // Fetch messages for the selected conversation
     const {
         data: messagesData,
@@ -54,10 +68,22 @@ export const DealConversationChat: React.FC<DealConversationChatProps> = ({
         isFetchingNextPage,
         hasNextPage,
         fetchNextPage,
+        error: messagesError,
     } = useMessages({
         conversationId,
         enabled: !!conversationId,
     });
+
+    // Debug logging for messages
+    useEffect(() => {
+        console.log('[DealConversationChat] Messages state:', {
+            conversationId,
+            isLoadingMessages,
+            pagesCount: messagesData?.pages?.length ?? 0,
+            messagesCount: messagesData?.pages?.flatMap(p => p.data)?.length ?? 0,
+            error: messagesError?.message,
+        });
+    }, [conversationId, isLoadingMessages, messagesData, messagesError]);
 
     // Flatten messages from infinite query pages
     const messages: WhatsAppMessage[] = useMemo(() => {
@@ -130,10 +156,10 @@ export const DealConversationChat: React.FC<DealConversationChatProps> = ({
     return (
         <div
             className="flex flex-col bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-white/10 overflow-hidden"
-            style={{ maxHeight }}
+            style={{ height: maxHeight, maxHeight }}
         >
             {/* Header with conversation selector (if multiple) */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20">
+            <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20">
                 <div className="flex items-center gap-2">
                     <MessageCircle className="w-4 h-4 text-slate-500" />
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -192,26 +218,43 @@ export const DealConversationChat: React.FC<DealConversationChatProps> = ({
                 )}
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 min-h-0 overflow-hidden">
-                <MessageThread
-                    messages={messages}
-                    isLoading={isLoadingMessages}
-                    isFetchingMore={isFetchingNextPage}
-                    hasMore={hasNextPage ?? false}
-                    onLoadMore={handleLoadMore}
-                />
+            {/* Messages area */}
+            <div className="flex-1 min-h-0 overflow-hidden relative">
+                {/* Error state for messages */}
+                {messagesError && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-900">
+                        <div className="text-center p-4">
+                            <p className="text-sm text-red-600 dark:text-red-400">
+                                Erro ao carregar mensagens
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                                {messagesError.message}
+                            </p>
+                        </div>
+                    </div>
+                )}
+                {!messagesError && (
+                    <MessageThread
+                        messages={messages}
+                        isLoading={isLoadingMessages}
+                        isFetchingMore={isFetchingNextPage}
+                        hasMore={hasNextPage ?? false}
+                        onLoadMore={handleLoadMore}
+                    />
+                )}
             </div>
 
             {/* Message composer (optional) */}
             {allowSend && conversationId && (
-                <MessageComposer
-                    value={messageText}
-                    onChange={setMessageText}
-                    onSend={handleSend}
-                    isSending={isSending}
-                    disabled={!conversationId}
-                />
+                <div className="flex-shrink-0">
+                    <MessageComposer
+                        value={messageText}
+                        onChange={setMessageText}
+                        onSend={handleSend}
+                        isSending={isSending}
+                        disabled={!conversationId}
+                    />
+                </div>
             )}
         </div>
     );
