@@ -10,3 +10,4 @@ export { useToggleStatus } from './useToggleStatus';
 export { useSendPrivateNote } from './useSendPrivateNote';
 export { useMarkAsRead } from './useMarkAsRead';
 export { useMessagingRealtime } from './useMessagingRealtime';
+export { useAudioRecorder } from './useAudioRecorder';

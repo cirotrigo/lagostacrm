@@ -18,12 +18,14 @@ interface ConversationHeaderProps {
   conversation: WhatsAppConversationView;
   onStatusChange: (status: WhatsAppConversationStatus) => void;
   onToggleAI: () => void;
+  children?: React.ReactNode;
 }
 
 export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   conversation,
   onStatusChange,
   onToggleAI,
+  children,
 }) => {
   const [showMenu, setShowMenu] = React.useState(false);
 
@@ -88,6 +90,9 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
 
       {/* Actions */}
       <div className="flex items-center gap-2">
+        {/* Additional actions from parent */}
+        {children}
+
         {/* AI Toggle */}
         <button
           onClick={onToggleAI}

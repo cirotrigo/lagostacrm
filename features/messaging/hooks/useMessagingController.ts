@@ -2,11 +2,10 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useConversations, useUpdateConversation } from './useConversations';
-import { useMessages, useSendMessage, useAddMessageToCache } from './useMessages';
-import { useRealtimeSync } from '@/lib/realtime/useRealtimeSync';
-import type { ConversationFilters, WhatsAppConversationView, WhatsAppMessage } from '../types/messaging';
-import { adaptChatwootMessage } from '../utils/chatwootAdapters';
-import type { ChatwootMessage, ChatwootContact } from '@/lib/chatwoot';
+import { useMessages, useSendMessage, useAddChatwootMessageToCache } from './useMessages';
+import { useMessagingRealtime } from './useMessagingRealtime';
+import { useMarkAsRead } from './useMarkAsRead';
+import type { ConversationFilters } from '../types/messaging';
 
 /**
  * Main controller hook for the messaging feature.
@@ -43,61 +42,22 @@ export function useMessagingController() {
     // Mutations
     const updateConversation = useUpdateConversation();
     const sendMessageMutation = useSendMessage();
-    const addMessageToCache = useAddMessageToCache();
+    const addChatwootMessageToCache = useAddChatwootMessageToCache();
+    const markAsRead = useMarkAsRead();
 
-    // Realtime subscriptions - using messaging_* tables (Chatwoot-backed)
-    // Listen for conversation link updates (status changes, new links)
-    useRealtimeSync('messaging_conversation_links', {
-        onchange: (payload) => {
-            if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
-                // Refetch conversations when links change
-                refetchConversations();
-            }
+    // Realtime subscriptions - dedicated hook for messaging tables
+    // Handles both messaging_conversation_links (status/metadata updates) and
+    // messaging_messages_cache (new incoming messages via webhook)
+    useMessagingRealtime({
+        conversationId: selectedConversationId ? parseInt(selectedConversationId, 10) : undefined,
+        enabled: true,
+        onNewMessage: (message) => {
+            // Add incoming message to React Query cache
+            addChatwootMessageToCache(message);
         },
-    });
-
-    // Listen for cached messages (Phase 2 - when messaging_messages_cache is implemented)
-    // For now, this will be a no-op until the webhook populates the cache
-    useRealtimeSync('messaging_messages_cache', {
-        onchange: (payload) => {
-            if (payload.eventType === 'INSERT' && payload.new) {
-                // The payload contains the cached message data
-                const cachedMessage = payload.new as {
-                    chatwoot_message_id: number;
-                    chatwoot_conversation_id: number;
-                    content: string;
-                    content_type: string;
-                    message_type: string;
-                    is_private: boolean;
-                    attachments: unknown[];
-                    sender_type: string;
-                    sender_id: number;
-                    sender_name: string;
-                    created_at: string;
-                };
-
-                // Convert to Chatwoot message format, then adapt to WhatsApp format
-                const chatwootMessage: ChatwootMessage = {
-                    id: cachedMessage.chatwoot_message_id,
-                    content: cachedMessage.content,
-                    content_type: cachedMessage.content_type as 'text',
-                    message_type: cachedMessage.message_type as 'incoming' | 'outgoing',
-                    private: cachedMessage.is_private,
-                    attachments: cachedMessage.attachments as [],
-                    sender: cachedMessage.sender_name
-                        ? {
-                            id: cachedMessage.sender_id ?? 0,
-                            name: cachedMessage.sender_name,
-                            created_at: cachedMessage.created_at,
-                          } as ChatwootContact
-                        : undefined,
-                    conversation_id: cachedMessage.chatwoot_conversation_id,
-                    created_at: new Date(cachedMessage.created_at).getTime() / 1000,
-                };
-
-                const adaptedMessage = adaptChatwootMessage(chatwootMessage);
-                addMessageToCache(adaptedMessage);
-            }
+        onConversationUpdate: () => {
+            // Refetch conversations when status/metadata changes
+            refetchConversations();
         },
     });
 
@@ -181,6 +141,16 @@ export function useMessagingController() {
             setSelectedConversationId(conversations[0].id);
         }
     }, [conversations, selectedConversationId]);
+
+    // Mark conversation as read when selected
+    useEffect(() => {
+        if (selectedConversationId) {
+            const numericId = parseInt(selectedConversationId, 10);
+            if (!isNaN(numericId)) {
+                markAsRead.mutate(numericId);
+            }
+        }
+    }, [selectedConversationId, markAsRead]);
 
     return {
         // State

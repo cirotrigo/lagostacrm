@@ -59,6 +59,7 @@ export function useMessages(options: UseMessagesOptions): UseInfiniteQueryResult
         getNextPageParam: (lastPage) => (lastPage.has_more ? lastPage.oldest_id : undefined),
         enabled: !!numericConversationId && !isNaN(numericConversationId) && enabled,
         staleTime: 10000, // 10 seconds
+        refetchInterval: 30000, // Fallback: poll every 30s if realtime fails
     });
 }
 
