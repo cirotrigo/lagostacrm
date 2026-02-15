@@ -129,6 +129,63 @@ function applyColorPalette(palette: Record<string, string>) {
 }
 
 /**
+ * Atualiza o título do documento (aba do navegador)
+ */
+function updateDocumentTitle(brandName: string) {
+  if (typeof document === 'undefined') return;
+  document.title = brandName;
+}
+
+/**
+ * Gera um favicon SVG dinâmico com a cor do branding e a inicial do nome
+ */
+function generateFaviconSvg(primaryColor: string, initial: string): string {
+  // Gerar cor mais escura para o gradiente
+  const { h, s, l } = hexToHSL(primaryColor);
+  const darkerColor = hslToHex(h, s, Math.max(l - 10, 20));
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${primaryColor}"/>
+      <stop offset="1" stop-color="${darkerColor}"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#g)"/>
+  <text x="256" y="340" text-anchor="middle" font-family="system-ui, sans-serif" font-size="280" font-weight="bold" fill="white">${initial}</text>
+</svg>`;
+
+  return svg;
+}
+
+/**
+ * Atualiza o favicon do documento com um SVG dinâmico
+ */
+function updateFavicon(primaryColor: string, initial: string) {
+  if (typeof document === 'undefined') return;
+
+  const svg = generateFaviconSvg(primaryColor, initial);
+  const dataUri = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+
+  // Remover favicons existentes
+  const existingIcons = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+  existingIcons.forEach((icon) => icon.remove());
+
+  // Criar novo favicon
+  const link = document.createElement('link');
+  link.rel = 'icon';
+  link.type = 'image/svg+xml';
+  link.href = dataUri;
+  document.head.appendChild(link);
+
+  // Também criar um para apple-touch-icon (alguns navegadores mobile)
+  const appleLink = document.createElement('link');
+  appleLink.rel = 'apple-touch-icon';
+  appleLink.href = dataUri;
+  document.head.appendChild(appleLink);
+}
+
+/**
  * Provider que carrega branding do banco uma única vez e distribui via Context.
  * Renderiza imediatamente com fallback do CLIENT_ID (sem flash/loading).
  * Atualiza quando os dados do banco chegam.
@@ -167,6 +224,23 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
       applyColorPalette(palette);
     }
   }, [brand.primaryColor]);
+
+  // Atualizar título do documento quando o nome mudar
+  useEffect(() => {
+    if (brand.name) {
+      updateDocumentTitle(brand.name);
+    }
+  }, [brand.name]);
+
+  // Atualizar favicon quando a cor ou inicial mudarem
+  useEffect(() => {
+    const color = brand.primaryColor || '#22c55e'; // fallback verde
+    const initial = brand.initial || brand.name?.[0]?.toUpperCase() || 'N';
+
+    if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+      updateFavicon(color, initial);
+    }
+  }, [brand.primaryColor, brand.initial, brand.name]);
 
   return (
     <BrandingContext.Provider value={{ brand, isLoaded }}>
