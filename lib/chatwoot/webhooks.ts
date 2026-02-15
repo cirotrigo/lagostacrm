@@ -240,8 +240,15 @@ async function handleMessageCreated(
     const senderId = message.sender?.id || null;
     const senderName = message.sender?.name || null;
 
+    console.log('[Webhook] Caching message for realtime:', {
+        messageId: message.id,
+        conversationId: conversation.id,
+        messageType: message.message_type,
+        contentPreview: message.content?.substring(0, 30),
+    });
+
     try {
-        await supabase.rpc('upsert_message_cache', {
+        const result = await supabase.rpc('upsert_message_cache', {
             p_organization_id: organizationId,
             p_chatwoot_message_id: message.id,
             p_chatwoot_conversation_id: conversation.id,
@@ -255,8 +262,12 @@ async function handleMessageCreated(
             p_sender_name: senderName,
             p_created_at: messageTimestamp,
         });
+        console.log('[Webhook] Message cached successfully:', {
+            messageId: message.id,
+            result,
+        });
     } catch (error) {
-        console.warn('Failed to cache message:', error);
+        console.warn('[Webhook] Failed to cache message:', error);
         // Non-critical, continue with conversation update
     }
 

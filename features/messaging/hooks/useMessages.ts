@@ -58,8 +58,8 @@ export function useMessages(options: UseMessagesOptions): UseInfiniteQueryResult
         initialPageParam: null,
         getNextPageParam: (lastPage) => (lastPage.has_more ? lastPage.oldest_id : undefined),
         enabled: !!numericConversationId && !isNaN(numericConversationId) && enabled,
-        staleTime: 10000, // 10 seconds
-        refetchInterval: 30000, // Fallback: poll every 30s if realtime fails
+        staleTime: 3000, // 3 seconds - allow more frequent updates
+        refetchInterval: 5000, // Poll every 5s for near-realtime feel (webhook may not be configured)
     });
 }
 

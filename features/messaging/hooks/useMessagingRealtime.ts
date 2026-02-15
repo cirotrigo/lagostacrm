@@ -64,12 +64,19 @@ export function useMessagingRealtime(options: UseMessagingRealtimeOptions = {}) 
 
     // Handle new message from realtime
     const handleNewMessage = useCallback((payload: RealtimePostgresChangesPayload<MessageCacheRow>) => {
+        console.log('[MessagingRealtime] Received message event:', {
+            eventType: payload.eventType,
+            messageId: (payload.new as MessageCacheRow)?.chatwoot_message_id,
+            conversationId: (payload.new as MessageCacheRow)?.chatwoot_conversation_id,
+        });
+
         if (payload.eventType !== 'INSERT') return;
         const cachedMessage = payload.new as MessageCacheRow;
         if (!cachedMessage.chatwoot_message_id) return;
 
         // Skip if filtering by conversationId and this message is for a different conversation
         if (conversationId && cachedMessage.chatwoot_conversation_id !== conversationId) {
+            console.log('[MessagingRealtime] Skipping message for different conversation');
             return;
         }
 
@@ -118,12 +125,22 @@ export function useMessagingRealtime(options: UseMessagingRealtimeOptions = {}) 
             }
         );
 
+        console.log('[MessagingRealtime] Added message to cache:', {
+            messageId: chatwootMessage.id,
+            conversationId: messageConvId,
+        });
+
         // Call custom callback
         onNewMessage?.(chatwootMessage);
 
         // Also invalidate conversations to update last message preview
         queryClient.invalidateQueries({
             queryKey: queryKeys.chatwoot.conversations(),
+        });
+
+        // Also invalidate messages query to ensure consistency
+        queryClient.invalidateQueries({
+            queryKey: queryKeys.chatwoot.messages(messageConvId),
         });
     }, [conversationId, onNewMessage, queryClient]);
 
@@ -175,7 +192,9 @@ export function useMessagingRealtime(options: UseMessagingRealtimeOptions = {}) 
                 },
                 handleNewMessage
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log('[MessagingRealtime] Messages channel status:', status);
+            });
 
         // Subscribe to messaging_conversation_links
         linksChannel = sb
@@ -189,7 +208,9 @@ export function useMessagingRealtime(options: UseMessagingRealtimeOptions = {}) 
                 },
                 handleConversationUpdate
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log('[MessagingRealtime] Links channel status:', status);
+            });
 
         return () => {
             if (messagesChannel) {
