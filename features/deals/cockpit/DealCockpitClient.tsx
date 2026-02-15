@@ -31,7 +31,7 @@ import { useDealFiles } from '@/features/inbox/hooks/useDealFiles';
 import { useQuickScripts } from '@/features/inbox/hooks/useQuickScripts';
 
 import { UIChat } from '@/components/ai/UIChat';
-import { getBrandName } from '@/lib/branding';
+import { useBrandingContext } from '@/context/BrandingContext';
 import { CallModal, type CallLogData } from '@/features/inbox/components/CallModal';
 import { MessageComposerModal, type MessageChannel, type MessageExecutedEvent } from '@/features/inbox/components/MessageComposerModal';
 import { ScheduleModal, type ScheduleData, type ScheduleType } from '@/features/inbox/components/ScheduleModal';
@@ -588,6 +588,7 @@ export default function DealCockpitClient({ dealId }: { dealId?: string }) {
   const pathname = usePathname();
 
   const { profile, user } = useAuth();
+  const { brand } = useBrandingContext();
 
   const {
     loading: crmLoading,
@@ -2252,7 +2253,7 @@ export default function DealCockpitClient({ dealId }: { dealId?: string }) {
                     <Sparkles className="h-4 w-4 text-cyan-300" />
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-slate-100">{getBrandName()} Pilot</div>
+                    <div className="text-sm font-semibold text-slate-100">{brand.name} Pilot</div>
                     <div className="text-[11px] text-slate-500">Deal: {humanizeTestLabel(deal.title) || deal.title}</div>
                   </div>
                 </div>

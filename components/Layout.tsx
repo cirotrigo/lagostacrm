@@ -54,7 +54,7 @@ import { prefetchRoute, RouteName } from '@/lib/prefetch';
 import { isDebugMode, enableDebugMode, disableDebugMode } from '@/lib/debug';
 import { SkipLink } from '@/lib/a11y';
 import { useResponsiveMode } from '@/hooks/useResponsiveMode';
-import { getBranding } from '@/lib/branding';
+import { useBrandingContext } from '@/context/BrandingContext';
 import { BottomNav, MoreMenuSheet, NavigationRail } from '@/components/navigation';
 
 // Lazy load AI Assistant (deprecated - using UIChat now)
@@ -138,7 +138,7 @@ const NavItem = ({
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { darkMode, toggleDarkMode } = useTheme();
   const { isGlobalAIOpen, setIsGlobalAIOpen, sidebarCollapsed, setSidebarCollapsed } = useCRM();
-  const brand = getBranding();
+  const { brand } = useBrandingContext();
   const { user, loading, profile, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();

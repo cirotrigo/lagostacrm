@@ -9,6 +9,7 @@ import { ThemeProvider } from '@/context/ThemeContext'
 import { AuthProvider } from '@/context/AuthContext'
 import { CRMProvider } from '@/context/CRMContext'
 import { AIProvider } from '@/context/AIContext'
+import { BrandingProvider } from '@/context/BrandingContext'
 import Layout from '@/components/Layout'
 
 /**
@@ -77,7 +78,9 @@ export default function ProtectedLayout({
                     <AuthProvider>
                         <CRMProvider>
                             <AIProvider>
-                                {shouldUseAppShell ? <Layout>{children}</Layout> : children}
+                                <BrandingProvider>
+                                    {shouldUseAppShell ? <Layout>{children}</Layout> : children}
+                                </BrandingProvider>
                             </AIProvider>
                         </CRMProvider>
                     </AuthProvider>

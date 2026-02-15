@@ -3,10 +3,11 @@
 import React from 'react';
 import { Download, X } from 'lucide-react';
 import { useInstallState } from './useInstallState';
-import { getBrandName } from '@/lib/branding';
+import { useBrandingContext } from '@/context/BrandingContext';
 
 export function InstallBanner() {
   const { isEligible, isDismissed, canPrompt, platformHint, promptInstall, dismiss } = useInstallState();
+  const { brand } = useBrandingContext();
 
   if (!isEligible || isDismissed) return null;
 
@@ -19,7 +20,7 @@ export function InstallBanner() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-slate-900 dark:text-white">
-              Instale o {getBrandName()}
+              Instale o {brand.name}
             </div>
             <div className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
               {platformHint === 'ios'

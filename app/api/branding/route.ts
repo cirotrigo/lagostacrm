@@ -1,65 +1,28 @@
 import { createClient } from '@/lib/supabase/server';
-import { getBranding, type BrandConfig } from '@/lib/branding';
+import { getBrandingFromDb, getBranding } from '@/lib/branding';
 
-export const dynamic = 'force-dynamic';
+function json<T>(body: T, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'private, max-age=300', // cache 5 min
+    },
+  });
+}
 
 /**
  * GET /api/branding
- *
- * Retorna a configuração de branding da organização.
- * Endpoint público (sem auth) para uso em tela de login, manifest, etc.
- *
- * Prioridade:
- * 1. organization_settings.brand_* do banco
- * 2. NEXT_PUBLIC_BRAND_* env vars
- * 3. CLIENT_ID hardcoded fallback
+ * Retorna configuração de branding da organização do usuário logado.
+ * Se não autenticado ou sem branding no banco, retorna fallback do CLIENT_ID.
  */
-export async function GET(): Promise<Response> {
+export async function GET() {
   try {
     const supabase = await createClient();
-
-    // Busca branding da primeira organização (single-tenant)
-    const { data, error } = await supabase
-      .from('organization_settings')
-      .select(
-        'brand_name, brand_short_name, brand_initial, brand_description, brand_logo_url, brand_favicon_url, brand_primary_color'
-      )
-      .limit(1)
-      .single();
-
-    if (error || !data?.brand_name) {
-      // Fallback para env vars ou CLIENT_ID
-      return Response.json(getBranding(), {
-        headers: {
-          'content-type': 'application/json; charset=utf-8',
-          'cache-control': 'public, max-age=600', // 10 min cache
-        },
-      });
-    }
-
-    const brand: BrandConfig = {
-      name: data.brand_name,
-      shortName: data.brand_short_name || data.brand_name,
-      initial: data.brand_initial || data.brand_name[0],
-      description: data.brand_description || `CRM - ${data.brand_name}`,
-      primaryColor: data.brand_primary_color || '#3B82F6',
-      logoUrl: data.brand_logo_url || undefined,
-      faviconUrl: data.brand_favicon_url || undefined,
-    };
-
-    return Response.json(brand, {
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'public, max-age=600', // 10 min cache
-      },
-    });
+    const brand = await getBrandingFromDb(supabase);
+    return json(brand);
   } catch {
-    // Em caso de erro, fallback para sync branding
-    return Response.json(getBranding(), {
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'public, max-age=60', // 1 min cache on error
-      },
-    });
+    // Fallback seguro
+    return json(getBranding());
   }
 }

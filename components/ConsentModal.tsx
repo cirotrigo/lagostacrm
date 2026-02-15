@@ -10,7 +10,7 @@ import {
   OPTIONAL_CONSENTS,
   CONSENT_VERSIONS
 } from '@/lib/consent/consentService';
-import { getBrandName } from '@/lib/branding';
+import { useBrandingContext } from '@/context/BrandingContext';
 
 interface ConsentModalProps {
   isOpen: boolean;
@@ -19,10 +19,14 @@ interface ConsentModalProps {
   onClose?: () => void;
 }
 
-const CONSENT_LABELS: Record<ConsentType, { title: string; description: string }> = {
+/**
+ * Labels de consentimento com placeholder para o nome da marca
+ * O placeholder {BRAND} é substituído dinamicamente pelo brand.name
+ */
+const CONSENT_LABELS_BASE: Record<ConsentType, { title: string; description: string }> = {
   terms: {
     title: 'Termos de Uso',
-    description: `Li e aceito os Termos de Uso do ${getBrandName()}.`,
+    description: 'Li e aceito os Termos de Uso do {BRAND}.',
   },
   privacy: {
     title: 'Política de Privacidade',
@@ -41,6 +45,18 @@ const CONSENT_LABELS: Record<ConsentType, { title: string; description: string }
     description: 'Autorizo a coleta de dados de uso para melhoria da plataforma.',
   },
 };
+
+/** Retorna os labels de consentimento com o nome da marca substituído */
+function getConsentLabels(brandName: string): Record<ConsentType, { title: string; description: string }> {
+  const result = { ...CONSENT_LABELS_BASE };
+  for (const key of Object.keys(result) as ConsentType[]) {
+    result[key] = {
+      ...result[key],
+      description: result[key].description.replace('{BRAND}', brandName),
+    };
+  }
+  return result;
+}
 
 /**
  * Componente React `ConsentModal`.
@@ -64,10 +80,14 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
   onAccept,
   onClose,
 }) => {
+  const { brand } = useBrandingContext();
   const [selectedConsents, setSelectedConsents] = useState<Set<ConsentType>>(
     new Set([...REQUIRED_CONSENTS, ...OPTIONAL_CONSENTS])
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Gerar labels com o nome da marca dinâmico
+  const CONSENT_LABELS = getConsentLabels(brand.name);
 
   if (!isOpen) return null;
 
@@ -121,7 +141,7 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
             Consentimentos Necessários
           </h2>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Para continuar usando o {getBrandName()}, precisamos do seu consentimento.
+            Para continuar usando o {brand.name}, precisamos do seu consentimento.
           </p>
         </div>
 
@@ -137,7 +157,7 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
                 {requiredMissing.map(type => (
                   <ConsentItem
                     key={type}
-                    type={type}
+                    label={CONSENT_LABELS[type]}
                     checked={selectedConsents.has(type)}
                     required
                     onChange={() => {}}
@@ -157,7 +177,7 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
                 {optionalMissing.map(type => (
                   <ConsentItem
                     key={type}
-                    type={type}
+                    label={CONSENT_LABELS[type]}
                     checked={selectedConsents.has(type)}
                     required={false}
                     onChange={() => toggleConsent(type)}
@@ -217,20 +237,18 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
 };
 
 interface ConsentItemProps {
-  type: ConsentType;
+  label: { title: string; description: string };
   checked: boolean;
   required: boolean;
   onChange: () => void;
 }
 
 const ConsentItem: React.FC<ConsentItemProps> = ({
-  type,
+  label,
   checked,
   required,
   onChange,
 }) => {
-  const label = CONSENT_LABELS[type];
-
   return (
     <label className="flex items-start gap-3 cursor-pointer group">
       <div className="mt-0.5">
