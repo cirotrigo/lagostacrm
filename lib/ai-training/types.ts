@@ -102,6 +102,18 @@ export interface CreateQADocumentRequest {
     answer: string;
 }
 
+export interface UpdateTextDocumentRequest {
+    title?: string;
+    content?: string;
+}
+
+export interface UpdateQADocumentRequest {
+    question?: string;
+    answer?: string;
+}
+
+export type UpdateDocumentRequest = UpdateTextDocumentRequest | UpdateQADocumentRequest;
+
 // =============================================================================
 // Processing Types
 // =============================================================================

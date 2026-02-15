@@ -6,4 +6,5 @@ export {
     useUploadPdfDocument,
     useDeleteDocument,
     useReprocessDocument,
+    useUpdateDocument,
 } from './useTrainingDocuments';

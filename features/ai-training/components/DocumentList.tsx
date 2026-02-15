@@ -12,6 +12,7 @@ import {
     AlertCircle,
     Clock,
     Eye,
+    Pencil,
 } from 'lucide-react';
 import type { TrainingDocument } from '@/lib/ai-training/types';
 import { useDeleteDocument, useReprocessDocument } from '../hooks';
@@ -22,6 +23,7 @@ interface DocumentListProps {
     documents: TrainingDocument[];
     isAdmin: boolean;
     isLoading?: boolean;
+    onEdit?: (document: TrainingDocument) => void;
 }
 
 const typeIcons = {
@@ -71,6 +73,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
     documents,
     isAdmin,
     isLoading,
+    onEdit,
 }) => {
     const { showToast } = useToast();
     const deleteMutation = useDeleteDocument();
@@ -175,6 +178,19 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                                 >
                                     <Eye className="h-4 w-4" />
                                 </button>
+
+                                {/* Edit button (only for text and Q&A, and if admin) */}
+                                {isAdmin && doc.type !== 'pdf' && onEdit && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onEdit(doc)}
+                                        className="p-2 rounded-lg text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-white/5"
+                                        title="Editar"
+                                        aria-label="Editar"
+                                    >
+                                        <Pencil className="h-4 w-4" />
+                                    </button>
+                                )}
 
                                 {/* Reprocess button (only for errors and if admin) */}
                                 {isAdmin && doc.status === 'error' && (

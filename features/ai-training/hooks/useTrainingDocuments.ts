@@ -12,6 +12,7 @@ import type {
     TrainingDocumentsResponse,
     CreateTextDocumentRequest,
     CreateQADocumentRequest,
+    UpdateDocumentRequest,
 } from '@/lib/ai-training/types';
 
 // =============================================================================
@@ -124,6 +125,23 @@ async function reprocessDocument(id: string): Promise<TrainingDocument> {
     return json.document;
 }
 
+async function updateDocument({ id, data }: { id: string; data: UpdateDocumentRequest }): Promise<TrainingDocument> {
+    const res = await fetch(`/api/ai-training/documents/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+        throw new Error(json.error || 'Erro ao atualizar documento');
+    }
+
+    return json.document;
+}
+
 // =============================================================================
 // Hooks
 // =============================================================================
@@ -220,6 +238,22 @@ export function useReprocessDocument() {
 
     return useMutation({
         mutationFn: reprocessDocument,
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.aiTraining.all,
+            });
+        },
+    });
+}
+
+/**
+ * Hook para atualizar documento
+ */
+export function useUpdateDocument() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: updateDocument,
         onSuccess: () => {
             queryClient.invalidateQueries({
                 queryKey: queryKeys.aiTraining.all,

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { GraduationCap, FileText, MessageSquare, FileType } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { GraduationCap, FileText, MessageSquare, FileType, Search } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTrainingDocuments } from './hooks';
 import {
@@ -10,7 +10,9 @@ import {
     QAEditor,
     TextEditor,
     DocumentUpload,
+    DocumentEditModal,
 } from './components';
+import type { TrainingDocument } from '@/lib/ai-training/types';
 
 /**
  * Seção de Treinamento do Agente IA
@@ -24,9 +26,30 @@ export const AITrainingSection: React.FC = () => {
 
     const [showQAEditor, setShowQAEditor] = useState(false);
     const [showTextEditor, setShowTextEditor] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [editingDocument, setEditingDocument] = useState<TrainingDocument | null>(null);
 
     const documents = data?.documents ?? [];
     const stats = data?.stats ?? { totalDocuments: 0, totalChunks: 0, totalTokens: 0 };
+
+    // Filter documents based on search query
+    const filteredDocuments = useMemo(() => {
+        if (!searchQuery.trim()) return documents;
+
+        const query = searchQuery.toLowerCase();
+        return documents.filter((doc) => {
+            // Search in title
+            if (doc.title.toLowerCase().includes(query)) return true;
+            // Search in content (for text docs)
+            if (doc.content?.toLowerCase().includes(query)) return true;
+            // Search in question/answer (for Q&A docs)
+            if (doc.question?.toLowerCase().includes(query)) return true;
+            if (doc.answer?.toLowerCase().includes(query)) return true;
+            // Search by type
+            if (doc.type.toLowerCase().includes(query)) return true;
+            return false;
+        });
+    }, [documents, searchQuery]);
 
     return (
         <div id="ai-training" className="scroll-mt-8">
@@ -99,13 +122,27 @@ export const AITrainingSection: React.FC = () => {
 
                 {/* Documents List */}
                 <div>
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
-                        Documentos ({documents.length})
+                    <div className="flex items-center justify-between gap-4 mb-3">
+                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Documentos ({filteredDocuments.length}{searchQuery && ` de ${documents.length}`})
+                        </div>
+                        {/* Search Input */}
+                        <div className="relative w-64">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Buscar documentos..."
+                                className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            />
+                        </div>
                     </div>
                     <DocumentList
-                        documents={documents}
+                        documents={filteredDocuments}
                         isAdmin={isAdmin}
                         isLoading={isLoading}
+                        onEdit={(doc) => setEditingDocument(doc)}
                     />
                 </div>
             </div>
@@ -113,6 +150,11 @@ export const AITrainingSection: React.FC = () => {
             {/* Modals */}
             <QAEditor isOpen={showQAEditor} onClose={() => setShowQAEditor(false)} />
             <TextEditor isOpen={showTextEditor} onClose={() => setShowTextEditor(false)} />
+            <DocumentEditModal
+                document={editingDocument}
+                isOpen={!!editingDocument}
+                onClose={() => setEditingDocument(null)}
+            />
         </div>
     );
 };
