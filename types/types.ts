@@ -742,3 +742,85 @@ export interface MessagesResponse {
   has_more: boolean;
   oldest_id: string | null;
 }
+
+// =============================================================================
+// Messaging Contact Identities (Multi-Channel)
+// =============================================================================
+
+/**
+ * Source channel for messaging identity.
+ *
+ * @description
+ * Identifies the messaging platform from which the contact originated.
+ * Used for external identity resolution across channels.
+ */
+export type MessagingSource = 'WHATSAPP' | 'INSTAGRAM';
+
+/**
+ * External identity mapping for a contact.
+ *
+ * @description
+ * Links CRM contacts to external channel identifiers.
+ * Enables deterministic identity resolution for multi-channel messaging.
+ *
+ * @example
+ * ```ts
+ * // WhatsApp identity
+ * const whatsappIdentity: MessagingContactIdentity = {
+ *   id: 'uuid',
+ *   organizationId: 'org-uuid',
+ *   contactId: 'contact-uuid',
+ *   source: 'WHATSAPP',
+ *   externalId: '+5511999990000', // E.164 phone
+ *   createdAt: '2026-02-18T00:00:00Z',
+ *   updatedAt: '2026-02-18T00:00:00Z',
+ * };
+ *
+ * // Instagram identity
+ * const instagramIdentity: MessagingContactIdentity = {
+ *   id: 'uuid',
+ *   organizationId: 'org-uuid',
+ *   contactId: 'contact-uuid',
+ *   source: 'INSTAGRAM',
+ *   externalId: '17841400000000000', // Instagram IGSID
+ *   createdAt: '2026-02-18T00:00:00Z',
+ *   updatedAt: '2026-02-18T00:00:00Z',
+ * };
+ * ```
+ */
+export interface MessagingContactIdentity {
+  /** Unique identifier */
+  id: string;
+  /** Organization ID for multi-tenant isolation */
+  organizationId: string;
+  /** CRM contact ID */
+  contactId: string;
+  /** Channel source (WHATSAPP or INSTAGRAM) */
+  source: MessagingSource;
+  /** External identifier from the messaging platform */
+  externalId: string;
+  /** Creation timestamp */
+  createdAt: string;
+  /** Last update timestamp */
+  updatedAt: string;
+}
+
+/**
+ * Result of identity resolution.
+ *
+ * @description
+ * Contains the resolved contact information and metadata about
+ * how the resolution was performed.
+ */
+export interface IdentityResolutionResult {
+  /** CRM contact ID */
+  contactId: string;
+  /** Identity mapping ID (null if resolved via fallback) */
+  identityId: string | null;
+  /** Channel source */
+  source: MessagingSource;
+  /** Normalized external identifier */
+  externalId: string;
+  /** How the identity was resolved */
+  resolutionMethod: 'identity' | 'phone' | 'email' | 'created';
+}

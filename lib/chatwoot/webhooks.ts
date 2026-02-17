@@ -3,6 +3,11 @@ import type {
     ChatwootWebhookPayload,
     ConversationLink,
 } from './types';
+import {
+    resolveContactByIdentity,
+    linkContactToIdentity,
+    type MessagingSource,
+} from '@/lib/messaging';
 
 /**
  * Database row type for messaging_conversation_links
@@ -88,7 +93,7 @@ export async function processWebhookEvent(
     payload: ChatwootWebhookPayload,
     chatwootBaseUrl: string
 ): Promise<void> {
-    const { event, conversation, message, contact } = payload;
+    const { event, conversation, message, contact, inbox } = payload;
 
     switch (event) {
         case 'conversation_created':
@@ -97,6 +102,7 @@ export async function processWebhookEvent(
                     supabase,
                     organizationId,
                     conversation,
+                    inbox?.channel_type,
                     chatwootBaseUrl
                 );
             }
@@ -138,12 +144,18 @@ export async function processWebhookEvent(
 }
 
 /**
- * Handle conversation_created event
+ * Handle conversation_created event with multi-channel identity resolution.
+ *
+ * Resolution priority:
+ * 1. Exact match in messaging_contact_identities table
+ * 2. Fallback to phone lookup (for WhatsApp and when phone available)
+ * 3. Auto-create contact with identity link
  */
 async function handleConversationCreated(
     supabase: SupabaseClient,
     organizationId: string,
     conversation: ChatwootWebhookPayload['conversation'],
+    inboxChannelType: string | undefined,
     chatwootBaseUrl: string
 ): Promise<void> {
     if (!conversation) return;
@@ -151,19 +163,74 @@ async function handleConversationCreated(
     const chatwootUrl = `${chatwootBaseUrl}/app/accounts/${conversation.account_id}/conversations/${conversation.id}`;
     const sender = conversation.meta?.sender;
 
-    // Try to find matching CRM contact by phone
-    let contactId: string | null = null;
-    const senderPhone = sender?.phone_number;
+    // Determine channel source from webhook inbox or conversation metadata
+    const channelType = inboxChannelType ?? conversation.meta?.channel ?? '';
+    const source: MessagingSource | null = detectMessagingSource(channelType);
 
-    if (senderPhone) {
+    // Extract external identifier based on source
+    let externalId: string | null = null;
+    if (source === 'INSTAGRAM' && sender?.identifier) {
+        // Instagram: use IGSID from identifier field
+        externalId = sender.identifier;
+    } else if (source === 'WHATSAPP' && sender?.phone_number) {
+        // WhatsApp: use phone number
+        externalId = sender.phone_number;
+    }
+
+    // Try identity resolution if we have a valid source and external_id
+    let contactId: string | null = null;
+
+    if (source && externalId) {
+        const resolution = await resolveContactByIdentity(supabase, {
+            organizationId,
+            source,
+            externalId,
+            phone: sender?.phone_number ?? null,
+            email: sender?.email ?? null,
+            contactName: sender?.name ?? null,
+            contactAvatar: sender?.thumbnail ?? null,
+            autoCreate: true, // Create contact if not found
+            createIdentity: true, // Create identity mapping if resolved via fallback
+        });
+
+        if (resolution.ok) {
+            contactId = resolution.data.contactId;
+            console.log('[Webhook] Identity resolved:', {
+                contactId,
+                method: resolution.data.resolutionMethod,
+                source,
+                externalId,
+            });
+        } else {
+            console.warn('[Webhook] Identity resolution failed:', {
+                error: resolution.error,
+                code: resolution.code,
+                source,
+                externalId,
+            });
+        }
+    } else if (sender?.phone_number) {
+        // Fallback: legacy phone-based lookup (backward compatibility for unknown channels)
         const { data: crmContact } = await supabase
             .from('contacts')
             .select('id')
-            .eq('phone', senderPhone)
-            .single();
+            .eq('organization_id', organizationId)
+            .eq('phone', sender.phone_number)
+            .is('deleted_at', null)
+            .maybeSingle();
 
         if (crmContact) {
             contactId = crmContact.id;
+
+            // Create identity link for future lookups if we know the source
+            if (source && externalId) {
+                await linkContactToIdentity(supabase, {
+                    organizationId,
+                    contactId: crmContact.id,
+                    source,
+                    externalId,
+                });
+            }
         }
     }
 
@@ -187,6 +254,27 @@ async function handleConversationCreated(
     }, {
         onConflict: 'organization_id,chatwoot_conversation_id',
     });
+}
+
+/**
+ * Detect messaging source from Chatwoot channel type.
+ *
+ * @param channelType - Chatwoot inbox channel_type (e.g., 'Channel::Instagram', 'Channel::Whatsapp')
+ * @returns MessagingSource or null if unknown
+ */
+function detectMessagingSource(channelType: string): MessagingSource | null {
+    const normalized = channelType.toLowerCase();
+
+    if (normalized.includes('instagram')) {
+        return 'INSTAGRAM';
+    }
+
+    if (normalized.includes('whatsapp') || normalized.includes('wpp')) {
+        return 'WHATSAPP';
+    }
+
+    // Unknown channel type
+    return null;
 }
 
 /**
@@ -309,6 +397,8 @@ async function handleMessageCreated(
 
 /**
  * Handle contact sync (contact_created or contact_updated)
+ *
+ * Syncs Chatwoot contact updates to CRM, including identity linking.
  */
 async function handleContactSync(
     supabase: SupabaseClient,
@@ -317,14 +407,25 @@ async function handleContactSync(
 ): Promise<void> {
     if (!contact?.phone_number) return;
 
-    // Find CRM contact by phone
+    // Find CRM contact by phone (with organization isolation)
     const { data: crmContact } = await supabase
         .from('contacts')
         .select('id')
+        .eq('organization_id', organizationId)
         .eq('phone', contact.phone_number)
-        .single();
+        .is('deleted_at', null)
+        .maybeSingle();
 
     if (!crmContact) return;
+
+    // Create WhatsApp identity link if phone is available
+    // This ensures future lookups can use the identity table
+    await linkContactToIdentity(supabase, {
+        organizationId,
+        contactId: crmContact.id,
+        source: 'WHATSAPP',
+        externalId: contact.phone_number,
+    });
 
     // Update all conversation links for this Chatwoot contact
     await supabase

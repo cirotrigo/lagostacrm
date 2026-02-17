@@ -4,6 +4,7 @@ import {
     validateWebhookSignature,
     processWebhookEvent,
     getChannelConfig,
+    getChannelConfigByInbox,
 } from '@/lib/chatwoot';
 import type { ChatwootWebhookPayload } from '@/lib/chatwoot';
 
@@ -60,19 +61,48 @@ export async function POST(request: NextRequest) {
         // 3. Get organization ID
         // Option 1: From header (preferred for multi-tenant)
         let organizationId = request.headers.get('X-Organization-Id');
+        const webhookInboxId = payload.inbox?.id ?? payload.conversation?.inbox_id ?? null;
+        let resolvedBaseUrl: string | null = null;
 
         // Option 2: Look up by account ID
         if (!organizationId && payload.account?.id) {
             const supabase = createStaticAdminClient();
-            const { data: config } = await supabase
+            const { data: configs, error: configError } = await supabase
                 .from('messaging_channel_configs')
-                .select('organization_id')
+                .select('organization_id, chatwoot_base_url, chatwoot_inbox_id')
                 .eq('chatwoot_account_id', payload.account.id)
-                .eq('status', 'active')
-                .single();
+                .eq('status', 'active');
 
-            if (config) {
-                organizationId = config.organization_id;
+            if (configError) {
+                console.error('Error resolving organization by account_id:', configError);
+                return NextResponse.json(
+                    { error: 'Failed to resolve organization' },
+                    { status: 500 }
+                );
+            }
+
+            if (configs && configs.length > 0) {
+                const inboxScopedConfigs = webhookInboxId == null
+                    ? configs
+                    : configs.filter(c => c.chatwoot_inbox_id === webhookInboxId);
+                const candidates = inboxScopedConfigs.length > 0 ? inboxScopedConfigs : configs;
+                const uniqueOrganizationIds = [...new Set(candidates.map(c => c.organization_id))];
+
+                if (uniqueOrganizationIds.length === 1) {
+                    const chosenConfig = candidates.find(c => c.organization_id === uniqueOrganizationIds[0]);
+                    organizationId = uniqueOrganizationIds[0];
+                    resolvedBaseUrl = chosenConfig?.chatwoot_base_url ?? null;
+                } else {
+                    console.error('Ambiguous organization mapping for Chatwoot account:', {
+                        accountId: payload.account.id,
+                        inboxId: webhookInboxId,
+                        organizations: uniqueOrganizationIds,
+                    });
+                    return NextResponse.json(
+                        { error: 'Ambiguous organization mapping for account' },
+                        { status: 400 }
+                    );
+                }
             }
         }
 
@@ -88,8 +118,17 @@ export async function POST(request: NextRequest) {
 
         // 4. Get Chatwoot base URL for building deep links
         const supabase = createStaticAdminClient();
-        const channelConfig = await getChannelConfig(supabase, organizationId);
-        const chatwootBaseUrl = channelConfig?.chatwootBaseUrl || '';
+        let chatwootBaseUrl = resolvedBaseUrl ?? '';
+
+        if (!chatwootBaseUrl && webhookInboxId != null) {
+            const inboxConfig = await getChannelConfigByInbox(supabase, organizationId, webhookInboxId);
+            chatwootBaseUrl = inboxConfig?.chatwootBaseUrl ?? '';
+        }
+
+        if (!chatwootBaseUrl) {
+            const channelConfig = await getChannelConfig(supabase, organizationId);
+            chatwootBaseUrl = channelConfig?.chatwootBaseUrl ?? '';
+        }
 
         // 5. Process the webhook event
         await processWebhookEvent(

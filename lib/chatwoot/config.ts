@@ -60,7 +60,9 @@ export async function getChannelConfig(
         .select('*')
         .eq('organization_id', organizationId)
         .eq('status', 'active')
-        .single<DbChannelConfig>();
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle<DbChannelConfig>();
 
     if (error || !data) {
         return null;
@@ -164,28 +166,58 @@ export async function saveChannelConfig(
     supabase: SupabaseClient,
     config: Omit<ChatwootChannelConfig, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<ChatwootChannelConfig> {
-    const { data, error } = await supabase
-        .from('messaging_channel_configs')
-        .upsert({
-            organization_id: config.organizationId,
-            chatwoot_base_url: config.chatwootBaseUrl,
-            chatwoot_api_token: config.chatwootApiToken,
-            chatwoot_account_id: config.chatwootAccountId,
-            chatwoot_inbox_id: config.chatwootInboxId,
-            wppconnect_base_url: config.wppconnectBaseUrl,
-            wppconnect_token: config.wppconnectToken,
-            wppconnect_session: config.wppconnectSession,
-            channel_type: config.channelType,
-            name: config.name,
-            status: config.status,
-        }, {
-            onConflict: 'organization_id',
-        })
-        .select()
-        .single<DbChannelConfig>();
+    const row = {
+        organization_id: config.organizationId,
+        chatwoot_base_url: config.chatwootBaseUrl,
+        chatwoot_api_token: config.chatwootApiToken,
+        chatwoot_account_id: config.chatwootAccountId,
+        chatwoot_inbox_id: config.chatwootInboxId,
+        wppconnect_base_url: config.wppconnectBaseUrl,
+        wppconnect_token: config.wppconnectToken,
+        wppconnect_session: config.wppconnectSession,
+        channel_type: config.channelType,
+        name: config.name,
+        status: config.status,
+    };
 
-    if (error || !data) {
-        throw new Error(`Failed to save channel config: ${error?.message}`);
+    const { data: existing, error: findError } = await supabase
+        .from('messaging_channel_configs')
+        .select('id')
+        .eq('organization_id', config.organizationId)
+        .eq('channel_type', config.channelType)
+        .eq('name', config.name)
+        .maybeSingle<{ id: string }>();
+
+    if (findError) {
+        throw new Error(`Failed to lookup existing channel config: ${findError.message}`);
+    }
+
+    let data: DbChannelConfig | null = null;
+    let errorMessage: string | null = null;
+
+    if (existing?.id) {
+        const result = await supabase
+            .from('messaging_channel_configs')
+            .update(row)
+            .eq('id', existing.id)
+            .select()
+            .single<DbChannelConfig>();
+
+        data = result.data;
+        errorMessage = result.error?.message ?? null;
+    } else {
+        const result = await supabase
+            .from('messaging_channel_configs')
+            .insert(row)
+            .select()
+            .single<DbChannelConfig>();
+
+        data = result.data;
+        errorMessage = result.error?.message ?? null;
+    }
+
+    if (errorMessage || !data) {
+        throw new Error(`Failed to save channel config: ${errorMessage ?? 'Unknown error'}`);
     }
 
     return toChannelConfig(data);
@@ -211,4 +243,143 @@ export async function updateChannelStatus(
     if (error) {
         throw new Error(`Failed to update channel status: ${error.message}`);
     }
+}
+
+// =============================================================================
+// Multi-Channel Config Lookup (Disambiguation)
+// =============================================================================
+
+/**
+ * Result type for channel config lookup with explicit error handling.
+ */
+export type GetChannelConfigResult =
+    | { ok: true; data: ChatwootChannelConfig }
+    | { ok: false; error: string; code: 'NOT_FOUND' | 'AMBIGUOUS' | 'DB_ERROR' };
+
+/**
+ * Get channel configuration by channel type (explicit disambiguation).
+ *
+ * Use this when you need to find a specific channel type (e.g., 'instagram')
+ * and want explicit error handling for ambiguous configurations.
+ *
+ * @param supabase - Supabase client
+ * @param organizationId - Organization ID
+ * @param channelType - Channel type (e.g., 'whatsapp', 'instagram')
+ * @returns Channel configuration or explicit error
+ *
+ * @example
+ * ```typescript
+ * const result = await getChannelConfigByType(supabase, orgId, 'instagram');
+ * if (!result.ok) {
+ *     if (result.code === 'AMBIGUOUS') {
+ *         // Multiple active Instagram configs - user needs to specify inbox
+ *     }
+ *     return;
+ * }
+ * const config = result.data;
+ * ```
+ */
+export async function getChannelConfigByType(
+    supabase: SupabaseClient,
+    organizationId: string,
+    channelType: string
+): Promise<GetChannelConfigResult> {
+    const { data, error } = await supabase
+        .from('messaging_channel_configs')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .eq('channel_type', channelType)
+        .eq('status', 'active');
+
+    if (error) {
+        return { ok: false, error: error.message, code: 'DB_ERROR' };
+    }
+
+    if (!data || data.length === 0) {
+        return {
+            ok: false,
+            error: `No active ${channelType} configuration found`,
+            code: 'NOT_FOUND',
+        };
+    }
+
+    if (data.length > 1) {
+        return {
+            ok: false,
+            error: `Multiple active ${channelType} configurations found. Please specify inbox_id.`,
+            code: 'AMBIGUOUS',
+        };
+    }
+
+    return { ok: true, data: toChannelConfig(data[0]) };
+}
+
+/**
+ * Get channel configuration by Chatwoot inbox ID (explicit disambiguation).
+ *
+ * Use this when you have an inbox_id from a webhook and need to find
+ * the corresponding configuration.
+ *
+ * @param supabase - Supabase client
+ * @param organizationId - Organization ID
+ * @param inboxId - Chatwoot inbox ID
+ * @returns Channel configuration or null if not found
+ *
+ * @example
+ * ```typescript
+ * // In webhook handler
+ * const config = await getChannelConfigByInbox(supabase, orgId, conversation.inbox_id);
+ * if (!config) {
+ *     console.warn('No config for inbox', conversation.inbox_id);
+ *     return;
+ * }
+ * ```
+ */
+export async function getChannelConfigByInbox(
+    supabase: SupabaseClient,
+    organizationId: string,
+    inboxId: number
+): Promise<ChatwootChannelConfig | null> {
+    const { data, error } = await supabase
+        .from('messaging_channel_configs')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .eq('chatwoot_inbox_id', inboxId)
+        .eq('status', 'active')
+        .maybeSingle<DbChannelConfig>();
+
+    if (error || !data) {
+        return null;
+    }
+
+    return toChannelConfig(data);
+}
+
+/**
+ * Get channel configuration by Chatwoot account ID.
+ *
+ * Use this in webhooks where you only have the account_id.
+ * Note: This may fail if multiple orgs share the same Chatwoot account
+ * (not recommended configuration).
+ *
+ * @param supabase - Supabase client
+ * @param accountId - Chatwoot account ID
+ * @returns Channel configuration or null if not found
+ */
+export async function getChannelConfigByAccountId(
+    supabase: SupabaseClient,
+    accountId: number
+): Promise<ChatwootChannelConfig | null> {
+    const { data, error } = await supabase
+        .from('messaging_channel_configs')
+        .select('*')
+        .eq('chatwoot_account_id', accountId)
+        .eq('status', 'active')
+        .maybeSingle<DbChannelConfig>();
+
+    if (error || !data) {
+        return null;
+    }
+
+    return toChannelConfig(data);
 }
