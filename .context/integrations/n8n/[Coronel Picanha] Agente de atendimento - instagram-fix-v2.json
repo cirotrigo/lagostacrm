@@ -86,37 +86,37 @@
             {
               "id": "69f6217f-9063-423f-abf4-e94f6b70f94e",
               "name": "ClienteNome",
-              "value": "={{(() => {\n  const name = $('Webhook').item.json.body.sender?.name || '';\n  return name\n    .split(' ')\n    .filter(w => w)\n    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())\n    .join(' ');\n})()}}",
+              "value": "={{(() => {\n  const body = $('Webhook').item.json.body || {};\n  const name = body.sender?.name || body.conversation?.meta?.sender?.name || body.conversation?.meta?.sender?.identifier || 'Cliente';\n  return name\n    .toString()\n    .split(' ')\n    .filter(w => w)\n    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())\n    .join(' ');\n})()}}",
               "type": "string"
             },
             {
               "id": "9f488c5c-0b3b-48e9-87b1-5a22d513d1ec",
               "name": "ClienteTelefone",
-              "value": "={{ $('Webhook').item.json.body.sender?.phone_number || $('Webhook').item.json.body.conversation?.meta?.sender?.phone_number || '' }}",
+              "value": "={{ (() => {\n  const body = $('Webhook').item.json.body || {};\n  return (body.sender?.phone_number || body.conversation?.meta?.sender?.phone_number || body.conversation?.contact_inbox?.source_id || '').toString().trim();\n})() }}",
               "type": "string"
             },
             {
               "id": "canal-mensagem",
               "name": "Canal",
-              "value": "={{ (() => {\n  const body = $('Webhook').item.json.body || {};\n  const raw = (body.inbox?.channel_type || body.conversation?.channel || body.conversation?.meta?.channel || '').toString().toLowerCase();\n  if (raw.includes('instagram')) return 'INSTAGRAM';\n  if (raw.includes('whatsapp') || raw.includes('wpp')) return 'WHATSAPP';\n  return 'WHATSAPP';\n})() }}",
+              "value": "={{ (() => {\n  const body = $('Webhook').item.json.body || {};\n  const raw = [\n    body.inbox?.channel_type,\n    body.conversation?.channel,\n    body.conversation?.meta?.channel,\n    body.inbox?.name\n  ]\n    .filter(Boolean)\n    .join(' ')\n    .toString()\n    .toLowerCase();\n\n  const phone = (body.sender?.phone_number || body.conversation?.meta?.sender?.phone_number || '').toString().trim();\n  const identifier = (body.sender?.identifier || body.conversation?.meta?.sender?.identifier || body.conversation?.contact_inbox?.source_id || '').toString().trim();\n\n  if (raw.includes('instagram') || raw.includes('facebook') || (identifier && !phone)) return 'INSTAGRAM';\n  if (raw.includes('whatsapp') || raw.includes('wpp') || raw.includes('twilio')) return 'WHATSAPP';\n  if (phone) return 'WHATSAPP';\n  if (identifier) return 'INSTAGRAM';\n  return 'WHATSAPP';\n})() }}",
               "type": "string"
             },
             {
               "id": "cliente-identificador",
               "name": "ClienteIdentificador",
-              "value": "={{ $('Webhook').item.json.body.sender?.identifier || $('Webhook').item.json.body.sender?.phone_number || '' }}",
+              "value": "={{ (() => {\n  const body = $('Webhook').item.json.body || {};\n  const value = body.sender?.identifier\n    || body.conversation?.meta?.sender?.identifier\n    || body.conversation?.contact_inbox?.source_id\n    || body.sender?.id\n    || body.conversation?.meta?.sender?.id\n    || body.conversation?.id\n    || '';\n  return value.toString().trim();\n})() }}",
               "type": "string"
             },
             {
               "id": "redis-session-key",
               "name": "SessionKey",
-              "value": "={{ (() => {\n  const body = $('Webhook').item.json.body || {};\n  const raw = (body.inbox?.channel_type || body.conversation?.channel || body.conversation?.meta?.channel || '').toString().toLowerCase();\n  const phone = body.sender?.phone_number || '';\n  const igsid = body.sender?.identifier || '';\n  const conversationId = body.conversation?.id || body.id || 'unknown';\n\n  if (raw.includes('instagram')) {\n    return igsid ? 'instagram:' + igsid : 'instagram:conversation:' + conversationId;\n  }\n\n  if (raw.includes('whatsapp') || raw.includes('wpp')) {\n    return phone ? 'whatsapp:' + phone : 'whatsapp:conversation:' + conversationId;\n  }\n\n  if (phone) return 'whatsapp:' + phone;\n  if (igsid) return 'instagram:' + igsid;\n  return 'chatwoot:conversation:' + conversationId;\n})() }}",
+              "value": "={{ (() => {\n  const body = $('Webhook').item.json.body || {};\n  const raw = [\n    body.inbox?.channel_type,\n    body.conversation?.channel,\n    body.conversation?.meta?.channel,\n    body.inbox?.name\n  ]\n    .filter(Boolean)\n    .join(' ')\n    .toString()\n    .toLowerCase();\n\n  const phone = (body.sender?.phone_number || body.conversation?.meta?.sender?.phone_number || '').toString().trim();\n  const igsid = (body.sender?.identifier || body.conversation?.meta?.sender?.identifier || body.conversation?.contact_inbox?.source_id || '').toString().trim();\n  const conversationId = body.conversation?.id || body.id || 'unknown';\n\n  if (raw.includes('instagram') || raw.includes('facebook') || (igsid && !phone)) {\n    return igsid ? 'instagram:' + igsid : 'instagram:conversation:' + conversationId;\n  }\n\n  if (raw.includes('whatsapp') || raw.includes('wpp') || raw.includes('twilio')) {\n    return phone ? 'whatsapp:' + phone : 'whatsapp:conversation:' + conversationId;\n  }\n\n  if (phone) return 'whatsapp:' + phone;\n  if (igsid) return 'instagram:' + igsid;\n  return 'chatwoot:conversation:' + conversationId;\n})() }}",
               "type": "string"
             },
             {
               "id": "5d5c64c0-6bce-491f-82fc-0aa5149516bf",
               "name": "ClienteEmail",
-              "value": "={{ $('Webhook').item.json.body.sender?.email }}",
+              "value": "={{ (() => {\n  const body = $('Webhook').item.json.body || {};\n  return (body.sender?.email || body.conversation?.meta?.sender?.email || '').toString().trim();\n})() }}",
               "type": "string"
             },
             {
@@ -312,7 +312,7 @@
           "parameters": [
             {
               "name": "phone",
-              "value": "={{ $('Fluxo_Variaveis').item.json.Canal === 'WHATSAPP' ? $('Fluxo_Variaveis').item.json['ClienteTelefone'] : '+999999999999999' }}"
+              "value": "={{ (() => {\n  const phone = $('Fluxo_Variaveis').item.json['ClienteTelefone'];\n  return phone ? phone : '+999999999999999';\n})() }}"
             },
             {
               "name": "limit",
@@ -382,7 +382,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"name\": \"{{ $('Fluxo_Variaveis').item.json.ClienteNome }}\",\n  \"phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n  \"email\": \"{{ $('Fluxo_Variaveis').item.json.ClienteEmail || ($('Fluxo_Variaveis').item.json.Canal === 'INSTAGRAM' && $('Fluxo_Variaveis').item.json.ClienteIdentificador ? $('Fluxo_Variaveis').item.json.ClienteIdentificador + '@instagram.local' : '') }}\",\n  \"source\": \"{{ $('Fluxo_Variaveis').item.json.Canal }}\",\n  \"stage\": \"LEAD\",\n  \"status\": \"ACTIVE\"\n}",
+        "jsonBody": "={\n  \"name\": \"{{ $('Fluxo_Variaveis').item.json.ClienteNome }}\",\n  \"phone\": \"{{ $('Fluxo_Variaveis').item.json.ClienteTelefone }}\",\n  \"email\": \"{{ (() => {\n    const vars = $('Fluxo_Variaveis').item.json;\n    const directEmail = (vars.ClienteEmail || '').toString().trim();\n    if (directEmail) return directEmail;\n\n    const phone = (vars.ClienteTelefone || '').toString().trim();\n    if (phone) return '';\n\n    const rawId = (vars.ClienteIdentificador || vars['CW-ConversationID'] || 'sem-id').toString().toLowerCase();\n    const safeId = rawId\n      .replace(/[^a-z0-9._-]/g, '-')\n      .replace(/^-+|-+$/g, '')\n      .slice(0, 64) || 'sem-id';\n    const prefix = (vars.Canal || 'chat').toString().toLowerCase();\n    return `${prefix}-${safeId}@chat.local`;\n  })() }}\",\n  \"source\": \"{{ $('Fluxo_Variaveis').item.json.Canal }}\",\n  \"stage\": \"LEAD\",\n  \"status\": \"ACTIVE\"\n}",
         "options": {}
       },
       "id": "96986fd8-3461-4a37-9cdc-391ef5dbbce3",

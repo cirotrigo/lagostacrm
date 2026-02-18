@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { Building2, Mail, Phone, Plus, Calendar, Pencil, Trash2, Globe, MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Contact, Company, ContactSortableColumn } from '@/types';
 import { StageBadge } from './ContactsStageTabs';
@@ -230,11 +231,24 @@ export const ContactsList: React.FC<ContactsListProps> = ({
                                             <button
                                                 type="button"
                                                 onClick={() => openEditModal(contact)}
-                                                className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 text-primary-700 dark:text-primary-200 flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white dark:ring-white/5 hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-dark-card"
+                                                className="relative overflow-hidden w-9 h-9 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 text-primary-700 dark:text-primary-200 flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white dark:ring-white/5 hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-dark-card"
                                                 aria-label={`Editar contato: ${contact.name || 'Sem nome'}`}
                                                 title={contact.name || 'Sem nome'}
                                             >
-                                                {(contact.name || '?').charAt(0)}
+                                                <span>{(contact.name || '?').charAt(0)}</span>
+                                                {contact.avatar ? (
+                                                    <Image
+                                                        src={contact.avatar}
+                                                        alt={contact.name || 'Contato'}
+                                                        fill
+                                                        sizes="36px"
+                                                        className="absolute inset-0 w-full h-full object-cover"
+                                                        unoptimized
+                                                        onError={(e) => {
+                                                            e.currentTarget.style.display = 'none';
+                                                        }}
+                                                    />
+                                                ) : null}
                                             </button>
                                             <div>
                                                 <span className="font-semibold text-slate-900 dark:text-white block">{contact.name}</span>
@@ -423,11 +437,24 @@ export const ContactsList: React.FC<ContactsListProps> = ({
                                                     key={c.id}
                                                     type="button"
                                                     onClick={() => openEditModal(c)}
-                                                    className="h-6 w-6 rounded-full ring-2 ring-white dark:ring-dark-card bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-[10px] font-bold text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-dark-card"
+                                                    className="relative overflow-hidden h-6 w-6 rounded-full ring-2 ring-white dark:ring-dark-card bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-[10px] font-bold text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-dark-card"
                                                     title={c.name || 'Sem nome'}
                                                     aria-label={`Editar contato: ${c.name || 'Sem nome'}`}
                                                 >
-                                                    {(c.name || '?').charAt(0)}
+                                                    <span>{(c.name || '?').charAt(0)}</span>
+                                                    {c.avatar ? (
+                                                        <Image
+                                                            src={c.avatar}
+                                                            alt={c.name || 'Contato'}
+                                                            fill
+                                                            sizes="24px"
+                                                            className="absolute inset-0 w-full h-full object-cover"
+                                                            unoptimized
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = 'none';
+                                                            }}
+                                                        />
+                                                    ) : null}
                                                 </button>
                                             ))}
                                             {(contactsByCompanyId.get(company.id) ?? []).length === 0 && (
