@@ -71,14 +71,29 @@ export async function GET() {
     // Usa status-session que retorna JSON com QR code base64
     const wppUrl = `${WPPCONNECT_HOST}/api/${WPPCONNECT_SESSION_NAME}/status-session`;
 
+    // Debug: log token info
+    console.log('[QR Route] WPPConnect config:', {
+      host: WPPCONNECT_HOST,
+      sessionName: WPPCONNECT_SESSION_NAME,
+      tokenLength: API_AUTH_TOKEN?.length || 0,
+      tokenPrefix: API_AUTH_TOKEN?.substring(0, 10) || null,
+      tokenSuffix: API_AUTH_TOKEN?.slice(-10) || null,
+    });
+
     const response = await fetch(wppUrl, {
       headers: {
         Authorization: `Bearer ${API_AUTH_TOKEN}`,
       },
     });
 
+    console.log('[QR Route] WPPConnect response:', {
+      ok: response.ok,
+      status: response.status,
+    });
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.log('[QR Route] WPPConnect error:', errorData);
       return json(
         { error: 'Failed to get QR code', details: errorData },
         response.status

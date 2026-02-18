@@ -52,17 +52,28 @@ export async function GET() {
     return json({ error: 'Unauthorized' }, 401);
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('organization_id')
     .eq('id', user.id)
     .single();
 
+  console.log('[Session Route] Profile query:', {
+    hasProfile: !!profile,
+    organizationId: profile?.organization_id?.substring(0, 8) || null,
+    profileError: profileError?.message || null,
+  });
+
   if (!profile?.organization_id) {
-    return json({ error: 'Profile not found' }, 404);
+    return json({ error: 'Profile not found', debug: profileError?.message }, 404);
   }
 
   // Busca sessão no Supabase
+  console.log('[Session Route] Querying whatsapp_sessions for:', {
+    organizationId: profile.organization_id,
+    sessionName: WPPCONNECT_SESSION_NAME,
+  });
+
   const { data: session, error: sessionError } = await supabase
     .from('whatsapp_sessions')
     .select('*')
@@ -70,27 +81,50 @@ export async function GET() {
     .eq('session_name', WPPCONNECT_SESSION_NAME)
     .maybeSingle();
 
+  console.log('[Session Route] whatsapp_sessions result:', {
+    hasSession: !!session,
+    sessionError: sessionError?.message || null,
+  });
+
   if (sessionError) {
     return json({ error: sessionError.message }, 500);
   }
 
   // Se WPPConnect está configurado, busca status em tempo real
   let wppStatus = null;
+
+  // Debug: log token (masked)
+  console.log('[Session Route] WPPConnect config:', {
+    host: WPPCONNECT_HOST,
+    sessionName: WPPCONNECT_SESSION_NAME,
+    tokenLength: API_AUTH_TOKEN?.length || 0,
+    tokenPrefix: API_AUTH_TOKEN?.substring(0, 10) || null,
+  });
+
   if (WPPCONNECT_HOST && API_AUTH_TOKEN) {
     try {
-      const response = await fetch(
-        `${WPPCONNECT_HOST}/api/${WPPCONNECT_SESSION_NAME}/status-session`,
-        {
-          headers: {
-            Authorization: `Bearer ${API_AUTH_TOKEN}`,
-          },
-        }
-      );
+      const wppUrl = `${WPPCONNECT_HOST}/api/${WPPCONNECT_SESSION_NAME}/status-session`;
+      console.log('[Session Route] Fetching WPPConnect:', wppUrl);
+
+      const response = await fetch(wppUrl, {
+        headers: {
+          Authorization: `Bearer ${API_AUTH_TOKEN}`,
+        },
+      });
+
+      console.log('[Session Route] WPPConnect response:', {
+        ok: response.ok,
+        status: response.status,
+      });
+
       if (response.ok) {
         wppStatus = await response.json();
+      } else {
+        const errorText = await response.text();
+        console.log('[Session Route] WPPConnect error:', errorText.substring(0, 200));
       }
-    } catch {
-      // WPPConnect indisponível, usa apenas dados do Supabase
+    } catch (wppError) {
+      console.log('[Session Route] WPPConnect fetch error:', wppError instanceof Error ? wppError.message : 'Unknown');
     }
   }
 
