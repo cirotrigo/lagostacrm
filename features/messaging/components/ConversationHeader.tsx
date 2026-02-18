@@ -3,16 +3,15 @@
 import React from 'react';
 import {
   User,
-  Phone,
   Bot,
   MoreVertical,
   CheckCircle,
   Clock,
   Archive,
-  XCircle,
   ExternalLink,
 } from 'lucide-react';
 import type { WhatsAppConversationView, WhatsAppConversationStatus } from '../types/messaging';
+import { MessagingSourceBadge, normalizeMessagingSource } from '@/components/ui/MessagingSourceBadge';
 
 interface ConversationHeaderProps {
   conversation: WhatsAppConversationView;
@@ -34,7 +33,12 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
     conversation.group_name ||
     conversation.remote_jid.replace('@c.us', '').replace('@s.whatsapp.net', '');
 
-  const phoneNumber = conversation.contact_phone || conversation.remote_jid.replace('@c.us', '').replace('@s.whatsapp.net', '');
+  const normalizedSource = normalizeMessagingSource(conversation.messaging_source);
+  const remoteId = conversation.remote_jid.replace('@c.us', '').replace('@s.whatsapp.net', '');
+  const contactHandle =
+    normalizedSource === 'INSTAGRAM'
+      ? (remoteId || 'Sem identificador')
+      : (conversation.contact_phone || remoteId || 'Sem telefone');
 
   const statusOptions: { value: WhatsAppConversationStatus; label: string; icon: React.ElementType }[] = [
     { value: 'open', label: 'Aberta', icon: CheckCircle },
@@ -70,8 +74,8 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
             )}
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <Phone className="w-3 h-3" />
-            <span>+{phoneNumber}</span>
+            <MessagingSourceBadge source={conversation.messaging_source} size="xs" />
+            <span>{contactHandle}</span>
             {conversation.deal_title && (
               <>
                 <span className="text-slate-300 dark:text-slate-600">•</span>

@@ -88,6 +88,19 @@ export enum ContactStage {
   CUSTOMER = 'CUSTOMER', // Cliente fechado
 }
 
+/**
+ * Origem do contato no CRM.
+ *
+ * Inclui origens comerciais tradicionais e canais de mensageria.
+ */
+export type ContactSource =
+  | 'WEBSITE'
+  | 'LINKEDIN'
+  | 'REFERRAL'
+  | 'MANUAL'
+  | 'WHATSAPP'
+  | 'INSTAGRAM';
+
 // @deprecated - Use Contact com stage: ContactStage.LEAD
 // Mantido apenas para compatibilidade de migração
 export interface Lead {
@@ -96,7 +109,7 @@ export interface Lead {
   email: string;
   companyName: string; // Texto solto, ainda não é uma Company
   role?: string;
-  source: 'WEBSITE' | 'LINKEDIN' | 'REFERRAL' | 'MANUAL';
+  source: ContactSource;
   status: 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'DISQUALIFIED';
   createdAt: string;
   notes?: string;
@@ -162,7 +175,7 @@ export interface Contact {
   birthDate?: string; // New field for Agentic AI tasks
   status: 'ACTIVE' | 'INACTIVE' | 'CHURNED';
   stage: string; // ID do LifecycleStage (antes era ContactStage enum)
-  source?: 'WEBSITE' | 'LINKEDIN' | 'REFERRAL' | 'MANUAL'; // Origem do contato
+  source?: ContactSource; // Origem do contato
   notes?: string; // Anotações gerais
   lastPurchaseDate?: string;
   totalValue?: number; // LTV
@@ -249,6 +262,7 @@ export interface DealView extends Deal {
   contactName: string;
   contactEmail: string;
   contactAvatar?: string; // Contact avatar URL from Chatwoot sync
+  contactSource?: ContactSource;
   /** Nome/label do estágio atual (resolvido a partir do status UUID) */
   stageLabel: string;
 
@@ -573,6 +587,7 @@ export interface WhatsAppConversationView extends WhatsAppConversation {
   deal_stage: string | null;
   session_name: string;
   session_phone: string | null;
+  messaging_source?: MessagingSource | null;
 }
 
 /**
@@ -720,6 +735,7 @@ export interface SendMessagePayload {
 export interface ConversationFilters {
   status?: WhatsAppConversationStatus | 'all';
   assigned_to?: string | 'unassigned' | 'all';
+  source?: MessagingSource | 'all';
   search?: string;
   has_unread?: boolean;
 }

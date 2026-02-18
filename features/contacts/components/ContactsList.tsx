@@ -2,6 +2,7 @@ import React from 'react';
 import { Building2, Mail, Phone, Plus, Calendar, Pencil, Trash2, Globe, MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Contact, Company, ContactSortableColumn } from '@/types';
 import { StageBadge } from './ContactsStageTabs';
+import { MessagingSourceBadge } from '@/components/ui/MessagingSourceBadge';
 
 // Performance: reuse Intl formatters (they are relatively expensive to instantiate).
 const PT_BR_DATE_FORMATTER = new Intl.DateTimeFormat('pt-BR');
@@ -237,6 +238,7 @@ export const ContactsList: React.FC<ContactsListProps> = ({
                                             </button>
                                             <div>
                                                 <span className="font-semibold text-slate-900 dark:text-white block">{contact.name}</span>
+                                                <MessagingSourceBadge source={contact.source} size="xs" className="mt-1" />
                                             </div>
                                         </div>
                                     </td>

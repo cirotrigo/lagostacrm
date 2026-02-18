@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Filter, Loader2, MessageSquare } from 'lucide-react';
+import { Search, Loader2, MessageSquare } from 'lucide-react';
 import { ConversationItem } from './ConversationItem';
 import type { WhatsAppConversationView, ConversationFilters } from '../types/messaging';
 
@@ -76,6 +76,22 @@ export const ConversationList: React.FC<ConversationListProps> = ({
               }`}
             >
               {status === 'all' ? 'Todas' : status === 'open' ? 'Abertas' : status === 'pending' ? 'Pendentes' : 'Resolvidas'}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 mt-2">
+          {(['all', 'WHATSAPP', 'INSTAGRAM'] as const).map((source) => (
+            <button
+              key={source}
+              onClick={() => onFilterChange({ source: source === 'all' ? undefined : source })}
+              className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                (filters.source || 'all') === source
+                  ? 'bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900'
+                  : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10'
+              }`}
+            >
+              {source === 'all' ? 'Todos canais' : source === 'WHATSAPP' ? 'WhatsApp' : 'Instagram'}
             </button>
           ))}
         </div>

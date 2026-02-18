@@ -3,8 +3,9 @@
 import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { User, Bot, Check, CheckCheck } from 'lucide-react';
+import { User, Bot, CheckCheck } from 'lucide-react';
 import type { WhatsAppConversationView } from '../types/messaging';
+import { MessagingSourceBadge } from '@/components/ui/MessagingSourceBadge';
 
 interface ConversationItemProps {
   conversation: WhatsAppConversationView;
@@ -21,6 +22,10 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
     conversation.contact_name ||
     conversation.group_name ||
     conversation.remote_jid.replace('@c.us', '').replace('@s.whatsapp.net', '');
+
+  const normalizedRemoteId = conversation.remote_jid
+    .replace('@c.us', '')
+    .replace('@s.whatsapp.net', '');
 
   const timeAgo = conversation.last_message_at
     ? formatDistanceToNow(new Date(conversation.last_message_at), {
@@ -70,9 +75,17 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <span className="font-medium text-slate-900 dark:text-white truncate">
-              {displayName}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-medium text-slate-900 dark:text-white truncate">
+                {displayName}
+              </span>
+              <MessagingSourceBadge
+                source={conversation.messaging_source}
+                iconOnly
+                size="xs"
+                className="flex-shrink-0"
+              />
+            </div>
             <span className="text-xs text-slate-500 dark:text-slate-400 flex-shrink-0">
               {timeAgo}
             </span>
@@ -91,7 +104,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
 
             {/* Preview */}
             <p className="text-sm text-slate-600 dark:text-slate-400 truncate flex-1">
-              {conversation.last_message_preview || 'Sem mensagens'}
+              {conversation.last_message_preview || normalizedRemoteId || 'Sem mensagens'}
             </p>
           </div>
 

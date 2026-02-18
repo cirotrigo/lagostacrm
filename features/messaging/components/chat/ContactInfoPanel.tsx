@@ -14,6 +14,7 @@ import { AssignmentDropdown } from './AssignmentDropdown';
 import { PrivateNoteInput } from './PrivateNoteInput';
 import { DealStageSelector } from './DealStageSelector';
 import type { WhatsAppConversationView, WhatsAppConversationStatus } from '@/types/types';
+import { MessagingSourceBadge, normalizeMessagingSource } from '@/components/ui/MessagingSourceBadge';
 
 interface ContactInfoPanelProps {
     conversation: WhatsAppConversationView;
@@ -55,6 +56,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
     const status = statusConfig[conversation.status] || statusConfig.open;
     const conversationId = parseInt(conversation.id, 10);
     const [avatarError, setAvatarError] = useState(false);
+    const source = normalizeMessagingSource(conversation.messaging_source);
 
     // Format currency
     const formatCurrency = (value: number | null) => {
@@ -103,6 +105,9 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
                         <h4 className="font-semibold text-lg text-slate-900 dark:text-white">
                             {conversation.contact_name || 'Contato desconhecido'}
                         </h4>
+                        <div className="mt-2">
+                            <MessagingSourceBadge source={conversation.messaging_source} />
+                        </div>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${status.bg} ${status.color}`}>
                             {status.label}
                         </span>
@@ -120,6 +125,15 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
                             <Phone className="w-4 h-4 text-slate-400" />
                             <span className="text-slate-700 dark:text-slate-300">
                                 {conversation.contact_phone}
+                            </span>
+                        </div>
+                    )}
+
+                    {source === 'INSTAGRAM' && conversation.remote_jid && (
+                        <div className="flex items-center gap-3 text-sm">
+                            <User className="w-4 h-4 text-slate-400" />
+                            <span className="text-slate-700 dark:text-slate-300 break-all">
+                                {conversation.remote_jid}
                             </span>
                         </div>
                     )}

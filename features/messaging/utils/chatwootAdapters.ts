@@ -18,6 +18,7 @@ import type {
     MessageDirection,
     WhatsAppMediaType,
     WhatsAppMessageStatus,
+    MessagingSource,
 } from '@/types/types';
 
 /**
@@ -80,6 +81,41 @@ function mapMessageStatus(status?: string): WhatsAppMessageStatus {
     return statusMap[status || ''] || 'sent';
 }
 
+function getStringValue(value: unknown): string | null {
+    return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function inferMessagingSource(conversation: ChatwootConversation): MessagingSource {
+    const additional = conversation.additional_attributes || {};
+    const custom = conversation.custom_attributes || {};
+
+    const channelHints = [
+        getStringValue(conversation.meta?.channel),
+        getStringValue((additional as Record<string, unknown>).channel_type),
+        getStringValue((additional as Record<string, unknown>).channel),
+        getStringValue((custom as Record<string, unknown>).channel_type),
+        getStringValue((custom as Record<string, unknown>).channel),
+    ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+    if (channelHints.includes('instagram')) {
+        return 'INSTAGRAM';
+    }
+
+    if (channelHints.includes('whatsapp') || channelHints.includes('wpp')) {
+        return 'WHATSAPP';
+    }
+
+    const contact = conversation.meta?.sender || conversation.contact;
+    if (contact?.identifier && !contact?.phone_number) {
+        return 'INSTAGRAM';
+    }
+
+    return 'WHATSAPP';
+}
+
 /**
  * Converts a Chatwoot conversation to WhatsAppConversationView format
  */
@@ -88,6 +124,10 @@ export function adaptChatwootConversation(
 ): WhatsAppConversationView {
     const contact = conversation.meta?.sender || conversation.contact;
     const lastMessage = conversation.messages?.[0];
+    const messagingSource = inferMessagingSource(conversation);
+    const remoteId = messagingSource === 'INSTAGRAM'
+        ? (contact?.identifier || contact?.phone_number || '')
+        : (contact?.phone_number || contact?.identifier || '');
 
     return {
         // Base fields
@@ -96,7 +136,7 @@ export function adaptChatwootConversation(
         session_id: conversation.inbox_id.toString(),
         contact_id: contact?.id?.toString() || null,
         deal_id: null, // Will be filled from conversation_links if available
-        remote_jid: contact?.phone_number || contact?.identifier || '',
+        remote_jid: remoteId,
         is_group: false, // Chatwoot doesn't expose this directly in conversations
         group_name: null,
         status: mapConversationStatus(conversation.status),
@@ -124,6 +164,7 @@ export function adaptChatwootConversation(
         deal_stage: null,
         session_name: `Inbox ${conversation.inbox_id}`, // Could be enhanced with inbox lookup
         session_phone: null,
+        messaging_source: messagingSource,
     };
 }
 

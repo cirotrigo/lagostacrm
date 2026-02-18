@@ -4,6 +4,7 @@ import { DealView } from '@/types';
 import { Building2, Hourglass, Trophy, XCircle } from 'lucide-react';
 import { ActivityStatusIcon } from './ActivityStatusIcon';
 import { priorityAriaLabelPtBr } from '@/lib/utils/priority';
+import { MessagingSourceBadge } from '@/components/ui/MessagingSourceBadge';
 
 interface DealCardProps {
   deal: DealView;
@@ -248,6 +249,7 @@ const DealCardComponent: React.FC<DealCardProps> = ({
           </div>
         )}
         <span className="truncate">{deal.contactName}</span>
+        <MessagingSourceBadge source={deal.contactSource} iconOnly size="xs" />
         <span className="text-slate-300 dark:text-slate-600">·</span>
         <Building2 size={10} aria-hidden="true" className="flex-shrink-0" />
         <span className="truncate">{deal.companyName}</span>

@@ -63,6 +63,7 @@ export function useConversations(options: UseConversationsOptions = {}): UseQuer
                     (conv) =>
                         conv.contact_name?.toLowerCase().includes(searchLower) ||
                         conv.contact_phone?.toLowerCase().includes(searchLower) ||
+                        conv.remote_jid?.toLowerCase().includes(searchLower) ||
                         conv.last_message_preview?.toLowerCase().includes(searchLower)
                 );
             }
@@ -71,6 +72,12 @@ export function useConversations(options: UseConversationsOptions = {}): UseQuer
             if (filters.has_unread) {
                 filteredConversations = filteredConversations.filter(
                     (conv) => conv.unread_count > 0
+                );
+            }
+
+            if (filters.source && filters.source !== 'all') {
+                filteredConversations = filteredConversations.filter(
+                    (conv) => conv.messaging_source === filters.source
                 );
             }
 
