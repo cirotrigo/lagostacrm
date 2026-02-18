@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createChatwootClientForOrg } from '@/lib/chatwoot';
+import { createChatwootClientForOrg, getChannelConfig } from '@/lib/chatwoot';
+import { normalizeChatwootAvatarUrl } from '@/lib/chatwoot/avatarUrl';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -39,6 +40,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const organizationId = profile.organization_id;
+        const channelConfig = await getChannelConfig(supabase, organizationId);
+        const chatwootBaseUrl = channelConfig?.chatwootBaseUrl ?? null;
 
         // Parse body
         const body = await request.json().catch(() => ({}));
@@ -89,7 +92,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         // Fetch Chatwoot contact
         const chatwootContact = await chatwoot.getContact(conversationLink.chatwoot_contact_id);
 
-        if (!chatwootContact?.thumbnail) {
+        const normalizedAvatar = normalizeChatwootAvatarUrl(
+            chatwootContact?.thumbnail || null,
+            chatwootBaseUrl
+        );
+
+        if (!normalizedAvatar) {
             return NextResponse.json({
                 error: 'Chatwoot contact has no thumbnail',
                 synced: false,
@@ -100,7 +108,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const { error: updateError } = await supabase
             .from('contacts')
             .update({
-                avatar: chatwootContact.thumbnail,
+                avatar: normalizedAvatar,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', contactId);
@@ -115,7 +123,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({
             message: 'Avatar synced successfully',
-            avatar: chatwootContact.thumbnail,
+            avatar: normalizedAvatar,
             synced: true,
         });
     } catch (error) {

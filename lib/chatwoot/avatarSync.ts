@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ChatwootClient } from './client';
 import type { ChatwootContact } from './types';
+import { normalizeChatwootAvatarUrl, needsChatwootAvatarRewrite } from './avatarUrl';
 
 const DEFAULT_BATCH_SIZE = 100;
 const PAGE_SIZE = 1000;
@@ -27,6 +28,7 @@ interface ContactIdentityRow {
 }
 
 interface LinkAvatarRow {
+    id: string;
     contact_id: string | null;
     contact_avatar_url: string | null;
 }
@@ -56,6 +58,8 @@ export interface AvatarSyncOptions {
 
 export interface AvatarSyncOrganizationStats {
     organizationId: string;
+    normalizedContacts: number;
+    normalizedLinks: number;
     missingAtStart: number;
     fromLinksUpdated: number;
     searched: number;
@@ -68,6 +72,8 @@ export interface AvatarSyncOrganizationStats {
 }
 
 export interface AvatarSyncTotals {
+    normalizedContacts: number;
+    normalizedLinks: number;
     missingAtStart: number;
     fromLinksUpdated: number;
     searched: number;
@@ -148,6 +154,8 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 
 function createEmptyTotals(): AvatarSyncTotals {
     return {
+        normalizedContacts: 0,
+        normalizedLinks: 0,
         missingAtStart: 0,
         fromLinksUpdated: 0,
         searched: 0,
@@ -223,7 +231,7 @@ async function getConversationLinksWithAvatar(
     while (true) {
         const { data, error } = await supabase
             .from('messaging_conversation_links')
-            .select('contact_id,contact_avatar_url')
+            .select('id,contact_id,contact_avatar_url')
             .eq('organization_id', organizationId)
             .not('contact_id', 'is', null)
             .not('contact_avatar_url', 'is', null)
@@ -244,6 +252,111 @@ async function getConversationLinksWithAvatar(
     }
 
     return rows;
+}
+
+async function getContactsWithAvatar(
+    supabase: SupabaseClient,
+    organizationId: string
+): Promise<Array<{ id: string; avatar: string }>> {
+    const rows: Array<{ id: string; avatar: string }> = [];
+    let from = 0;
+
+    while (true) {
+        const { data, error } = await supabase
+            .from('contacts')
+            .select('id,avatar')
+            .eq('organization_id', organizationId)
+            .not('avatar', 'is', null)
+            .neq('avatar', '')
+            .range(from, from + PAGE_SIZE - 1);
+
+        if (error) {
+            throw new Error(`Failed loading contacts with avatar: ${error.message}`);
+        }
+
+        const page = (data || []) as Array<{ id: string; avatar: string }>;
+        if (!page.length) break;
+
+        rows.push(...page);
+
+        if (page.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+    }
+
+    return rows;
+}
+
+async function normalizeExistingContactAvatars(
+    supabase: SupabaseClient,
+    config: OrganizationChatwootConfig,
+    dryRun: boolean
+): Promise<number> {
+    const contacts = await getContactsWithAvatar(supabase, config.organizationId);
+    if (!contacts.length) return 0;
+
+    let normalizedCount = 0;
+
+    for (const contact of contacts) {
+        if (!needsChatwootAvatarRewrite(contact.avatar, config.chatwootBaseUrl)) {
+            continue;
+        }
+
+        const normalized = normalizeChatwootAvatarUrl(contact.avatar, config.chatwootBaseUrl);
+        if (!normalized || normalized === contact.avatar) continue;
+
+        if (dryRun) {
+            normalizedCount += 1;
+            continue;
+        }
+
+        const { error } = await supabase
+            .from('contacts')
+            .update({ avatar: normalized, updated_at: new Date().toISOString() })
+            .eq('organization_id', config.organizationId)
+            .eq('id', contact.id);
+
+        if (!error) {
+            normalizedCount += 1;
+        }
+    }
+
+    return normalizedCount;
+}
+
+async function normalizeConversationLinkAvatars(
+    supabase: SupabaseClient,
+    config: OrganizationChatwootConfig,
+    dryRun: boolean
+): Promise<number> {
+    const links = await getConversationLinksWithAvatar(supabase, config.organizationId);
+    if (!links.length) return 0;
+
+    let normalizedCount = 0;
+    for (const link of links) {
+        const original = (link.contact_avatar_url || '').trim();
+        if (!original) continue;
+        if (!needsChatwootAvatarRewrite(original, config.chatwootBaseUrl)) continue;
+
+        const normalized = normalizeChatwootAvatarUrl(original, config.chatwootBaseUrl);
+        if (!normalized || normalized === original) continue;
+
+        if (dryRun) {
+            normalizedCount += 1;
+            continue;
+        }
+
+        const { error } = await supabase
+            .from('messaging_conversation_links')
+            .update({ contact_avatar_url: normalized, updated_at: new Date().toISOString() })
+            .eq('organization_id', config.organizationId)
+            .eq('id', link.id);
+
+        if (!error) {
+            normalizedCount += 1;
+        }
+    }
+
+    return normalizedCount;
 }
 
 async function getContactsWithoutAvatar(
@@ -281,7 +394,8 @@ async function syncFromConversationLinks(
     supabase: SupabaseClient,
     organizationId: string,
     dryRun: boolean,
-    batchSize: number
+    batchSize: number,
+    chatwootBaseUrl: string
 ): Promise<number> {
     const links = await getConversationLinksWithAvatar(supabase, organizationId);
     if (!links.length) return 0;
@@ -290,7 +404,10 @@ async function syncFromConversationLinks(
 
     for (const row of links) {
         const contactId = (row.contact_id || '').trim();
-        const avatar = (row.contact_avatar_url || '').trim();
+        const avatar = normalizeChatwootAvatarUrl(
+            row.contact_avatar_url || null,
+            chatwootBaseUrl
+        ) || '';
 
         if (!contactId || !avatar) continue;
         if (!avatarByContact.has(contactId)) {
@@ -453,7 +570,11 @@ async function syncFromChatwootSearch(
         result.matched += 1;
 
         const thumbnail = (match.thumbnail || '').trim();
-        if (!thumbnail) {
+        const normalizedThumbnail = normalizeChatwootAvatarUrl(
+            thumbnail,
+            config.chatwootBaseUrl
+        );
+        if (!normalizedThumbnail) {
             result.noThumbnail += 1;
             if (verbose) {
                 console.log(`[avatar-sync] Match without thumbnail for contact ${contact.id}`);
@@ -468,7 +589,7 @@ async function syncFromChatwootSearch(
 
         const { error: updateError } = await supabase
             .from('contacts')
-            .update({ avatar: thumbnail, updated_at: new Date().toISOString() })
+            .update({ avatar: normalizedThumbnail, updated_at: new Date().toISOString() })
             .eq('organization_id', config.organizationId)
             .eq('id', contact.id)
             .or('avatar.is.null,avatar.eq.');
@@ -499,6 +620,8 @@ export async function syncChatwootContactAvatars(
     for (const config of configs) {
         const stats: AvatarSyncOrganizationStats = {
             organizationId: config.organizationId,
+            normalizedContacts: 0,
+            normalizedLinks: 0,
             missingAtStart: 0,
             fromLinksUpdated: 0,
             searched: 0,
@@ -511,6 +634,17 @@ export async function syncChatwootContactAvatars(
         };
 
         try {
+            stats.normalizedContacts = await normalizeExistingContactAvatars(
+                supabase,
+                config,
+                dryRun
+            );
+            stats.normalizedLinks = await normalizeConversationLinkAvatars(
+                supabase,
+                config,
+                dryRun
+            );
+
             stats.missingAtStart = await countMissingAvatars(supabase, config.organizationId);
 
             if (stats.missingAtStart > 0) {
@@ -518,7 +652,8 @@ export async function syncChatwootContactAvatars(
                     supabase,
                     config.organizationId,
                     dryRun,
-                    batchSize
+                    batchSize,
+                    config.chatwootBaseUrl
                 );
 
                 const chatwootStats = await syncFromChatwootSearch(
@@ -559,6 +694,8 @@ export async function syncChatwootContactAvatars(
     }
 
     const totals = byOrg.reduce<AvatarSyncTotals>((acc, item) => {
+        acc.normalizedContacts += item.normalizedContacts;
+        acc.normalizedLinks += item.normalizedLinks;
         acc.missingAtStart += item.missingAtStart;
         acc.fromLinksUpdated += item.fromLinksUpdated;
         acc.searched += item.searched;

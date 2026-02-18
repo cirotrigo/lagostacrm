@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createStaticAdminClient } from '@/lib/supabase/staticAdminClient';
-import { createChatwootClientForOrg } from '@/lib/chatwoot';
+import { createChatwootClientForOrg, getChannelConfig } from '@/lib/chatwoot';
+import { normalizeChatwootAvatarUrl, needsChatwootAvatarRewrite } from '@/lib/chatwoot/avatarUrl';
 import type { ConversationLink } from '@/lib/chatwoot';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -205,6 +206,21 @@ export async function POST(request: NextRequest) {
         // Helper to convert empty strings to null (n8n sends "" for undefined)
         const emptyToNull = (val: unknown) => (val === '' || val === undefined) ? null : val;
 
+        // Resolve preferred/public Chatwoot base URL for avatar normalization.
+        const providedChatwootUrl = emptyToNull(body.chatwoot_url) as string | null;
+        let chatwootBaseUrl: string | null = null;
+        if (providedChatwootUrl) {
+            try {
+                chatwootBaseUrl = new URL(providedChatwootUrl).origin;
+            } catch {
+                chatwootBaseUrl = null;
+            }
+        }
+        if (!chatwootBaseUrl) {
+            const channelConfig = await getChannelConfig(supabase, organizationId);
+            chatwootBaseUrl = channelConfig?.chatwootBaseUrl ?? null;
+        }
+
         // Log the data being inserted
         const insertData = {
             organization_id: organizationId,
@@ -213,8 +229,11 @@ export async function POST(request: NextRequest) {
             chatwoot_inbox_id: emptyToNull(body.chatwoot_inbox_id),
             contact_id: emptyToNull(body.contact_id),
             deal_id: emptyToNull(body.deal_id),
-            chatwoot_url: emptyToNull(body.chatwoot_url),
-            contact_avatar_url: emptyToNull(body.contact_avatar_url),
+            chatwoot_url: providedChatwootUrl,
+            contact_avatar_url: normalizeChatwootAvatarUrl(
+                emptyToNull(body.contact_avatar_url) as string | null,
+                chatwootBaseUrl
+            ),
             status: body.status || 'open',
         };
         console.log('[POST] Upserting conversation link:', JSON.stringify(insertData, null, 2));
@@ -239,7 +258,7 @@ export async function POST(request: NextRequest) {
         // Sync contact avatar from Chatwoot:
         // 1) Use avatar URL from payload if present
         // 2) Fallback: fetch Chatwoot contact thumbnail by chatwoot_contact_id
-        let contactAvatarUrl = emptyToNull(body.contact_avatar_url) as string | null;
+        let contactAvatarUrl = insertData.contact_avatar_url as string | null;
         const contactId = emptyToNull(body.contact_id) as string | null;
         const chatwootContactId = emptyToNull(body.chatwoot_contact_id) as number | null;
 
@@ -247,14 +266,17 @@ export async function POST(request: NextRequest) {
             try {
                 const chatwoot = await createChatwootClientForOrg(supabase, organizationId);
                 const chatwootContact = await chatwoot.getContact(Number(chatwootContactId));
-                contactAvatarUrl = chatwootContact?.thumbnail || null;
+                contactAvatarUrl = normalizeChatwootAvatarUrl(
+                    chatwootContact?.thumbnail || null,
+                    chatwootBaseUrl
+                );
             } catch (avatarFetchError) {
                 console.error('[POST] Failed to fetch Chatwoot contact thumbnail:', avatarFetchError);
             }
         }
 
-        // Persist fallback avatar on conversation link row when payload omitted it
-        if (contactAvatarUrl && !insertData.contact_avatar_url) {
+        // Persist normalized/fallback avatar on conversation link row when needed.
+        if (contactAvatarUrl && insertData.contact_avatar_url !== contactAvatarUrl) {
             await supabase
                 .from('messaging_conversation_links')
                 .update({ contact_avatar_url: contactAvatarUrl, updated_at: new Date().toISOString() })
@@ -265,15 +287,20 @@ export async function POST(request: NextRequest) {
         if (contactId && contactAvatarUrl) {
             console.log('[POST] Syncing contact avatar:', { contactId, avatarUrl: contactAvatarUrl });
 
-            // Check if contact already has an avatar (don't overwrite if already set)
+            // Check if contact already has an avatar.
             const { data: existingContact } = await supabase
                 .from('contacts')
                 .select('avatar')
                 .eq('id', contactId)
                 .single();
 
-            // Only update if contact exists and doesn't have an avatar yet
-            if (existingContact && !existingContact.avatar) {
+            const existingAvatar = (existingContact?.avatar || '').trim();
+            const shouldUpdate =
+                !existingAvatar ||
+                needsChatwootAvatarRewrite(existingAvatar, chatwootBaseUrl);
+
+            // Update when empty or when we need to fix old internal Chatwoot hosts.
+            if (existingContact && shouldUpdate) {
                 const { error: avatarError } = await supabase
                     .from('contacts')
                     .update({ avatar: contactAvatarUrl, updated_at: new Date().toISOString() })

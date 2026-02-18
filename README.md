@@ -264,6 +264,39 @@ Se tudo funcionar, sua instalação está completa! 🎉
 
 ---
 
+### Passo 5: Configurar Rotinas e Integrações (Novo Cliente)
+
+Após a instalação base, execute este checklist para produção:
+
+1. **Configurar variável de cron na Vercel**
+   - Em `Settings → Environment Variables`, adicione:
+   - `CRON_SECRET` = token forte (ex: `openssl rand -hex 32`)
+   - Faça um novo deploy após salvar.
+
+2. **Confirmar job agendado**
+   - O projeto já inclui cron em `vercel.json`:
+   - `GET /api/cron/sync-chatwoot-avatars`
+   - `0 */8 * * *` (3 vezes ao dia, UTC)
+
+3. **Testar cron manualmente (dry-run)**
+   - Execute:
+   ```bash
+   curl -sS -H "Authorization: Bearer <CRON_SECRET>" \
+     "https://SEU-PROJETO.vercel.app/api/cron/sync-chatwoot-avatars?dry_run=true"
+   ```
+   - Esperado: HTTP 200 com JSON de `totals` e `byOrg`.
+
+4. **Configurar n8n (quando aplicável)**
+   - Defina `N8N_WEBHOOK_SECRET` na Vercel.
+   - Envie headers nas chamadas n8n:
+   - `Authorization: Bearer <N8N_WEBHOOK_SECRET>`
+   - `X-Organization-Id: <organization_id>`
+
+5. **Desativar instalador após setup**
+   - Mantenha `INSTALLER_ENABLED=false` em produção.
+
+---
+
 ## 🎬 Primeiros Passos
 
 ### 1. Fazer login
@@ -506,6 +539,7 @@ Veja o guia completo em: [docs/webhooks.md](./docs/webhooks.md)
 ### Documentação
 
 - **[Guia de Webhooks](./docs/webhooks.md)**: Como configurar automações
+- **[Checklist Vercel (Novo Cliente)](./docs/vercel-new-client-checklist.md)**: Runbook de instalação e go-live
 - **[Permissões](./docs/security/RBAC.md)**: Entenda admin vs vendedor
 - **[API Pública](./docs/public-api.md)**: Documentação para desenvolvedores
 

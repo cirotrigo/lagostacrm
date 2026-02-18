@@ -8,6 +8,7 @@ import {
     linkContactToIdentity,
     type MessagingSource,
 } from '@/lib/messaging';
+import { normalizeChatwootAvatarUrl, needsChatwootAvatarRewrite } from './avatarUrl';
 
 /**
  * Database row type for messaging_conversation_links
@@ -133,7 +134,12 @@ export async function processWebhookEvent(
         case 'contact_created':
         case 'contact_updated':
             if (contact) {
-                await handleContactSync(supabase, organizationId, contact);
+                await handleContactSync(
+                    supabase,
+                    organizationId,
+                    contact,
+                    chatwootBaseUrl
+                );
             }
             break;
 
@@ -162,6 +168,10 @@ async function handleConversationCreated(
 
     const chatwootUrl = `${chatwootBaseUrl}/app/accounts/${conversation.account_id}/conversations/${conversation.id}`;
     const sender = conversation.meta?.sender;
+    const normalizedSenderThumbnail = normalizeChatwootAvatarUrl(
+        sender?.thumbnail ?? null,
+        chatwootBaseUrl
+    );
 
     // Determine channel source from webhook inbox or conversation metadata
     const channelType = inboxChannelType ?? conversation.meta?.channel ?? '';
@@ -188,7 +198,7 @@ async function handleConversationCreated(
             phone: sender?.phone_number ?? null,
             email: sender?.email ?? null,
             contactName: sender?.name ?? null,
-            contactAvatar: sender?.thumbnail ?? null,
+            contactAvatar: normalizedSenderThumbnail,
             autoCreate: true, // Create contact if not found
             createIdentity: true, // Create identity mapping if resolved via fallback
         });
@@ -250,7 +260,7 @@ async function handleConversationCreated(
         inbox_name: null, // Would need inbox lookup
         contact_name: sender?.name || null,
         contact_phone: sender?.phone_number || null,
-        contact_avatar_url: sender?.thumbnail || null,
+        contact_avatar_url: normalizedSenderThumbnail,
     }, {
         onConflict: 'organization_id,chatwoot_conversation_id',
     });
@@ -403,20 +413,42 @@ async function handleMessageCreated(
 async function handleContactSync(
     supabase: SupabaseClient,
     organizationId: string,
-    contact: ChatwootWebhookPayload['contact']
+    contact: ChatwootWebhookPayload['contact'],
+    chatwootBaseUrl: string
 ): Promise<void> {
     if (!contact?.phone_number) return;
 
     // Find CRM contact by phone (with organization isolation)
     const { data: crmContact } = await supabase
         .from('contacts')
-        .select('id')
+        .select('id,avatar')
         .eq('organization_id', organizationId)
         .eq('phone', contact.phone_number)
         .is('deleted_at', null)
         .maybeSingle();
 
     if (!crmContact) return;
+
+    const normalizedAvatar = normalizeChatwootAvatarUrl(
+        contact.thumbnail ?? null,
+        chatwootBaseUrl
+    );
+    const existingAvatar = (crmContact.avatar || '').trim();
+    const shouldUpdateAvatar = Boolean(
+        normalizedAvatar &&
+        (!existingAvatar || needsChatwootAvatarRewrite(existingAvatar, chatwootBaseUrl))
+    );
+
+    if (shouldUpdateAvatar) {
+        await supabase
+            .from('contacts')
+            .update({
+                avatar: normalizedAvatar,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('organization_id', organizationId)
+            .eq('id', crmContact.id);
+    }
 
     // Create WhatsApp identity link if phone is available
     // This ensures future lookups can use the identity table
@@ -428,9 +460,14 @@ async function handleContactSync(
     });
 
     // Update all conversation links for this Chatwoot contact
+    const linkUpdates: Record<string, unknown> = { contact_id: crmContact.id };
+    if (normalizedAvatar) {
+        linkUpdates.contact_avatar_url = normalizedAvatar;
+        linkUpdates.updated_at = new Date().toISOString();
+    }
     await supabase
         .from('messaging_conversation_links')
-        .update({ contact_id: crmContact.id })
+        .update(linkUpdates)
         .eq('organization_id', organizationId)
         .eq('chatwoot_contact_id', contact.id);
 }
