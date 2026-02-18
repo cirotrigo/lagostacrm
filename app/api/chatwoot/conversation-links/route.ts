@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createStaticAdminClient } from '@/lib/supabase/staticAdminClient';
 import { createChatwootClientForOrg, getChannelConfig } from '@/lib/chatwoot';
 import { normalizeChatwootAvatarUrl, needsChatwootAvatarRewrite } from '@/lib/chatwoot/avatarUrl';
+import { authPublicApi } from '@/lib/public-api/auth';
 import type { ConversationLink } from '@/lib/chatwoot';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -20,11 +21,12 @@ async function validateAuth(request: NextRequest): Promise<{
     const authHeader = request.headers.get('Authorization');
     const xApiKey = request.headers.get('x-api-key');
     const expectedSecret = process.env.N8N_WEBHOOK_SECRET || process.env.CRM_API_KEY;
+    const bearerToken = authHeader?.startsWith('Bearer ')
+        ? authHeader.replace('Bearer ', '').trim()
+        : null;
 
     // Check for API key auth (n8n uses x-api-key header via "Coronel CRM" credential)
-    const providedKey = xApiKey || (authHeader?.startsWith('Bearer ')
-        ? authHeader.replace('Bearer ', '')
-        : authHeader);
+    const providedKey = (xApiKey || bearerToken || authHeader || '').trim();
 
     if (providedKey && expectedSecret && providedKey === expectedSecret) {
         const organizationId = request.headers.get('X-Organization-Id');
@@ -41,6 +43,25 @@ async function validateAuth(request: NextRequest): Promise<{
             supabase: createStaticAdminClient(),
             organizationId,
         };
+    }
+
+    // Fallback: accept standard public API keys (ncrm_*) validated via RPC.
+    // This keeps compatibility with existing n8n credentials used in public/v1 endpoints.
+    if (xApiKey) {
+        const publicAuth = await authPublicApi(request);
+        if (publicAuth.ok) {
+            const headerOrgId = request.headers.get('X-Organization-Id');
+            if (headerOrgId && headerOrgId !== publicAuth.organizationId) {
+                return {
+                    error: 'X-Organization-Id does not match API key organization',
+                    status: 403,
+                };
+            }
+            return {
+                supabase: createStaticAdminClient(),
+                organizationId: publicAuth.organizationId,
+            };
+        }
     }
 
     // Fall back to Supabase user auth
