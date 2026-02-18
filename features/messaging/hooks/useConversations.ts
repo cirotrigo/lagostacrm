@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query/queryKeys';
 import { adaptChatwootConversations, adaptChatwootConversation } from '../utils/chatwootAdapters';
@@ -32,7 +33,44 @@ export function useConversations(options: UseConversationsOptions = {}): UseQuer
         chatwootFilters.page = Math.floor(offset / limit) + 1;
     }
 
-    return useQuery<ConversationsResponse>({
+    const selectConversations = useMemo(
+        () => (adaptedConversations: WhatsAppConversationView[]): ConversationsResponse => {
+            let filteredConversations = adaptedConversations;
+
+            if (filters.search) {
+                const searchLower = filters.search.toLowerCase();
+                filteredConversations = filteredConversations.filter(
+                    (conv) =>
+                        conv.contact_name?.toLowerCase().includes(searchLower) ||
+                        conv.contact_phone?.toLowerCase().includes(searchLower) ||
+                        conv.remote_jid?.toLowerCase().includes(searchLower) ||
+                        conv.last_message_preview?.toLowerCase().includes(searchLower)
+                );
+            }
+
+            if (filters.has_unread) {
+                filteredConversations = filteredConversations.filter(
+                    (conv) => conv.unread_count > 0
+                );
+            }
+
+            if (filters.source && filters.source !== 'all') {
+                filteredConversations = filteredConversations.filter(
+                    (conv) => conv.messaging_source === filters.source
+                );
+            }
+
+            return {
+                data: filteredConversations,
+                total: filteredConversations.length,
+                limit,
+                offset,
+            };
+        },
+        [filters.search, filters.has_unread, filters.source, limit, offset]
+    );
+
+    return useQuery<WhatsAppConversationView[], Error, ConversationsResponse>({
         queryKey: [...queryKeys.chatwoot.conversations(chatwootFilters), limit, offset],
         queryFn: async () => {
             const params = new URLSearchParams();
@@ -53,41 +91,9 @@ export function useConversations(options: UseConversationsOptions = {}): UseQuer
             const chatwootConversations: ChatwootConversation[] = result.data;
 
             // Adapt to WhatsApp format
-            const adaptedConversations = adaptChatwootConversations(chatwootConversations);
-
-            // Apply client-side search filter if provided (Chatwoot API doesn't support search directly)
-            let filteredConversations = adaptedConversations;
-            if (filters.search) {
-                const searchLower = filters.search.toLowerCase();
-                filteredConversations = adaptedConversations.filter(
-                    (conv) =>
-                        conv.contact_name?.toLowerCase().includes(searchLower) ||
-                        conv.contact_phone?.toLowerCase().includes(searchLower) ||
-                        conv.remote_jid?.toLowerCase().includes(searchLower) ||
-                        conv.last_message_preview?.toLowerCase().includes(searchLower)
-                );
-            }
-
-            // Apply has_unread filter
-            if (filters.has_unread) {
-                filteredConversations = filteredConversations.filter(
-                    (conv) => conv.unread_count > 0
-                );
-            }
-
-            if (filters.source && filters.source !== 'all') {
-                filteredConversations = filteredConversations.filter(
-                    (conv) => conv.messaging_source === filters.source
-                );
-            }
-
-            return {
-                data: filteredConversations,
-                total: filteredConversations.length,
-                limit,
-                offset,
-            };
+            return adaptChatwootConversations(chatwootConversations);
         },
+        select: selectConversations,
         enabled,
         staleTime: 30000, // 30 seconds
         refetchInterval: 60000, // 1 minute
