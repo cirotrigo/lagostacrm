@@ -54,6 +54,13 @@ const BRAND_CONFIG: Record<ClientId, BrandConfig> = {
     initial: 'C',
     description: 'CRM Inteligente para Gestão de Atendimento',
   },
+  emporiofonseca: {
+    name: 'CRM Empório',
+    shortName: 'Empório',
+    initial: 'E',
+    description: 'CRM Inteligente para Gestão de Atendimento - Empório Fonseca',
+    primaryColor: '#CAB371',
+  },
   default: {
     name: 'NossoCRM',
     shortName: 'Nosso',

@@ -1,4 +1,26 @@
-# AGENTS.md — NossoCRM
+# AGENTS.md — CRM Empório (Empório Fonseca)
+
+## Project Identity
+- **Deploy**: `emporiofonseca` — Fork dedicated to Empório Fonseca
+- **Vercel Project**: `https://vercel.com/cirotrigos-projects/emporio_fonseca`
+- **URL**: `https://emporiofonseca.vercel.app`
+- **CLIENT_ID**: `emporiofonseca` (default fallback in `lib/client.ts`)
+- **Primary Color**: `#CAB371` (gold)
+- **CRM Board Key**: `gestao-de-atendimento-emporio-forseca`
+
+## Related Projects (same repo, different deploys)
+- **Coronel Picanha**: `https://coronelpicanhacrm.vercel.app` (CLIENT_ID: `lagostacrm`)
+- **Lagosta CRM**: `https://vercel.com/cirotrigos-projects/lagostacrm` (upstream)
+- Changes in this fork must be **isolated** — do not break sync with upstream
+
+## External Services
+- **Chatwoot**: `https://chatwoot-coronel.lagostacriativa.com.br` (shared instance)
+  - Inbox ID 3: `emporiofonseca.vix` (Instagram)
+  - Inbox ID 1-2: Coronel Picanha (do not modify)
+- **n8n**: `https://n8n-coronel.lagostacriativa.com.br` (shared instance)
+  - Workflow: `[Emporio Fonseca] Agente de atendimento Sofia` (ID: `TvNXUETbiNy2mE5k`)
+  - Webhook: `/webhook/atendimento/emporio_fonseca`
+- **Supabase**: `bmaacpemxgoiimttyvar.supabase.co`
 
 ## Commands
 - **Dev**: `npm run dev`
@@ -28,7 +50,9 @@
 - Imports: use `@/` alias (e.g., `@/lib/utils`, `@/components/ui`)
 - Naming: camelCase for variables/functions, PascalCase for components/types
 - Tests: Vitest + happy-dom + React Testing Library; place `.test.ts(x)` files alongside source
-## AI Context References
-- Documentation index: `.context/docs/README.md`
-- Agent playbooks: `.context/agents/README.md`
+## Multi-tenant / Multi-brand
+- Client detection: `lib/client.ts` (reads `CLIENT_ID` env, falls back to `emporiofonseca`)
+- Branding: `lib/branding.ts` (name, colors, description per client)
+- Theme colors: `app/globals.css` (@theme block) + `tailwind.config.js`
+- Supported clients: `jucaocrm`, `lagostacrm`, `emporiofonseca`, `default`
 
