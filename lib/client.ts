@@ -18,12 +18,12 @@
  * ```
  */
 
-export type ClientId = 'jucaocrm' | 'lagostacrm' | 'default';
+export type ClientId = 'jucaocrm' | 'lagostacrm' | 'emporiofonseca' | 'default';
 
 /**
  * Lista de clientes suportados
  */
-export const SUPPORTED_CLIENTS: ClientId[] = ['jucaocrm', 'lagostacrm', 'default'];
+export const SUPPORTED_CLIENTS: ClientId[] = ['jucaocrm', 'lagostacrm', 'emporiofonseca', 'default'];
 
 /**
  * Retorna o CLIENT_ID atual baseado na variável de ambiente
@@ -36,8 +36,8 @@ export function getClientId(): ClientId {
     return clientId as ClientId;
   }
 
-  // Este fork é dedicado ao LagostaCRM (CRM Coronel)
-  return 'lagostacrm';
+  // Este fork é dedicado ao Empório Fonseca
+  return 'emporiofonseca';
 }
 
 /**

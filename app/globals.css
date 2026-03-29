@@ -11,17 +11,17 @@
   --font-display: 'Space Grotesk', sans-serif;
   --font-serif: 'Cinzel', serif;
 
-  /* Primary Colors - Green */
-  --color-primary-50: #f0fdf4;
-  --color-primary-100: #dcfce7;
-  --color-primary-200: #bbf7d0;
-  --color-primary-300: #86efac;
-  --color-primary-400: #4ade80;
-  --color-primary-500: #22c55e;
-  --color-primary-600: #16a34a;
-  --color-primary-700: #15803d;
-  --color-primary-800: #166534;
-  --color-primary-900: #14532d;
+  /* Primary Colors - Gold (Empório Fonseca #CAB371) */
+  --color-primary-50: #faf8f0;
+  --color-primary-100: #f3eed8;
+  --color-primary-200: #e8ddb1;
+  --color-primary-300: #d9c98a;
+  --color-primary-400: #CAB371;
+  --color-primary-500: #b89d56;
+  --color-primary-600: #a08642;
+  --color-primary-700: #856e37;
+  --color-primary-800: #6b5830;
+  --color-primary-900: #574828;
 
   /* Dark Theme Colors */
   --color-dark-bg: #020617;
