@@ -3,7 +3,7 @@ import { getMenuProducts, groupByCategory } from '@/lib/public-menu';
 import { PublicLayout } from '@/components/public/PublicLayout';
 import { CardapioClient } from '@/components/public/CardapioClient';
 
-export const revalidate = 300; // ISR: 5 minutes
+export const revalidate = 60; // ISR: 1 minute
 
 export const metadata: Metadata = {
   title: 'Cardápio — Empório Fonseca',
