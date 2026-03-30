@@ -4,6 +4,7 @@ import { DealView, CustomFieldDefinition, BoardStage } from '@/types';
 import { ActivityStatusIcon } from './ActivityStatusIcon';
 import { getActivityStatus } from '@/features/boards/hooks/useBoardsController';
 import { MoveToStageModal } from '../Modals/MoveToStageModal';
+import { MessagingSourceBadge } from '@/components/ui/MessagingSourceBadge';
 
 type QuickAddType = 'CALL' | 'MEETING' | 'EMAIL';
 
@@ -56,7 +57,12 @@ const KanbanListRow = React.memo(function KanbanListRow({
           onRequestClose={onCloseMenu}
         />
         </td>
-        <td className="px-6 py-3 font-bold text-slate-900 dark:text-white">{deal.title}</td>
+        <td className="px-6 py-3">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-900 dark:text-white">{deal.title}</span>
+            <MessagingSourceBadge source={deal.contactSource} iconOnly size="xs" />
+          </div>
+        </td>
         <td className="px-6 py-3 text-slate-600 dark:text-slate-300">{deal.companyName}</td>
         <td className="px-6 py-3">
           {onMoveDealToStage ? (

@@ -85,3 +85,4 @@ workflows/
 
 # Test documentation (test code stays, docs are local)
 test/*.md
+.env*.local

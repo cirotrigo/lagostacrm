@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 
 function json<T>(body: T, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -20,6 +21,17 @@ const API_AUTH_TOKEN = WPPCONNECT_TOKEN || WPPCONNECT_SECRET_KEY;
  * Retorna QR Code para escaneamento (base64)
  */
 export async function GET() {
+  // Debug: Log cookies received
+  const cookieStore = await cookies();
+  const allCookies = cookieStore.getAll();
+  const supabaseCookies = allCookies.filter(c => c.name.includes('supabase') || c.name.includes('sb-'));
+
+  console.log('[QR Route] Request received:', {
+    totalCookies: allCookies.length,
+    supabaseCookieNames: supabaseCookies.map(c => c.name),
+    hasAuthCookie: supabaseCookies.some(c => c.name.includes('auth-token')),
+  });
+
   if (!WPPCONNECT_HOST || !API_AUTH_TOKEN) {
     return json({ error: 'WPPConnect not configured' }, 503);
   }
@@ -28,10 +40,21 @@ export async function GET() {
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
+  // Debug logging for production troubleshooting
+  console.log('[QR Route] Auth result:', {
+    hasUser: !!user,
+    userId: user?.id?.substring(0, 8) || null,
+    authError: authError?.message || null,
+  });
+
   if (!user) {
-    return json({ error: 'Unauthorized' }, 401);
+    return json({
+      error: 'Unauthorized',
+      debug: process.env.NODE_ENV === 'development' ? { authError: authError?.message } : undefined,
+    }, 401);
   }
 
   const { data: profile } = await supabase
@@ -48,14 +71,29 @@ export async function GET() {
     // Usa status-session que retorna JSON com QR code base64
     const wppUrl = `${WPPCONNECT_HOST}/api/${WPPCONNECT_SESSION_NAME}/status-session`;
 
+    // Debug: log token info
+    console.log('[QR Route] WPPConnect config:', {
+      host: WPPCONNECT_HOST,
+      sessionName: WPPCONNECT_SESSION_NAME,
+      tokenLength: API_AUTH_TOKEN?.length || 0,
+      tokenPrefix: API_AUTH_TOKEN?.substring(0, 10) || null,
+      tokenSuffix: API_AUTH_TOKEN?.slice(-10) || null,
+    });
+
     const response = await fetch(wppUrl, {
       headers: {
         Authorization: `Bearer ${API_AUTH_TOKEN}`,
       },
     });
 
+    console.log('[QR Route] WPPConnect response:', {
+      ok: response.ok,
+      status: response.status,
+    });
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.log('[QR Route] WPPConnect error:', errorData);
       return json(
         { error: 'Failed to get QR code', details: errorData },
         response.status

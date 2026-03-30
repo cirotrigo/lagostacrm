@@ -3,6 +3,37 @@ import { normalizeEmail, normalizePhone } from '@/lib/public-api/sanitize';
 import { resolveBoardId } from '@/lib/public-api/resolve';
 import { sanitizeUUID } from '@/lib/supabase/utils';
 
+const STAGE_NOTIFICATION_WEBHOOK = process.env.STAGE_NOTIFICATION_WEBHOOK_URL || '';
+
+async function fireStageNotification(payload: {
+  stage_name: string;
+  contact_name: string;
+  contact_phone: string;
+  deal_id: string;
+  deal_value: string;
+  ai_summary: string;
+}) {
+  if (!STAGE_NOTIFICATION_WEBHOOK) return;
+  try {
+    // Enrich with contact name from DB
+    const sb = createStaticAdminClient();
+    if (payload.contact_phone) {
+      const { data } = await sb
+        .from('contacts')
+        .select('name, phone')
+        .eq('phone', payload.contact_phone)
+        .limit(1)
+        .maybeSingle();
+      if (data?.name) payload.contact_name = data.name;
+    }
+    await fetch(STAGE_NOTIFICATION_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch { /* non-blocking */ }
+}
+
 export type MoveStageTarget =
   | { to_stage_id: string }
   | { to_stage_label: string }
@@ -177,10 +208,7 @@ export async function moveStageByIdentity(opts: {
     .limit(2);
   if (dealsError) return { ok: false as const, status: 500, body: { error: dealsError.message, code: 'DB_ERROR' } };
   if (!deals || deals.length === 0) return { ok: false as const, status: 404, body: { error: 'Deal not found for this identity', code: 'NOT_FOUND' } };
-  if (deals.length > 1) {
-    return { ok: false as const, status: 409, body: { error: 'More than one open deal found for this identity in this board', code: 'AMBIGUOUS_MATCH' } };
-  }
-
+  // When multiple open deals exist, use the most recently updated one (first in list due to order)
   const dealId = (deals[0] as any).id as string;
   const stageId = await resolveStageIdForBoard({
     organizationId: opts.organizationId,
@@ -224,6 +252,9 @@ export async function moveStageByIdentity(opts: {
     .maybeSingle();
   if (updateError) return { ok: false as const, status: 500, body: { error: updateError.message, code: 'DB_ERROR' } };
   if (!updated) return { ok: false as const, status: 404, body: { error: 'Deal not found', code: 'NOT_FOUND' } };
+
+  // Stage notification is handled by Supabase trigger (trg_notify_stage_change)
+
   return { ok: true as const, status: 200, body: { data: updated, action: 'moved' } };
 }
 

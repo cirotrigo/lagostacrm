@@ -44,7 +44,8 @@ import {
   Bug,
   CheckSquare,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  GraduationCap
 } from 'lucide-react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
@@ -53,7 +54,7 @@ import { prefetchRoute, RouteName } from '@/lib/prefetch';
 import { isDebugMode, enableDebugMode, disableDebugMode } from '@/lib/debug';
 import { SkipLink } from '@/lib/a11y';
 import { useResponsiveMode } from '@/hooks/useResponsiveMode';
-import { getBranding } from '@/lib/branding';
+import { useBrandingContext } from '@/context/BrandingContext';
 import { BottomNav, MoreMenuSheet, NavigationRail } from '@/components/navigation';
 
 // Lazy load AI Assistant (deprecated - using UIChat now)
@@ -137,7 +138,7 @@ const NavItem = ({
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { darkMode, toggleDarkMode } = useTheme();
   const { isGlobalAIOpen, setIsGlobalAIOpen, sidebarCollapsed, setSidebarCollapsed } = useCRM();
-  const brand = getBranding();
+  const { brand } = useBrandingContext();
   const { user, loading, profile, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -271,6 +272,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             { to: '/contacts', icon: Users, label: 'Contatos', prefetch: 'contacts' as const },
             { to: '/activities', icon: CheckSquare, label: 'Atividades', prefetch: 'activities' as const },
             { to: '/reports', icon: BarChart3, label: 'Relatórios', prefetch: 'reports' as const },
+            { to: '/training', icon: GraduationCap, label: 'Treinamento', prefetch: 'training' as const },
             { to: '/settings', icon: Settings, label: 'Configurações', prefetch: 'settings' as const },
           ].map((item) => {
             if (sidebarCollapsed) {

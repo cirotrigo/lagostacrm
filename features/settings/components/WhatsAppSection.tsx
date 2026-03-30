@@ -71,6 +71,17 @@ const statusConfig: Record<
   },
 };
 
+// Normalize WPPConnect status (CONNECTED -> connected, CLOSED -> disconnected, etc.)
+const normalizeStatus = (status: string | undefined): WhatsAppSessionStatus => {
+  if (!status) return 'disconnected';
+  const lower = status.toLowerCase();
+  if (lower === 'connected' || lower === 'islogged') return 'connected';
+  if (lower === 'connecting' || lower === 'opening' || lower === 'pairing') return 'connecting';
+  if (lower === 'closed' || lower === 'disconnected' || lower === 'notlogged') return 'disconnected';
+  if (lower === 'qrcode' || lower === 'qr_pending') return 'qr_pending';
+  return 'disconnected';
+};
+
 export const WhatsAppSection: React.FC = () => {
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [qrCodeData, setQrCodeData] = useState<QRCodeData | null>(null);
@@ -80,7 +91,9 @@ export const WhatsAppSection: React.FC = () => {
 
   const fetchSession = useCallback(async () => {
     try {
-      const response = await fetch('/api/whatsapp/session');
+      const response = await fetch('/api/whatsapp/session', {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Falha ao buscar sessão');
       const data = await response.json();
       setSessionData(data);
@@ -94,7 +107,9 @@ export const WhatsAppSection: React.FC = () => {
 
   const fetchQRCode = useCallback(async () => {
     try {
-      const response = await fetch('/api/whatsapp/session/qr');
+      const response = await fetch('/api/whatsapp/session/qr', {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Falha ao buscar QR Code');
       const data = await response.json();
       setQrCodeData(data);
@@ -109,7 +124,7 @@ export const WhatsAppSection: React.FC = () => {
 
   // Polling para QR Code quando status é qr_pending ou connecting
   useEffect(() => {
-    const status = sessionData?.session?.status || sessionData?.wppStatus?.status;
+    const status = sessionData?.session?.status || normalizeStatus(sessionData?.wppStatus?.status);
     if (status === 'qr_pending' || status === 'connecting') {
       fetchQRCode();
       const interval = setInterval(fetchQRCode, 5000);
@@ -119,7 +134,7 @@ export const WhatsAppSection: React.FC = () => {
 
   // Polling para status quando não está conectado
   useEffect(() => {
-    const status = sessionData?.session?.status;
+    const status = sessionData?.session?.status || normalizeStatus(sessionData?.wppStatus?.status);
     if (status && status !== 'connected') {
       const interval = setInterval(fetchSession, 10000);
       return () => clearInterval(interval);
@@ -133,6 +148,7 @@ export const WhatsAppSection: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Falha na ação');
       await fetchSession();
@@ -146,10 +162,12 @@ export const WhatsAppSection: React.FC = () => {
     }
   };
 
+  // Prioriza status real-time do WPPConnect sobre o cache do Supabase
+  const wppRealTimeStatus = normalizeStatus(sessionData?.wppStatus?.status);
   const currentStatus: WhatsAppSessionStatus =
-    (sessionData?.session?.status as WhatsAppSessionStatus) ||
-    (sessionData?.wppStatus?.status as WhatsAppSessionStatus) ||
-    'disconnected';
+    wppRealTimeStatus !== 'disconnected'
+      ? wppRealTimeStatus
+      : sessionData?.session?.status || 'disconnected';
 
   const statusInfo = statusConfig[currentStatus] || statusConfig.disconnected;
   const StatusIcon = statusInfo.icon;

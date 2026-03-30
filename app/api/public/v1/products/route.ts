@@ -12,6 +12,9 @@ export const runtime = 'nodejs';
  * Query params:
  * - active: "true" (default) | "false" | "all" - Filtra por status ativo
  * - q: string - Busca por nome ou descrição
+ * - category: string - Filtra por categoria
+ * - featured: "true" | "false" - Filtra por destaque
+ * - available: "true" | "false" - Filtra por disponibilidade
  * - cursor: string - Paginação
  * - limit: number - Limite de resultados (default 50, max 100)
  */
@@ -29,8 +32,9 @@ export async function GET(request: Request) {
 
   let query = sb
     .from('products')
-    .select('id,name,description,price,sku,active,created_at,updated_at', { count: 'exact' })
+    .select('id,name,description,price,sku,active,category,image_url,sort_order,available,tags,featured,created_at,updated_at', { count: 'exact' })
     .eq('organization_id', auth.organizationId)
+    .order('sort_order', { ascending: true })
     .order('name', { ascending: true });
 
   // Filtro de status ativo
@@ -40,6 +44,22 @@ export async function GET(request: Request) {
     query = query.eq('active', false);
   }
   // Se "all", não aplica filtro de active
+
+  // Filtro por categoria
+  const categoryParam = (url.searchParams.get('category') || '').trim();
+  if (categoryParam) {
+    query = query.eq('category', categoryParam);
+  }
+
+  // Filtro por featured
+  const featuredParam = (url.searchParams.get('featured') || '').trim().toLowerCase();
+  if (featuredParam === 'true') query = query.eq('featured', true);
+  else if (featuredParam === 'false') query = query.eq('featured', false);
+
+  // Filtro por available
+  const availableParam = (url.searchParams.get('available') || '').trim().toLowerCase();
+  if (availableParam === 'true') query = query.eq('available', true);
+  else if (availableParam === 'false') query = query.eq('available', false);
 
   // Busca por nome ou descrição
   if (q) {
@@ -66,6 +86,12 @@ export async function GET(request: Request) {
       price: Number(p.price ?? 0),
       sku: p.sku ?? null,
       active: p.active ?? true,
+      category: p.category ?? null,
+      image_url: p.image_url ?? null,
+      sort_order: p.sort_order ?? 0,
+      available: p.available ?? true,
+      tags: p.tags ?? [],
+      featured: p.featured ?? false,
       created_at: p.created_at,
       updated_at: p.updated_at,
     })),

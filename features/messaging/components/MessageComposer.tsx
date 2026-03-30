@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
-import { Send, Paperclip, Smile, Loader2 } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Send, Paperclip, Smile, Loader2, Mic } from 'lucide-react';
+import { AudioRecorder } from './chat/AudioRecorder';
 
 interface MessageComposerProps {
   value: string;
   onChange: (value: string) => void;
   onSend: () => void;
+  onSendAudio?: (blob: Blob) => void;
   isSending: boolean;
   disabled?: boolean;
 }
@@ -15,10 +17,13 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   value,
   onChange,
   onSend,
+  onSendAudio,
   isSending,
   disabled = false,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSendingAudio, setIsSendingAudio] = useState(false);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -36,6 +41,47 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
       }
     }
   };
+
+  const handleStartRecording = () => {
+    setIsRecording(true);
+  };
+
+  const handleCancelRecording = () => {
+    setIsRecording(false);
+  };
+
+  const handleSendAudio = async (blob: Blob) => {
+    if (!onSendAudio) {
+      console.warn('onSendAudio not provided - audio upload not implemented');
+      setIsRecording(false);
+      return;
+    }
+
+    setIsSendingAudio(true);
+    try {
+      await onSendAudio(blob);
+      setIsRecording(false);
+    } catch (error) {
+      console.error('Failed to send audio:', error);
+    } finally {
+      setIsSendingAudio(false);
+    }
+  };
+
+  // Show AudioRecorder when recording
+  if (isRecording) {
+    return (
+      <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900">
+        <AudioRecorder
+          onSend={handleSendAudio}
+          onCancel={handleCancelRecording}
+          isSending={isSendingAudio}
+        />
+      </div>
+    );
+  }
+
+  const hasText = value.trim().length > 0;
 
   return (
     <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900">
@@ -75,19 +121,32 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
           <Smile className="w-5 h-5" />
         </button>
 
-        {/* Send button */}
-        <button
-          type="button"
-          onClick={onSend}
-          disabled={disabled || isSending || !value.trim()}
-          className="p-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {isSending ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Send className="w-5 h-5" />
-          )}
-        </button>
+        {/* Send button (when has text) or Mic button (when empty) */}
+        {hasText ? (
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={disabled || isSending}
+            className="p-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Enviar mensagem"
+          >
+            {isSending ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleStartRecording}
+            disabled={disabled || isSending}
+            className="p-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Gravar áudio"
+          >
+            <Mic className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </div>
   );

@@ -47,8 +47,8 @@
 
 **Credenciais WPPConnect:**
 - Session: `lagostacrm`
-- Token: `$2b$10$QXgCMTHujdn.AdmTLH9w8.CyE6mVLTKXL50fMyJEtp50yGYYnJL4C`
-- Secret Key: `THISISMYSECURETOKEN`
+- Token: `$2b$10$8_IrVGbLfQLNpj6dExU1vesxA_MRbYw_QR_OCWcsxXtJU2zRU47Ee`
+- Secret Key: `LagostaWPP2024SecretKey32chars!!`
 
 ### Fase 2: Backend - Tabelas ✅
 
@@ -121,9 +121,9 @@
 ### .env.local
 ```env
 WPPCONNECT_HOST=https://coronel-wwp.lagostacriativa.com.br
-WPPCONNECT_SECRET_KEY=THISISMYSECURETOKEN
+WPPCONNECT_SECRET_KEY=LagostaWPP2024SecretKey32chars!!
 WPPCONNECT_SESSION_NAME=lagostacrm
-WPPCONNECT_TOKEN=$2b$10$QXgCMTHujdn.AdmTLH9w8.CyE6mVLTKXL50fMyJEtp50yGYYnJL4C
+WPPCONNECT_TOKEN=$2b$10$8_IrVGbLfQLNpj6dExU1vesxA_MRbYw_QR_OCWcsxXtJU2zRU47Ee
 N8N_WEBHOOK_BASE_URL=https://coronel-n8n.lagostacriativa.com.br
 ```
 

@@ -1,0 +1,544 @@
+{
+  "name": "[Coronel Picanha] Encerramento Automatico 18h",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Encerramento Automatico (18h+ sem interacao)\n\nIdentifica deals sem resposta ha 18+ horas e prepara para encerramento.\n\n### Regras:\n- Deals em QUALQUER stage exceto Finalizado/Follow-up\n\n**18-24h (dentro da janela Meta):**\n- Envia mensagem de encerramento via Chatwoot\n- Move para Finalizado\n\n**>24h (fora da janela Meta):**\n- NAO envia mensagem (bloqueado pela Meta)\n- Move direto para Finalizado\n\n### Compliance Meta:\n- Respeita janela de 24h\n- Funciona para WhatsApp e Instagram",
+        "height": 360,
+        "width": 380,
+        "color": 4
+      },
+      "id": "sticky-intro",
+      "name": "Sticky Note Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [160, 80]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "trigger-scheduled",
+      "name": "Trigger_4h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 480]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-crm-host",
+              "name": "CRM_Host",
+              "value": "https://coronelpicanhacrm.vercel.app",
+              "type": "string"
+            },
+            {
+              "id": "cfg-org-id",
+              "name": "ORG_ID",
+              "value": "5f8d9c08-fb66-4fc9-be53-180d3ab35d0f",
+              "type": "string"
+            },
+            {
+              "id": "cfg-cw-host",
+              "name": "CW_Host",
+              "value": "https://chatwoot-coronel.lagostacriativa.com.br",
+              "type": "string"
+            },
+            {
+              "id": "cfg-cw-account",
+              "name": "CW_Account",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "cfg-horas-min",
+              "name": "HorasMinimas",
+              "value": 18,
+              "type": "number"
+            },
+            {
+              "id": "cfg-horas-max",
+              "name": "HorasMaximas",
+              "value": 24,
+              "type": "number"
+            },
+            {
+              "id": "cfg-stage-finalizado",
+              "name": "StageFinalizado",
+              "value": "Finalizado",
+              "type": "string"
+            },
+            {
+              "id": "cfg-mensagem-encerramento",
+              "name": "MensagemEncerramento",
+              "value": "Oi! Como nao tivemos retorno, vou finalizar nosso atendimento por aqui. Mas fique tranquilo(a), se precisar de qualquer coisa e so chamar que estaremos a disposicao! Ate mais! 👋",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "configuracoes",
+      "name": "Configuracoes",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [464, 480]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.CRM_Host }}/api/chatwoot/conversation-links",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Organization-Id",
+              "value": "={{ $json.ORG_ID }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "buscar-conversations",
+      "name": "Buscar_Conversations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [688, 480],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RhZY4FZWk3Pstr72",
+          "name": "Coronel CRM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Configuracoes').first().json;\nconst response = $input.first().json;\nconst links = response?.data || [];\n\nconst horasMin = Number(cfg.HorasMinimas || 18);\nconst horasMax = Number(cfg.HorasMaximas || 24);\nconst nowMs = Date.now();\n\nconst output = [];\n\nfor (const link of links) {\n  const dealId = link.dealId || link.deal_id;\n  if (!dealId) continue;\n  \n  // Usar lastMessageAt se existir, senao usar updatedAt como fallback\n  const lastMessageAt = link.lastMessageAt || link.last_message_at || link.updatedAt || link.updated_at;\n  if (!lastMessageAt) continue;\n  \n  const lastMs = Date.parse(lastMessageAt);\n  if (!Number.isFinite(lastMs)) continue;\n  \n  const horasSemInteracao = (nowMs - lastMs) / (1000 * 60 * 60);\n  \n  // Filtrar: >= 18h sem interacao (inclui > 24h para mover direto para Finalizado)\n  if (horasSemInteracao < horasMin) continue;\n  \n  // Identificar a fonte da data usada\n  const dataSource = (link.lastMessageAt || link.last_message_at) ? 'lastMessageAt' : 'updatedAt';\n  \n  // Determinar acao: dentro da janela (18-24h) ou fora (>24h)\n  const dentroJanela24h = horasSemInteracao <= horasMax;\n  \n  output.push({\n    json: {\n      dealId,\n      conversationId: link.chatwootConversationId || link.chatwoot_conversation_id,\n      contactId: link.contactId || link.contact_id,\n      lastMessageAt,\n      dataSource,\n      lastMessagePreview: link.lastMessagePreview || link.last_message_preview || '',\n      lastMessageSender: link.lastMessageSender || link.last_message_sender || '',\n      horasSemInteracao: Math.round(horasSemInteracao * 10) / 10,\n      dentroJanela24h,\n      status: link.status\n    }\n  });\n}\n\nreturn output.length > 0 ? output : [{ json: { _empty: true, count: 0 } }];"
+      },
+      "id": "filtrar-candidatos",
+      "name": "Filtrar_Candidatos_18h",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [912, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-deals",
+              "leftValue": "={{ $json._empty }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "tem-candidatos",
+      "name": "Tem_Candidatos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [1136, 480]
+    },
+    {
+      "parameters": {},
+      "id": "fim-sem-candidatos",
+      "name": "Fim_Sem_Candidatos",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1360, 640]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Configuracoes').first().json.CRM_Host }}/api/public/v1/deals/{{ $json.dealId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "buscar-deal",
+      "name": "Buscar_Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1360, 320],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RhZY4FZWk3Pstr72",
+          "name": "Coronel CRM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Configuracoes').first().json.CRM_Host }}/api/public/v1/boards/{{ $json.data.board_id }}/stages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "buscar-stages",
+      "name": "Buscar_Stages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1584, 320],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RhZY4FZWk3Pstr72",
+          "name": "Coronel CRM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const cfg = $('Configuracoes').first().json;\nconst candidatos = $('Filtrar_Candidatos_18h').all();\nconst stagesData = $input.item.json;\n\n// Buscar o deal correspondente do nó Buscar_Deal usando $itemIndex\nconst allDeals = $('Buscar_Deal').all();\nconst dealData = allDeals[$itemIndex]?.json || {};\nconst deal = dealData?.data || dealData || {};\nconst stages = stagesData?.data || [];\n\nconst normalize = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim();\n\n// Encontrar stage atual\nconst currentStage = stages.find(s => s.id === deal.stage_id);\nconst currentStageLabel = normalize(currentStage?.label || '');\n\n// Ignorar se ja esta em Finalizado ou Follow-up\nconst isFinalizadoOrFollowup = \n  currentStageLabel.includes('finaliz') ||\n  currentStageLabel.includes('follow');\n\nif (isFinalizadoOrFollowup) {\n  return { json: { _skip: true, reason: 'Deal ja em Finalizado ou Follow-up', dealId: deal.id, stage: currentStage?.label } };\n}\n\n// Encontrar candidato correspondente\nconst candidato = candidatos.find(c => c.json.dealId === deal.id)?.json || {};\n\n// Determinar se deve enviar mensagem (dentro da janela 24h)\nconst dentroJanela24h = candidato.dentroJanela24h !== false;\nconst enviarMensagem = dentroJanela24h;\n\nreturn {\n  json: {\n    dealId: deal.id,\n    dealTitle: deal.title,\n    boardId: deal.board_id,\n    currentStageId: deal.stage_id,\n    currentStageLabel: currentStage?.label || '',\n    conversationId: candidato.conversationId,\n    contactId: candidato.contactId || deal.contact_id,\n    horasSemInteracao: candidato.horasSemInteracao,\n    lastMessagePreview: candidato.lastMessagePreview,\n    aiSummary: deal.ai_summary || '',\n    mensagemEncerramento: cfg.MensagemEncerramento,\n    targetStage: cfg.StageFinalizado,\n    enviarMensagem,\n    dentroJanela24h\n  }\n};"
+      },
+      "id": "preparar-deal",
+      "name": "Preparar_Deal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1808, 320]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "not-skip",
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "deve-processar",
+      "name": "Deve_Processar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [2032, 320]
+    },
+    {
+      "parameters": {},
+      "id": "fim-skip",
+      "name": "Fim_Skip",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2256, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "enviar-msg",
+              "leftValue": "={{ $json.enviarMensagem }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "has-conversation",
+              "leftValue": "={{ $json.conversationId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "enviar-mensagem-check",
+      "name": "Enviar_Mensagem?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [2256, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuracoes').first().json.CW_Host }}/api/v1/accounts/{{ $('Configuracoes').first().json.CW_Account }}/conversations/{{ $json.conversationId }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.mensagemEncerramento, message_type: 'outgoing', private: false }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "enviar-chatwoot",
+      "name": "Enviar_Mensagem_Chatwoot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2480, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1uvzB18SDD4GzDDt",
+          "name": "ChatWoot Coronel"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuracoes').first().json.CRM_Host }}/api/public/v1/activities",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'task', title: 'Encerramento automatico - ' + $('Preparar_Deal').item.json.horasSemInteracao + 'h sem interacao', description: ($('Preparar_Deal').item.json.dentroJanela24h ? 'Mensagem de encerramento enviada via Chatwoot' : 'Fora da janela de 24h - movido direto para Finalizado (sem mensagem)') + '\\n\\nHoras sem interacao: ' + $('Preparar_Deal').item.json.horasSemInteracao + 'h', deal_id: $('Preparar_Deal').item.json.dealId, contact_id: $('Preparar_Deal').item.json.contactId }) }}",
+        "options": {}
+      },
+      "id": "criar-atividade",
+      "name": "Criar_Atividade_Encerramento",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2704, 160],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RhZY4FZWk3Pstr72",
+          "name": "Coronel CRM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuracoes').first().json.CRM_Host }}/api/public/v1/deals/{{ $('Preparar_Deal').item.json.dealId }}/move-stage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to_stage_label: $('Preparar_Deal').item.json.targetStage }) }}",
+        "options": {}
+      },
+      "id": "mover-deal",
+      "name": "Mover_Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2928, 160],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RhZY4FZWk3Pstr72",
+          "name": "Coronel CRM"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger_4h": {
+      "main": [
+        [
+          {
+            "node": "Configuracoes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuracoes": {
+      "main": [
+        [
+          {
+            "node": "Buscar_Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar_Conversations": {
+      "main": [
+        [
+          {
+            "node": "Filtrar_Candidatos_18h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar_Candidatos_18h": {
+      "main": [
+        [
+          {
+            "node": "Tem_Candidatos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem_Candidatos?": {
+      "main": [
+        [
+          {
+            "node": "Buscar_Deal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fim_Sem_Candidatos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar_Deal": {
+      "main": [
+        [
+          {
+            "node": "Buscar_Stages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar_Stages": {
+      "main": [
+        [
+          {
+            "node": "Preparar_Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar_Deal": {
+      "main": [
+        [
+          {
+            "node": "Deve_Processar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deve_Processar?": {
+      "main": [
+        [
+          {
+            "node": "Enviar_Mensagem?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fim_Skip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar_Mensagem?": {
+      "main": [
+        [
+          {
+            "node": "Enviar_Mensagem_Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Criar_Atividade_Encerramento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar_Mensagem_Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Criar_Atividade_Encerramento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar_Atividade_Encerramento": {
+      "main": [
+        [
+          {
+            "node": "Mover_Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "coronel-encerramento-18h-v3"
+  },
+  "tags": []
+}

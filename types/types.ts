@@ -88,6 +88,19 @@ export enum ContactStage {
   CUSTOMER = 'CUSTOMER', // Cliente fechado
 }
 
+/**
+ * Origem do contato no CRM.
+ *
+ * Inclui origens comerciais tradicionais e canais de mensageria.
+ */
+export type ContactSource =
+  | 'WEBSITE'
+  | 'LINKEDIN'
+  | 'REFERRAL'
+  | 'MANUAL'
+  | 'WHATSAPP'
+  | 'INSTAGRAM';
+
 // @deprecated - Use Contact com stage: ContactStage.LEAD
 // Mantido apenas para compatibilidade de migração
 export interface Lead {
@@ -96,7 +109,7 @@ export interface Lead {
   email: string;
   companyName: string; // Texto solto, ainda não é uma Company
   role?: string;
-  source: 'WEBSITE' | 'LINKEDIN' | 'REFERRAL' | 'MANUAL';
+  source: ContactSource;
   status: 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'DISQUALIFIED';
   createdAt: string;
   notes?: string;
@@ -162,7 +175,7 @@ export interface Contact {
   birthDate?: string; // New field for Agentic AI tasks
   status: 'ACTIVE' | 'INACTIVE' | 'CHURNED';
   stage: string; // ID do LifecycleStage (antes era ContactStage enum)
-  source?: 'WEBSITE' | 'LINKEDIN' | 'REFERRAL' | 'MANUAL'; // Origem do contato
+  source?: ContactSource; // Origem do contato
   notes?: string; // Anotações gerais
   lastPurchaseDate?: string;
   totalValue?: number; // LTV
@@ -183,6 +196,18 @@ export interface Product {
   sku?: string;
   /** Se está ativo no catálogo (itens inativos não devem aparecer no dropdown do deal). */
   active?: boolean;
+  /** Categoria para agrupamento no cardápio digital. */
+  category?: string;
+  /** URL da imagem do produto. */
+  imageUrl?: string;
+  /** Ordem de exibição dentro da categoria. */
+  sortOrder?: number;
+  /** Disponível para venda agora (diferente de active — permite marcar "esgotado" sem remover). */
+  available?: boolean;
+  /** Tags descritivas (ex: "vegano", "sem glúten", "novidade"). */
+  tags?: string[];
+  /** Destaque no cardápio. */
+  featured?: boolean;
 }
 
 export interface DealItem {
@@ -248,6 +273,8 @@ export interface DealView extends Deal {
   clientCompanyName?: string; // Name of the CRM client company
   contactName: string;
   contactEmail: string;
+  contactAvatar?: string; // Contact avatar URL from Chatwoot sync
+  contactSource?: ContactSource;
   /** Nome/label do estágio atual (resolvido a partir do status UUID) */
   stageLabel: string;
 
@@ -572,6 +599,7 @@ export interface WhatsAppConversationView extends WhatsAppConversation {
   deal_stage: string | null;
   session_name: string;
   session_phone: string | null;
+  messaging_source?: MessagingSource | null;
 }
 
 /**
@@ -719,6 +747,7 @@ export interface SendMessagePayload {
 export interface ConversationFilters {
   status?: WhatsAppConversationStatus | 'all';
   assigned_to?: string | 'unassigned' | 'all';
+  source?: MessagingSource | 'all';
   search?: string;
   has_unread?: boolean;
 }
@@ -740,4 +769,86 @@ export interface MessagesResponse {
   data: WhatsAppMessage[];
   has_more: boolean;
   oldest_id: string | null;
+}
+
+// =============================================================================
+// Messaging Contact Identities (Multi-Channel)
+// =============================================================================
+
+/**
+ * Source channel for messaging identity.
+ *
+ * @description
+ * Identifies the messaging platform from which the contact originated.
+ * Used for external identity resolution across channels.
+ */
+export type MessagingSource = 'WHATSAPP' | 'INSTAGRAM';
+
+/**
+ * External identity mapping for a contact.
+ *
+ * @description
+ * Links CRM contacts to external channel identifiers.
+ * Enables deterministic identity resolution for multi-channel messaging.
+ *
+ * @example
+ * ```ts
+ * // WhatsApp identity
+ * const whatsappIdentity: MessagingContactIdentity = {
+ *   id: 'uuid',
+ *   organizationId: 'org-uuid',
+ *   contactId: 'contact-uuid',
+ *   source: 'WHATSAPP',
+ *   externalId: '+5511999990000', // E.164 phone
+ *   createdAt: '2026-02-18T00:00:00Z',
+ *   updatedAt: '2026-02-18T00:00:00Z',
+ * };
+ *
+ * // Instagram identity
+ * const instagramIdentity: MessagingContactIdentity = {
+ *   id: 'uuid',
+ *   organizationId: 'org-uuid',
+ *   contactId: 'contact-uuid',
+ *   source: 'INSTAGRAM',
+ *   externalId: '17841400000000000', // Instagram IGSID
+ *   createdAt: '2026-02-18T00:00:00Z',
+ *   updatedAt: '2026-02-18T00:00:00Z',
+ * };
+ * ```
+ */
+export interface MessagingContactIdentity {
+  /** Unique identifier */
+  id: string;
+  /** Organization ID for multi-tenant isolation */
+  organizationId: string;
+  /** CRM contact ID */
+  contactId: string;
+  /** Channel source (WHATSAPP or INSTAGRAM) */
+  source: MessagingSource;
+  /** External identifier from the messaging platform */
+  externalId: string;
+  /** Creation timestamp */
+  createdAt: string;
+  /** Last update timestamp */
+  updatedAt: string;
+}
+
+/**
+ * Result of identity resolution.
+ *
+ * @description
+ * Contains the resolved contact information and metadata about
+ * how the resolution was performed.
+ */
+export interface IdentityResolutionResult {
+  /** CRM contact ID */
+  contactId: string;
+  /** Identity mapping ID (null if resolved via fallback) */
+  identityId: string | null;
+  /** Channel source */
+  source: MessagingSource;
+  /** Normalized external identifier */
+  externalId: string;
+  /** How the identity was resolved */
+  resolutionMethod: 'identity' | 'phone' | 'email' | 'created';
 }

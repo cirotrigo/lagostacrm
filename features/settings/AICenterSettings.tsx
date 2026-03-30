@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCRM } from '@/context/CRMContext';
 import { AIConfigSection } from './components/AIConfigSection';
 import { AIFeaturesSection } from './components/AIFeaturesSection';
+import { AITrainingSection } from '@/features/ai-training';
 
 /**
  * Componente React `AICenterSettings`.
@@ -60,6 +61,10 @@ export const AICenterSettings: React.FC = () => {
 
       <div className="mt-6">
         <AIFeaturesSection />
+      </div>
+
+      <div className="mt-6">
+        <AITrainingSection />
       </div>
     </div>
   );

@@ -38,6 +38,8 @@ async function getCurrentOrganizationId(): Promise<string | null> {
   return orgId;
 }
 
+const SELECT_COLS = 'id, organization_id, name, description, price, sku, active, category, image_url, sort_order, available, tags, featured, created_at, updated_at, owner_id';
+
 type DbProduct = {
   id: string;
   organization_id: string | null;
@@ -46,6 +48,12 @@ type DbProduct = {
   price: number;
   sku: string | null;
   active: boolean | null;
+  category: string | null;
+  image_url: string | null;
+  sort_order: number | null;
+  available: boolean | null;
+  tags: string[] | null;
+  featured: boolean | null;
   created_at: string;
   updated_at: string;
   owner_id: string | null;
@@ -60,8 +68,29 @@ function transformProduct(db: DbProduct): Product {
     price: Number(db.price ?? 0),
     sku: db.sku || undefined,
     active: db.active ?? true,
+    category: db.category || undefined,
+    imageUrl: db.image_url || undefined,
+    sortOrder: db.sort_order ?? 0,
+    available: db.available ?? true,
+    tags: db.tags ?? [],
+    featured: db.featured ?? false,
   };
 }
+
+export type ProductCreateInput = {
+  name: string;
+  price: number;
+  sku?: string;
+  description?: string;
+  category?: string;
+  imageUrl?: string;
+  sortOrder?: number;
+  available?: boolean;
+  tags?: string[];
+  featured?: boolean;
+};
+
+export type ProductUpdateInput = Partial<ProductCreateInput & { active: boolean }>;
 
 export const productsService = {
   async getAll(): Promise<{ data: Product[]; error: Error | null }> {
@@ -70,13 +99,12 @@ export const productsService = {
 
       const { data, error } = await supabase
         .from('products')
-        .select('id, organization_id, name, description, price, sku, active, created_at, updated_at, owner_id')
+        .select(SELECT_COLS)
         .order('created_at', { ascending: false });
 
       if (error) return { data: [], error };
 
       const rows = (data || []) as DbProduct[];
-      // Por padrão mostramos só ativos na UI do deal; mas aqui retorna tudo para o Settings.
       return { data: rows.map(transformProduct), error: null };
     } catch (e) {
       return { data: [], error: e as Error };
@@ -89,9 +117,9 @@ export const productsService = {
 
       const { data, error } = await supabase
         .from('products')
-        .select('id, organization_id, name, description, price, sku, active, created_at, updated_at, owner_id')
+        .select(SELECT_COLS)
         .eq('active', true)
-        .order('created_at', { ascending: false });
+        .order('sort_order', { ascending: true });
 
       if (error) return { data: [], error };
 
@@ -102,7 +130,7 @@ export const productsService = {
     }
   },
 
-  async create(input: { name: string; price: number; sku?: string; description?: string }): Promise<{ data: Product | null; error: Error | null }> {
+  async create(input: ProductCreateInput): Promise<{ data: Product | null; error: Error | null }> {
     try {
       if (!supabase) return { data: null, error: new Error('Supabase não configurado') };
 
@@ -116,11 +144,17 @@ export const productsService = {
           price: input.price,
           sku: input.sku || null,
           description: input.description || null,
+          category: input.category || null,
+          image_url: input.imageUrl || null,
+          sort_order: input.sortOrder ?? 0,
+          available: input.available ?? true,
+          tags: input.tags ?? [],
+          featured: input.featured ?? false,
           active: true,
           owner_id: sanitizeUUID(user?.id),
           organization_id: organizationId,
         })
-        .select('id, organization_id, name, description, price, sku, active, created_at, updated_at, owner_id')
+        .select(SELECT_COLS)
         .single();
 
       if (error) return { data: null, error };
@@ -130,7 +164,7 @@ export const productsService = {
     }
   },
 
-  async update(id: string, updates: Partial<{ name: string; price: number; sku?: string; description?: string; active: boolean }>): Promise<{ error: Error | null }> {
+  async update(id: string, updates: ProductUpdateInput): Promise<{ error: Error | null }> {
     try {
       if (!supabase) return { error: new Error('Supabase não configurado') };
 
@@ -139,6 +173,12 @@ export const productsService = {
       if (updates.price !== undefined) payload.price = updates.price;
       if (updates.sku !== undefined) payload.sku = updates.sku || null;
       if (updates.description !== undefined) payload.description = updates.description || null;
+      if (updates.category !== undefined) payload.category = updates.category || null;
+      if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl || null;
+      if (updates.sortOrder !== undefined) payload.sort_order = updates.sortOrder;
+      if (updates.available !== undefined) payload.available = updates.available;
+      if (updates.tags !== undefined) payload.tags = updates.tags;
+      if (updates.featured !== undefined) payload.featured = updates.featured;
       if (updates.active !== undefined) payload.active = updates.active;
       payload.updated_at = new Date().toISOString();
 
@@ -167,4 +207,3 @@ export const productsService = {
     }
   },
 };
-

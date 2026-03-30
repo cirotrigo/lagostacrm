@@ -101,7 +101,8 @@ async function handleMessageReceived(
   supabase: Awaited<ReturnType<typeof createAdminClient>>,
   data: {
     wpp_message_id: string;
-    conversation_id: string;
+    conversation_id?: string; // Agora opcional - pode usar phone para buscar/criar
+    phone?: string; // Telefone do contato (alternativa ao conversation_id)
     content: string;
     media_type?: string;
     media_url?: string;
@@ -111,13 +112,13 @@ async function handleMessageReceived(
     wpp_timestamp?: string;
     is_forwarded?: boolean;
     quoted_wpp_id?: string;
+    is_from_me?: boolean;
   },
-  _sessionName: string,
-  _organizationId: string
+  sessionName: string,
+  organizationId: string
 ) {
   const {
     wpp_message_id,
-    conversation_id,
     content,
     media_type = 'text',
     media_url,
@@ -127,7 +128,133 @@ async function handleMessageReceived(
     wpp_timestamp,
     is_forwarded = false,
     quoted_wpp_id,
+    is_from_me = false,
   } = data;
+
+  // Determina o telefone do contato
+  const contactPhone = data.phone || sender_phone || sender_jid?.replace('@c.us', '').replace('@s.whatsapp.net', '');
+
+  if (!contactPhone) {
+    throw new Error('Phone number is required');
+  }
+
+  // Busca ou cria a conversa
+  let conversationId = data.conversation_id;
+
+  if (!conversationId) {
+    // Busca sessão pelo nome para pegar organization_id e session_id
+    let orgId = organizationId;
+    let sessionId: string | null = null;
+
+    if (sessionName) {
+      const { data: session } = await supabase
+        .from('whatsapp_sessions')
+        .select('id, organization_id')
+        .eq('session_name', sessionName)
+        .single();
+
+      if (session) {
+        sessionId = session.id;
+        if (!orgId) orgId = session.organization_id;
+      }
+    }
+
+    if (!orgId) {
+      throw new Error('Organization ID not found');
+    }
+
+    if (!sessionId) {
+      // Busca a sessão padrão da organização
+      const { data: defaultSession } = await supabase
+        .from('whatsapp_sessions')
+        .select('id')
+        .eq('organization_id', orgId)
+        .eq('is_default', true)
+        .single();
+
+      if (defaultSession) {
+        sessionId = defaultSession.id;
+      } else {
+        // Pega qualquer sessão da organização
+        const { data: anySession } = await supabase
+          .from('whatsapp_sessions')
+          .select('id')
+          .eq('organization_id', orgId)
+          .limit(1)
+          .single();
+
+        sessionId = anySession?.id || null;
+      }
+    }
+
+    if (!sessionId) {
+      throw new Error('No WhatsApp session found for organization');
+    }
+
+    const remoteJid = sender_jid || `${contactPhone}@c.us`;
+
+    // Busca conversa existente pelo remote_jid
+    const { data: existingConversation } = await supabase
+      .from('whatsapp_conversations')
+      .select('id')
+      .eq('session_id', sessionId)
+      .eq('remote_jid', remoteJid)
+      .single();
+
+    if (existingConversation) {
+      conversationId = existingConversation.id;
+    } else {
+      // Busca ou cria contato no CRM
+      let contactId: string | null = null;
+
+      const { data: existingContact } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('organization_id', orgId)
+        .eq('phone', contactPhone)
+        .single();
+
+      if (existingContact) {
+        contactId = existingContact.id;
+      } else {
+        // Cria novo contato
+        const { data: newContact } = await supabase
+          .from('contacts')
+          .insert({
+            organization_id: orgId,
+            name: sender_name || contactPhone,
+            phone: contactPhone,
+            source: 'WHATSAPP',
+            stage: 'LEAD',
+            status: 'ACTIVE',
+          })
+          .select('id')
+          .single();
+
+        contactId = newContact?.id || null;
+      }
+
+      // Cria nova conversa
+      const { data: newConversation, error: createError } = await supabase
+        .from('whatsapp_conversations')
+        .insert({
+          organization_id: orgId,
+          session_id: sessionId,
+          remote_jid: remoteJid,
+          contact_id: contactId,
+          status: 'open',
+          ai_enabled: true,
+        })
+        .select('id')
+        .single();
+
+      if (createError || !newConversation) {
+        throw new Error(`Failed to create conversation: ${createError?.message}`);
+      }
+
+      conversationId = newConversation.id;
+    }
+  }
 
   // Busca quoted_message_id se houver
   let quoted_message_id = null;
@@ -142,20 +269,20 @@ async function handleMessageReceived(
 
   // Insere mensagem (trigger atualiza contadores da conversa)
   await supabase.from('whatsapp_messages').insert({
-    conversation_id,
+    conversation_id: conversationId,
     wpp_message_id,
-    direction: 'inbound',
+    direction: is_from_me ? 'outbound' : 'inbound',
     media_type,
     content,
     media_url: media_url || null,
     sender_jid,
     sender_name: sender_name || null,
-    sender_phone: sender_phone || null,
+    sender_phone: sender_phone || contactPhone,
     wpp_timestamp: wpp_timestamp || new Date().toISOString(),
     is_forwarded,
     quoted_message_id,
-    status: 'delivered',
-    is_from_me: false,
+    status: is_from_me ? 'sent' : 'delivered',
+    is_from_me,
   });
 }
 

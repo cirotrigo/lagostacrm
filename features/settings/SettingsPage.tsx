@@ -10,6 +10,7 @@ import { WhatsAppSection } from './components/WhatsAppSection';
 import { DataStorageSettings } from './components/DataStorageSettings';
 import { ProductsCatalogManager } from './components/ProductsCatalogManager';
 import { AICenterSettings } from './AICenterSettings';
+import { BrandingSettings } from './components/BrandingSettings';
 
 import { UsersPage } from './UsersPage';
 import { useAuth } from '@/context/AuthContext';
@@ -41,6 +42,9 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({ hash, isAdmin }) => {
 
   return (
     <div className="pb-10">
+      {/* Branding — apenas admin */}
+      {isAdmin && <BrandingSettings />}
+
       {/* General Settings */}
       <div className="mb-12">
         <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6">

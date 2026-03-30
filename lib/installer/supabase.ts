@@ -150,6 +150,25 @@ export async function bootstrapInstance({
     return { ok: false, error: profileError.message };
   }
 
+  // 4) Branding upsert (organization_settings já existe via trigger)
+  // Popula brand_name com o companyName fornecido no installer
+  const brandInitial = companyName.trim()[0]?.toUpperCase() || 'N';
+  const { error: brandingError } = await admin
+    .from('organization_settings')
+    .update({
+      brand_name: companyName,
+      brand_short_name: companyName,
+      brand_initial: brandInitial,
+      brand_description: `CRM - ${companyName}`,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('organization_id', organizationId);
+
+  if (brandingError) {
+    // Branding error não é crítico - log e continua
+    console.warn('[bootstrap] Branding update failed:', brandingError.message);
+  }
+
   return {
     ok: true,
     organizationId: organizationId!,
