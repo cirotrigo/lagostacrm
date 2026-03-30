@@ -18,12 +18,12 @@
  * ```
  */
 
-export type ClientId = 'jucaocrm' | 'lagostacrm' | 'emporiofonseca' | 'default';
+export type ClientId = 'jucaocrm' | 'lagostacrm' | 'coronelpicanha' | 'emporiofonseca' | 'default';
 
 /**
  * Lista de clientes suportados
  */
-export const SUPPORTED_CLIENTS: ClientId[] = ['jucaocrm', 'lagostacrm', 'emporiofonseca', 'default'];
+export const SUPPORTED_CLIENTS: ClientId[] = ['jucaocrm', 'lagostacrm', 'coronelpicanha', 'emporiofonseca', 'default'];
 
 /**
  * Retorna o CLIENT_ID atual baseado na variável de ambiente
@@ -36,8 +36,8 @@ export function getClientId(): ClientId {
     return clientId as ClientId;
   }
 
-  // Este fork é dedicado ao Empório Fonseca
-  return 'emporiofonseca';
+  // Fallback: sem CLIENT_ID definido = default (redirect para login)
+  return 'default';
 }
 
 /**
