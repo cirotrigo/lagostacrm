@@ -32,8 +32,13 @@ export function SiteFooter() {
               <Link href="/#localizacao" className="text-sm text-[#C4B5A3] hover:text-white transition-colors">
                 Contato
               </Link>
-              <Link href="/login" className="text-sm text-[#C4B5A3] hover:text-white transition-colors">
-                Área Restrita
+              <Link href="/login" className="text-sm font-semibold text-[#D4B85A] hover:text-white transition-colors mt-2 flex items-center gap-2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+                Login CRM
               </Link>
             </nav>
           </div>
@@ -44,8 +49,11 @@ export function SiteFooter() {
               Contato
             </h4>
             <div className="flex flex-col gap-2 text-sm text-[#C4B5A3]">
-              <span>Vitória – ES</span>
-              <span>Horários em breve</span>
+              <span>Av. Raul Oliveira Neves</span>
+              <span>Jardim Camburi, Vitória – ES</span>
+              <span className="mt-2 text-[#EDE8E1]">Ter a Qui: 09h às 22h</span>
+              <span className="text-[#EDE8E1]">Sex e Sáb: 09h às 23h</span>
+              <span className="text-[#EDE8E1]">Dom: 09h às 16h</span>
             </div>
           </div>
         </div>
