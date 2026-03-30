@@ -196,6 +196,18 @@ export interface Product {
   sku?: string;
   /** Se está ativo no catálogo (itens inativos não devem aparecer no dropdown do deal). */
   active?: boolean;
+  /** Categoria para agrupamento no cardápio digital. */
+  category?: string;
+  /** URL da imagem do produto. */
+  imageUrl?: string;
+  /** Ordem de exibição dentro da categoria. */
+  sortOrder?: number;
+  /** Disponível para venda agora (diferente de active — permite marcar "esgotado" sem remover). */
+  available?: boolean;
+  /** Tags descritivas (ex: "vegano", "sem glúten", "novidade"). */
+  tags?: string[];
+  /** Destaque no cardápio. */
+  featured?: boolean;
 }
 
 export interface DealItem {
