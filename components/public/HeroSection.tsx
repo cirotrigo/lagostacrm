@@ -22,13 +22,13 @@ export function HeroSection() {
           {/* Small label */}
           <div className="mb-6 animate-[fadeIn_0.8s_ease-out_forwards]">
             <span className="inline-block px-4 py-1.5 rounded-full bg-[#D4B85A]/10 text-[#D4B85A] text-xs font-semibold tracking-[0.2em] uppercase border border-[#D4B85A]/20">
-              Nova Loja em Vitória
+              Jardim Camburi — Vitória
             </span>
           </div>
 
           {/* Brand name */}
           <h1 className="font-[family-name:var(--font-old-standard)] text-6xl sm:text-7xl lg:text-[5.5rem] leading-[0.95] font-bold text-[#4A4A50] tracking-tight mb-8 animate-[slideUp_0.8s_ease-out_0.2s_forwards] opacity-0">
-            O Eterno<br />Fonseca
+            Empório<br />Fonseca
           </h1>
 
           {/* Tagline */}
