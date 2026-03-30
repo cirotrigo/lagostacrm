@@ -28,8 +28,12 @@ export function AboutSection() {
             </p>
             <p className="text-base sm:text-lg leading-relaxed text-[#4A4A50]/80">
               Nosso menu combina ingredientes selecionados, receitas autorais e uma
-              curadoria de cafés especiais para transformar cada visita em uma
-              experiência memorável.
+              cuidadosa curadoria de vinhos para harmonizações perfeitas, garantindo que
+              cada visita seja uma experiência inesquecível.
+            </p>
+            <p className="text-base sm:text-lg leading-relaxed text-[#4A4A50]/80">
+              Desfrute de um ambiente intimista e climatizado, ou relaxe em nossa
+              varanda charmosa — que também é <em>pet friendly</em> para receber toda a família.
             </p>
             <p className="font-[family-name:var(--font-cormorant)] text-xl sm:text-2xl italic text-[#963550] mt-8">
               Gastronomia franco-italiana em Vitória – ES.

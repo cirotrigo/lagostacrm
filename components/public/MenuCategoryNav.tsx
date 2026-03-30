@@ -36,16 +36,15 @@ export function MenuCategoryNav({ categories }: Props) {
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  };
-
-  // Scroll active pill into view in nav
-  useEffect(() => {
-    if (!navRef.current) return;
-    const activeBtn = navRef.current.querySelector(`[data-slug="${activeSlug}"]`);
-    if (activeBtn) {
-      activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    
+    // Scroll the nav container smoothly only when clicked
+    const activeBtn = navRef.current?.querySelector(`[data-slug="${slug}"]`) as HTMLButtonElement | null;
+    if (activeBtn && navRef.current) {
+      const container = navRef.current;
+      const scrollLeft = activeBtn.offsetLeft - container.offsetWidth / 2 + activeBtn.offsetWidth / 2;
+      container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
     }
-  }, [activeSlug]);
+  };
 
   return (
     <div className="sticky top-[65px] z-30 bg-[#EDE8E1]/95 backdrop-blur-md border-b border-[#C4B5A3]/20 py-3">

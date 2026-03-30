@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "emporio-fonseca-crm": {
+      "type": "http",
+      "url": "https://emporiofonseca.vercel.app/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ncrm_YfFilRzuZ6OHZDXQWTjjpLEo80N2rxsC"
+      }
+    },
+    "chatwoot": {
+      "command": "npx",
+      "args": ["-y", "chatwoot-mcp"],
+      "env": {
+        "CHATWOOT_URL": "https://chatwoot-coronel.lagostacriativa.com.br",
+        "CHATWOOT_API_TOKEN": "a3XAP8BPP3XvDyGM8zmmm2AG",
+        "CHATWOOT_ACCOUNT_ID": "1"
+      }
+    },
+    "n8n-mcp": {
+      "command": "npx",
+      "args": ["n8n-mcp"],
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_API_URL": "https://n8n-coronel.lagostacriativa.com.br",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzOTkzMjkwMy05MmYwLTRkNzgtODg1NC1hNmRmM2Y2YzVlNDYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiMTJhNTIxMzYtZmZhMy00YzVhLWE2YTQtMDUyZTBlMDEyNzRhIiwiaWF0IjoxNzc0ODE3NTgwfQ.vGiE6-_dSiEEAB8eUqjGjIXiZcdM2te5dNpd2nVzwfo"
+      }
+    }
+  }
+}

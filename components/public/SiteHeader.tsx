@@ -16,10 +16,8 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 bg-[#EDE8E1]/90 backdrop-blur-md border-b border-[#C4B5A3]/30">
       <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="hover:opacity-80 transition-opacity">
-          <span className="font-[family-name:var(--font-old-standard)] text-xl font-bold tracking-wide text-[#4A4A50]">
-            EMPÓRIO FONSECA
-          </span>
+        <Link href="/" className="hover:opacity-80 transition-opacity flex items-center">
+          <img src="/logos/logo-bordo.png" alt="Empório Fonseca Logo" className="h-10 w-auto object-contain" />
         </Link>
 
         {/* Desktop nav */}
