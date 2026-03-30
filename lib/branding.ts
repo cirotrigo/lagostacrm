@@ -61,6 +61,13 @@ const BRAND_CONFIG: Record<ClientId, BrandConfig> = {
     description: 'CRM Inteligente para Gestão de Atendimento - Empório Fonseca',
     primaryColor: '#CAB371',
   },
+  coronelpicanha: {
+    name: 'CRM Coronel Picanha',
+    shortName: 'Coronel',
+    initial: 'C',
+    description: 'CRM Inteligente — Churrascaria Coronel Picanha',
+    primaryColor: '#16A34A',
+  },
   default: {
     name: 'NossoCRM',
     shortName: 'Nosso',
