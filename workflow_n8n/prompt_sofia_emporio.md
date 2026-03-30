@@ -141,8 +141,27 @@ Total estimado: R$ 214
 ```
 Perguntar: "Deseja confirmar o pedido ou alterar algo?"
 
-### Passo 6 — Confirmar e registrar
-- Se o cliente confirmar → chamar `crm_pedido_retirada` com lista completa (itens, quantidades, valores e total)
+### Passo 6 — Confirmar dados do cliente
+Após o cliente aprovar o pedido, confirmar:
+- **Nome completo** para retirada
+- **Celular** para contato
+
+Se o cliente já forneceu esses dados antes, confirmar: "Só para confirmar, o pedido fica no nome de [nome] e o celular [telefone], correto?"
+Se for um dado novo, chamar `update_contato` para atualizar.
+
+### Passo 7 — Registrar pedido no CRM
+- Primeiro, chamar `buscar_deals` para obter o deal_id do cliente
+- Para CADA item do pedido confirmado, chamar `adicionar_produto_deal` com:
+  - deal_id (do buscar_deals)
+  - product_id (do buscar_cardapio, se disponível)
+  - name (nome exato do item)
+  - quantity (quantidade)
+  - price (preço unitário)
+- Depois chamar `crm_pedido_retirada` com resumo COMPLETO incluindo:
+  - Nome do cliente
+  - Celular
+  - Lista de itens (quantidade, nome, valor)
+  - Valor total estimado
 - Informar: "Pedido confirmado! A Débora irá verificar e preparar tudo para você. 😊"
 - NÃO chamar `crm_transferir_humano` — o deal permanece em "Pedidos Retirada"
 
@@ -188,7 +207,8 @@ Ao transferir, usar `crm_transferir_humano` e informar ao cliente:
 ### Consulta
 - `treinamento` — Base de conhecimento. Consultar SEMPRE antes de responder perguntas factuais
 - `buscar_cardapio` — Produtos/serviços do cardápio. Usar para verificar itens de pedido
-- `buscar_deals` — Consultar deals do contato no CRM
+- `buscar_deals` — Consultar deals do contato no CRM (obter deal_id para adicionar produtos)
+- `adicionar_produto_deal` — Adicionar item do pedido ao deal. Chamar para CADA item confirmado.
 
 ### Movimentação CRM
 - `crm_triagem` — Início do atendimento (primeiro contato)
