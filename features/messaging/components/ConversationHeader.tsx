@@ -105,10 +105,10 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
               ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
               : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400'
           }`}
-          title={conversation.ai_enabled ? 'Desativar IA' : 'Ativar IA'}
+          title={conversation.ai_enabled ? 'Mudar para Atendimento Humano' : 'Devolver para IA'}
         >
           <Bot className="w-4 h-4" />
-          {conversation.ai_enabled ? 'IA Ativa' : 'IA Inativa'}
+          {conversation.ai_enabled ? 'IA Ativa' : 'Atendimento Humano'}
         </button>
 
         {/* Status dropdown */}
