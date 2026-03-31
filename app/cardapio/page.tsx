@@ -3,6 +3,7 @@ import { getMenuProducts, groupByCategory } from '@/lib/public-menu';
 import { PublicLayout } from '@/components/public/PublicLayout';
 import { CardapioClient } from '@/components/public/CardapioClient';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 60; // ISR: 1 minute
 
 export const metadata: Metadata = {
