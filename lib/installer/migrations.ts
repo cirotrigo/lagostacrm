@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { Client } from 'pg';
 
-const SCHEMA_PATH = path.resolve(process.cwd(), 'supabase/migrations/20251201000000_schema_init.sql');
+const MIGRATIONS_DIR = path.resolve(process.cwd(), 'supabase/migrations');
 
 function needsSsl(connectionString: string) {
   return !/sslmode=disable/i.test(connectionString);
@@ -105,7 +105,15 @@ async function waitForStorageReady(client: Client, opts?: { timeoutMs?: number; 
  * Função pública `runSchemaMigration` do projeto.
  */
 export async function runSchemaMigration(dbUrl: string) {
-  const schemaSql = fs.readFileSync(SCHEMA_PATH, 'utf8');
+  // Read all migration files in order (filenames are timestamped)
+  const files = fs.readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+
+  if (files.length === 0) {
+    throw new Error('Nenhum arquivo de migration encontrado em supabase/migrations/');
+  }
+
   const normalizedDbUrl = stripSslModeParam(dbUrl);
 
   const createClient = () =>
@@ -121,7 +129,14 @@ export async function runSchemaMigration(dbUrl: string) {
   try {
     // Never "skip" Storage. We wait until it's ready, then run migrations.
     await waitForStorageReady(client);
-    await client.query(schemaSql);
+
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
+      console.log(`[migrations] Applying ${file}...`);
+      await client.query(sql);
+    }
+
+    console.log(`[migrations] All ${files.length} migrations applied successfully.`);
   } finally {
     await client.end();
   }
