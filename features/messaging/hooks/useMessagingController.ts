@@ -165,6 +165,15 @@ export function useMessagingController() {
             });
             if (!postRes.ok) throw new Error('Failed to update labels');
 
+            // Assign/unassign agent to control AI bot behavior.
+            // hasLabel = currently human mode → toggling TO AI (unassign)
+            // !hasLabel = currently AI mode → toggling TO human (assign)
+            await fetch(`/api/messaging/conversations/${numericId}/assign`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ agent_id: hasLabel ? null : 1 }),
+            });
+
             // Refresh conversations to reflect new ai_enabled state
             queryClient.invalidateQueries({ queryKey: ['chatwoot'] });
         } catch (error) {
