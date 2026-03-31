@@ -32,7 +32,18 @@ export async function updateSession(request: NextRequest) {
         supabaseUrl.startsWith('http')
 
     if (!isConfigured) {
-        console.warn('[proxy] Supabase not configured - skipping auth check')
+        const installerDisabled = process.env.INSTALLER_ENABLED === 'false'
+        const reqPath = request.nextUrl.pathname
+        const isInstallPath = reqPath === '/install' || reqPath.startsWith('/install/')
+        const isApiPath = reqPath.startsWith('/api/')
+
+        // If Supabase is not configured and installer is available, redirect to /install
+        if (!installerDisabled && !isInstallPath && !isApiPath) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/install'
+            return NextResponse.redirect(url)
+        }
+
         return NextResponse.next({ request })
     }
 
