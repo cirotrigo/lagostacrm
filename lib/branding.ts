@@ -68,6 +68,13 @@ const BRAND_CONFIG: Record<ClientId, BrandConfig> = {
     description: 'CRM Inteligente — Churrascaria Coronel Picanha',
     primaryColor: '#16A34A',
   },
+  winevix: {
+    name: 'Wine Vix',
+    shortName: 'Wine Vix',
+    initial: 'W',
+    description: 'Wine Bar & Experiências em Vinhos',
+    primaryColor: '#722F37',
+  },
   default: {
     name: 'NossoCRM',
     shortName: 'Nosso',

@@ -6,6 +6,7 @@ import emporiofonsecaConfig from './emporiofonseca/config';
 import lagostacrmConfig from './lagostacrm/config';
 import coronelpicanhaConfig from './coronelpicanha/config';
 import jucaocrmConfig from './jucaocrm/config';
+import winevixConfig from './winevix/config';
 
 export type { ClientConfig } from './types';
 
@@ -14,6 +15,7 @@ const configs: Record<string, ClientConfig> = {
   lagostacrm: lagostacrmConfig,
   coronelpicanha: coronelpicanhaConfig,
   jucaocrm: jucaocrmConfig,
+  winevix: winevixConfig,
   default: defaultConfig,
 };
 
@@ -38,11 +40,11 @@ export async function getClientPublicPage(
         const mod = await import('./emporiofonseca/public-page/LandingPage');
         return mod.default;
       }
+      case 'winevix': {
+        const mod = await import('./winevix/public-page/LandingPage');
+        return mod.default;
+      }
       // Add new client landings here:
-      // case 'coronelpicanha': {
-      //   const mod = await import('./coronelpicanha/public-page/LandingPage');
-      //   return mod.default;
-      // }
       default:
         return null; // No landing → redirect to /login
     }

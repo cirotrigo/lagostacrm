@@ -18,12 +18,12 @@
  * ```
  */
 
-export type ClientId = 'jucaocrm' | 'lagostacrm' | 'coronelpicanha' | 'emporiofonseca' | 'default';
+export type ClientId = 'jucaocrm' | 'lagostacrm' | 'coronelpicanha' | 'emporiofonseca' | 'winevix' | 'default';
 
 /**
  * Lista de clientes suportados
  */
-export const SUPPORTED_CLIENTS: ClientId[] = ['jucaocrm', 'lagostacrm', 'coronelpicanha', 'emporiofonseca', 'default'];
+export const SUPPORTED_CLIENTS: ClientId[] = ['jucaocrm', 'lagostacrm', 'coronelpicanha', 'emporiofonseca', 'winevix', 'default'];
 
 /**
  * Retorna o CLIENT_ID atual baseado na variável de ambiente
