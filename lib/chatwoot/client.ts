@@ -139,6 +139,13 @@ export class ChatwootClient {
     }
 
     /**
+     * List all agents in the account
+     */
+    async listAgents(): Promise<ChatwootAgent[]> {
+        return this.request<ChatwootAgent[]>('/agents', { method: 'GET' });
+    }
+
+    /**
      * Assign conversation to an agent
      */
     async assignConversation(

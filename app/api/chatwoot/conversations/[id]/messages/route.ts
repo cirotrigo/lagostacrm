@@ -146,6 +146,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             body.private ?? false
         );
 
+        // Auto-assign conversation to the human agent when sending a non-private message.
+        // This signals the AI bot to stop responding (the bot's filter checks for assignee).
+        if (!body.private) {
+            try {
+                const agents = await chatwoot.listAgents();
+                const userEmail = user.email?.toLowerCase();
+                const match = agents.find((a: any) =>
+                    a.email?.toLowerCase() === userEmail
+                );
+                if (match) {
+                    await chatwoot.assignConversation(conversationId, match.id);
+                }
+            } catch (assignError) {
+                // Non-critical — log but don't fail the message send
+                console.warn('[Messages API] Auto-assign failed:', assignError);
+            }
+        }
+
         return NextResponse.json({ data: message }, { status: 201 });
     } catch (error) {
         console.error('Error sending message:', error);
