@@ -4,6 +4,8 @@ import React from 'react';
 import {
   User,
   Bot,
+  Headset,
+  Loader2,
   MoreVertical,
   CheckCircle,
   Clock,
@@ -17,6 +19,7 @@ interface ConversationHeaderProps {
   conversation: WhatsAppConversationView;
   onStatusChange: (status: WhatsAppConversationStatus) => void;
   onToggleAI: () => void;
+  isTogglingAI?: boolean;
   children?: React.ReactNode;
 }
 
@@ -24,6 +27,7 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   conversation,
   onStatusChange,
   onToggleAI,
+  isTogglingAI = false,
   children,
 }) => {
   const [showMenu, setShowMenu] = React.useState(false);
@@ -100,15 +104,24 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
         {/* AI Toggle */}
         <button
           onClick={onToggleAI}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-            conversation.ai_enabled
-              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-              : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400'
+          disabled={isTogglingAI}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-all cursor-pointer select-none ${
+            isTogglingAI
+              ? 'opacity-60 cursor-wait'
+              : conversation.ai_enabled
+                ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700/50 hover:bg-purple-100 dark:hover:bg-purple-900/40 hover:shadow-sm'
+                : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:shadow-sm'
           }`}
           title={conversation.ai_enabled ? 'Mudar para Atendimento Humano' : 'Devolver para IA'}
         >
-          <Bot className="w-4 h-4" />
-          {conversation.ai_enabled ? 'IA Ativa' : 'Atendimento Humano'}
+          {isTogglingAI ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : conversation.ai_enabled ? (
+            <Bot className="w-4 h-4" />
+          ) : (
+            <Headset className="w-4 h-4" />
+          )}
+          {isTogglingAI ? 'Alternando...' : conversation.ai_enabled ? 'IA Ativa' : 'Atendimento Humano'}
         </button>
 
         {/* Status dropdown */}

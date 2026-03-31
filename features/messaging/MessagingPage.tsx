@@ -36,6 +36,7 @@ export const MessagingPage: React.FC = () => {
               conversation={controller.selectedConversation}
               onStatusChange={controller.handleUpdateConversationStatus}
               onToggleAI={controller.handleToggleAI}
+              isTogglingAI={controller.isTogglingAI}
             >
               {/* Toggle info panel button */}
               <button

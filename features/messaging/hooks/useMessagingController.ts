@@ -140,12 +140,15 @@ export function useMessagingController() {
         [selectedConversationId, updateConversation]
     );
 
+    const [isTogglingAI, setIsTogglingAI] = useState(false);
+
     const handleToggleAI = useCallback(async () => {
-        if (!selectedConversation || !selectedConversationId) return;
+        if (!selectedConversation || !selectedConversationId || isTogglingAI) return;
 
         const numericId = parseInt(selectedConversationId, 10);
         if (isNaN(numericId)) return;
 
+        setIsTogglingAI(true);
         try {
             // Fetch current labels
             const getRes = await fetch(`/api/chatwoot/conversations/${numericId}/labels`);
@@ -174,12 +177,14 @@ export function useMessagingController() {
                 body: JSON.stringify({ agent_id: hasLabel ? null : 1 }),
             });
 
-            // Refresh conversations to reflect new ai_enabled state
-            queryClient.invalidateQueries({ queryKey: ['chatwoot'] });
+            // Force refetch to update UI immediately
+            await queryClient.refetchQueries({ queryKey: ['chatwoot'] });
         } catch (error) {
             console.error('Error toggling AI:', error);
+        } finally {
+            setIsTogglingAI(false);
         }
-    }, [selectedConversation, selectedConversationId, queryClient]);
+    }, [selectedConversation, selectedConversationId, queryClient, isTogglingAI]);
 
     const handleFilterChange = useCallback((newFilters: Partial<ConversationFilters>) => {
         setFilters((prev) => ({ ...prev, ...newFilters }));
@@ -257,6 +262,7 @@ export function useMessagingController() {
         handleSendAttachment,
         handleUpdateConversationStatus,
         handleToggleAI,
+        isTogglingAI,
         handleFilterChange,
         handleLoadMoreMessages,
         refetchConversations,
