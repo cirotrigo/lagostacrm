@@ -52,7 +52,7 @@ export const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   ];
 
   return (
-    <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900">
+    <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-surface">
       {/* Contact info */}
       <div className="flex items-center gap-3">
         {conversation.contact_avatar ? (

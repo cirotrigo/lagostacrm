@@ -68,9 +68,9 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
     };
 
     return (
-        <div className="h-full flex flex-col bg-white dark:bg-slate-900">
+        <div className="h-full flex flex-col bg-surface">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <h3 className="font-semibold text-slate-900 dark:text-white">
                     Informações
                 </h3>
@@ -86,7 +86,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
 
             <div className="flex-1 overflow-y-auto">
                 {/* Contact Avatar & Name */}
-                <div className="p-4 border-b border-slate-200 dark:border-white/10">
+                <div className="p-4 border-b border-[var(--color-border)]">
                     <div className="flex flex-col items-center text-center">
                         {conversation.contact_avatar && !avatarError ? (
                             <img
@@ -115,7 +115,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
                 </div>
 
                 {/* Contact Info */}
-                <div className="p-4 border-b border-slate-200 dark:border-white/10 space-y-3">
+                <div className="p-4 border-b border-[var(--color-border)] space-y-3">
                     <h5 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                         Contato
                     </h5>
@@ -161,7 +161,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
 
                 {/* Deal Info (if linked) */}
                 {conversation.deal_id && (
-                    <div className="p-4 border-b border-slate-200 dark:border-white/10 space-y-3">
+                    <div className="p-4 border-b border-[var(--color-border)] space-y-3">
                         <h5 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                             Negócio vinculado
                         </h5>
@@ -202,7 +202,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
                 )}
 
                 {/* Assignment */}
-                <div className="p-4 border-b border-slate-200 dark:border-white/10 space-y-3">
+                <div className="p-4 border-b border-[var(--color-border)] space-y-3">
                     <h5 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                         Atribuição
                     </h5>
@@ -215,7 +215,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
 
                 {/* Quick Actions */}
                 {onStatusChange && (
-                    <div className="p-4 border-b border-slate-200 dark:border-white/10 space-y-3">
+                    <div className="p-4 border-b border-[var(--color-border)] space-y-3">
                         <h5 className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                             Ações rápidas
                         </h5>

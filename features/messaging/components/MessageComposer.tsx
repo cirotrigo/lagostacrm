@@ -71,7 +71,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   // Show AudioRecorder when recording
   if (isRecording) {
     return (
-      <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900">
+      <div className="p-4 border-t border-[var(--color-border)] bg-surface">
         <AudioRecorder
           onSend={handleSendAudio}
           onCancel={handleCancelRecording}
@@ -84,7 +84,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   const hasText = value.trim().length > 0;
 
   return (
-    <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900">
+    <div className="p-4 border-t border-[var(--color-border)] bg-surface">
       <div className="flex items-end gap-2">
         {/* Attachment button (placeholder) */}
         <button
