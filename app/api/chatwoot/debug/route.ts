@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            config: configInfo,
+            configs: configsInfo,
             connectionTest,
             conversationId,
             analysis,
