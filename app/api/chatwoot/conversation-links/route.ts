@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createStaticAdminClient } from '@/lib/supabase/staticAdminClient';
-import { createChatwootClientForOrg, getChannelConfig } from '@/lib/chatwoot';
+import { createChatwootClientForOrg, getChannelConfigByInbox, getAllChannelConfigs } from '@/lib/chatwoot';
 import { normalizeChatwootAvatarUrl, needsChatwootAvatarRewrite } from '@/lib/chatwoot/avatarUrl';
 import { authPublicApi } from '@/lib/public-api/auth';
 import type { ConversationLink } from '@/lib/chatwoot';
@@ -238,8 +238,15 @@ export async function POST(request: NextRequest) {
             }
         }
         if (!chatwootBaseUrl) {
-            const channelConfig = await getChannelConfig(supabase, organizationId);
-            chatwootBaseUrl = channelConfig?.chatwootBaseUrl ?? null;
+            const inboxId = emptyToNull(body.chatwoot_inbox_id) as number | null;
+            if (inboxId) {
+                const inboxConfig = await getChannelConfigByInbox(supabase, organizationId, inboxId);
+                chatwootBaseUrl = inboxConfig?.chatwootBaseUrl ?? null;
+            }
+            if (!chatwootBaseUrl) {
+                const allConfigs = await getAllChannelConfigs(supabase, organizationId);
+                chatwootBaseUrl = allConfigs.find(c => c.status === 'active')?.chatwootBaseUrl ?? null;
+            }
         }
 
         // Log the data being inserted

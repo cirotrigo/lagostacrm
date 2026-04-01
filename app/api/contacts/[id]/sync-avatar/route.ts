@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createChatwootClientForOrg, getChannelConfig } from '@/lib/chatwoot';
+import { createChatwootClientForOrg, getAllChannelConfigs } from '@/lib/chatwoot';
 import { normalizeChatwootAvatarUrl } from '@/lib/chatwoot/avatarUrl';
 
 interface RouteParams {
@@ -40,8 +40,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const organizationId = profile.organization_id;
-        const channelConfig = await getChannelConfig(supabase, organizationId);
-        const chatwootBaseUrl = channelConfig?.chatwootBaseUrl ?? null;
+        const allConfigs = await getAllChannelConfigs(supabase, organizationId);
+        const chatwootBaseUrl = allConfigs.find(c => c.status === 'active')?.chatwootBaseUrl ?? null;
 
         // Parse body
         const body = await request.json().catch(() => ({}));

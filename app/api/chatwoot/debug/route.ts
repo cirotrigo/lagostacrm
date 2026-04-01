@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createChatwootClientForOrg, getChannelConfig } from '@/lib/chatwoot';
+import { createChatwootClientForOrg, getAllChannelConfigs } from '@/lib/chatwoot';
 
 /**
  * GET /api/chatwoot/debug
@@ -34,26 +34,31 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'No organization' }, { status: 400 });
         }
 
-        // Get raw config for debugging
-        const config = await getChannelConfig(supabase, profile.organization_id);
+        // Get ALL configs for debugging
+        const allConfigs = (await getAllChannelConfigs(supabase, profile.organization_id))
+            .filter(c => c.status === 'active');
 
-        if (!config) {
+        if (allConfigs.length === 0) {
             return NextResponse.json({
                 error: 'No Chatwoot configuration found',
                 organizationId: profile.organization_id,
             }, { status: 400 });
         }
 
-        // Show config info (mask token)
-        const configInfo = {
-            baseUrl: config.chatwootBaseUrl,
-            accountId: config.chatwootAccountId,
-            inboxId: config.chatwootInboxId,
-            tokenPreview: config.chatwootApiToken ? `${config.chatwootApiToken.substring(0, 8)}...` : 'NOT SET',
-            status: config.status,
-        };
+        const config = allConfigs[0];
 
-        // Test basic connectivity
+        // Show config info for ALL inboxes (mask token)
+        const configsInfo = allConfigs.map(c => ({
+            baseUrl: c.chatwootBaseUrl,
+            accountId: c.chatwootAccountId,
+            inboxId: c.chatwootInboxId,
+            channelType: c.channelType,
+            name: c.name,
+            tokenPreview: c.chatwootApiToken ? `${c.chatwootApiToken.substring(0, 8)}...` : 'NOT SET',
+            status: c.status,
+        }));
+
+        // Test basic connectivity using first config
         let connectionTest = { success: false, error: '', statusCode: 0, url: '' };
         try {
             const testUrl = `${config.chatwootBaseUrl}/api/v1/accounts/${config.chatwootAccountId}/conversations?page=1`;
@@ -82,7 +87,7 @@ export async function GET(request: NextRequest) {
         if (!conversationIdStr) {
             return NextResponse.json({
                 success: connectionTest.success,
-                config: configInfo,
+                configs: configsInfo,
                 connectionTest,
                 hint: connectionTest.success
                     ? 'Connection OK! Add ?conversationId=123 to test message fetching'
