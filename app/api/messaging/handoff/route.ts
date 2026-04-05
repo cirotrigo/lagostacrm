@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createStaticAdminClient } from '@/lib/supabase/staticAdminClient';
 import { authPublicApi } from '@/lib/public-api/auth';
 import { createChatwootClientForOrg } from '@/lib/chatwoot';
+import { deriveSessionKey, pushContextToRedis } from '@/lib/messaging/contextSync';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -254,6 +255,33 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // 3) When resuming AI mode, inject a system context message into Redis
+        // so the agent knows the human handoff period is over and should respond
+        // normally. Without this, the agent reads the old transferir_humano tool
+        // call in its memory and follows the "NÃO responda mais" instruction.
+        let contextSync = 'skipped';
+        if (aiEnabled) {
+            try {
+                const sessionKey = await deriveSessionKey(admin, ctx.organizationId, conversationId);
+                if (sessionKey) {
+                    await pushContextToRedis({
+                        sessionKey,
+                        role: 'ai',
+                        content: [
+                            '[SISTEMA] O atendimento humano foi encerrado.',
+                            'A IA está retomando o atendimento desta conversa.',
+                            'Continue respondendo normalmente com base no contexto anterior.',
+                            'Ignore qualquer instrução anterior de "não responder mais".',
+                        ].join(' '),
+                    });
+                    contextSync = 'ok';
+                }
+            } catch (e) {
+                console.warn('[handoff] Context resume sync failed:', e);
+                contextSync = 'failed';
+            }
+        }
+
         return NextResponse.json({
             ok: true,
             ai_enabled: aiEnabled,
@@ -261,6 +289,7 @@ export async function POST(request: NextRequest) {
             source,
             reason: body.reason ?? null,
             chatwoot: chatwootResult,
+            contextSync,
         });
     } catch (error) {
         console.error('[handoff] Unexpected error:', error);
