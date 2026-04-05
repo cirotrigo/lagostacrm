@@ -148,39 +148,59 @@ export function useMessagingController() {
         const numericId = parseInt(selectedConversationId, 10);
         if (isNaN(numericId)) return;
 
+        const currentAi = selectedConversation.ai_enabled;
+        const nextAi = !currentAi;
+
+        // 1) Optimistic update: patch every conversations cache entry BEFORE the network call.
+        //    This gives the user instant feedback (<16ms). The realtime channel on
+        //    messaging_conversation_links confirms the state afterwards for other clients.
+        const conversationsCaches = queryClient.getQueryCache().findAll({
+            queryKey: ['chatwoot', 'conversations'],
+        });
+        const snapshots = conversationsCaches.map((q) => ({
+            key: q.queryKey,
+            data: queryClient.getQueryData(q.queryKey),
+        }));
+
+        const patchCache = (value: boolean) => {
+            conversationsCaches.forEach((q) => {
+                queryClient.setQueryData(q.queryKey, (old: unknown) => {
+                    if (!old || typeof old !== 'object') return old;
+                    const oldData = old as { data?: Array<{ id: string; ai_enabled?: boolean }> };
+                    if (!Array.isArray(oldData.data)) return old;
+                    return {
+                        ...oldData,
+                        data: oldData.data.map((c) =>
+                            c.id === selectedConversationId ? { ...c, ai_enabled: value } : c
+                        ),
+                    };
+                });
+            });
+        };
+
+        patchCache(nextAi);
         setIsTogglingAI(true);
+
         try {
-            // Fetch current labels
-            const getRes = await fetch(`/api/chatwoot/conversations/${numericId}/labels`);
-            if (!getRes.ok) throw new Error('Failed to fetch labels');
-            const { labels: currentLabels } = await getRes.json() as { labels: string[] };
-
-            const hasLabel = currentLabels.includes('atendimento-humano');
-            const newLabels = hasLabel
-                ? currentLabels.filter((l: string) => l !== 'atendimento-humano')
-                : [...currentLabels, 'atendimento-humano'];
-
-            // Update labels
-            const postRes = await fetch(`/api/chatwoot/conversations/${numericId}/labels`, {
+            const res = await fetch('/api/messaging/handoff', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ labels: newLabels }),
-            });
-            if (!postRes.ok) throw new Error('Failed to update labels');
-
-            // Assign/unassign agent to control AI bot behavior.
-            // hasLabel = currently human mode → toggling TO AI (unassign)
-            // !hasLabel = currently AI mode → toggling TO human (assign)
-            await fetch(`/api/messaging/conversations/${numericId}/assign`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ agent_id: hasLabel ? null : 1 }),
+                body: JSON.stringify({
+                    conversation_id: numericId,
+                    mode: nextAi ? 'ai' : 'human',
+                    reason: nextAi ? 'user_toggle_resume_ai' : 'user_toggle_manual',
+                    source: 'ui',
+                }),
             });
 
-            // Force refetch to update UI immediately
-            await queryClient.refetchQueries({ queryKey: ['chatwoot'] });
+            if (!res.ok) {
+                const error = await res.json().catch(() => ({}));
+                throw new Error(error.error || 'Failed to update handoff state');
+            }
         } catch (error) {
-            console.error('Error toggling AI:', error);
+            console.error('[toggleAI] failed, rolling back:', error);
+            // Rollback every cache we touched
+            snapshots.forEach(({ key, data }) => queryClient.setQueryData(key, data));
         } finally {
             setIsTogglingAI(false);
         }

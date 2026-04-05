@@ -244,6 +244,11 @@ async function handleConversationCreated(
         }
     }
 
+    // Initial handoff state from labels (if Chatwoot already sent them on create)
+    const initialAiEnabled = Array.isArray(conversation.labels)
+        ? !conversation.labels.includes('atendimento-humano')
+        : true;
+
     // Upsert conversation link with extended fields
     await supabase.from('messaging_conversation_links').upsert({
         organization_id: organizationId,
@@ -254,6 +259,9 @@ async function handleConversationCreated(
         status: mapStatus(conversation.status),
         unread_count: conversation.unread_count || 0,
         chatwoot_url: chatwootUrl,
+        // Initial handoff state — default TRUE unless an existing label says otherwise.
+        // Subsequent changes flow through /api/messaging/handoff or webhook updates.
+        ai_enabled: initialAiEnabled,
         // Extended fields for embedded chat
         assigned_agent_id: conversation.assignee?.id || null,
         assigned_agent_name: conversation.assignee?.name || null,
@@ -289,6 +297,14 @@ function detectMessagingSource(channelType: string): MessagingSource | null {
 
 /**
  * Handle conversation_updated event
+ *
+ * This is the external-sync path: if labels change directly in Chatwoot UI
+ * (or through any other integration), we mirror the handoff state here.
+ * The CRM UI toggle and the n8n agent tool already call /api/messaging/handoff
+ * directly and don't rely on this path, so this is defense-in-depth.
+ *
+ * We only overwrite ai_enabled when the label set meaningfully says so,
+ * never from an empty/undefined labels array (which could be a partial payload).
  */
 async function handleConversationUpdated(
     supabase: SupabaseClient,
@@ -297,14 +313,25 @@ async function handleConversationUpdated(
 ): Promise<void> {
     if (!conversation) return;
 
+    const update: Record<string, unknown> = {
+        status: mapStatus(conversation.status),
+        unread_count: conversation.unread_count || 0,
+        assigned_agent_id: conversation.assignee?.id || null,
+        assigned_agent_name: conversation.assignee?.name || null,
+    };
+
+    // Only mirror ai_enabled when labels is an actual array (Chatwoot always
+    // sends the full label list on conversation_updated, but we guard anyway).
+    if (Array.isArray(conversation.labels)) {
+        const hasHumanLabel = conversation.labels.includes('atendimento-humano');
+        update.ai_enabled = !hasHumanLabel;
+        update.handoff_source = 'webhook';
+        update.handoff_at = new Date().toISOString();
+    }
+
     await supabase
         .from('messaging_conversation_links')
-        .update({
-            status: mapStatus(conversation.status),
-            unread_count: conversation.unread_count || 0,
-            assigned_agent_id: conversation.assignee?.id || null,
-            assigned_agent_name: conversation.assignee?.name || null,
-        })
+        .update(update)
         .eq('organization_id', organizationId)
         .eq('chatwoot_conversation_id', conversation.id);
 }
