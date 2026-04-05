@@ -111,6 +111,30 @@ export async function GET(request: NextRequest) {
             }
         }
 
+        // 6. Merge authoritative ai_enabled from messaging_conversation_links.
+        //    This is the canonical source of truth for the IA<->Human handoff
+        //    (see supabase/migrations/20260405000000_ai_handoff_state.sql).
+        //    Labels in Chatwoot are still updated as a side-effect, but the
+        //    UI reads this merged field to get instant, realtime-backed state.
+        if (conversations.length > 0) {
+            const ids = conversations.map(c => c.id);
+            const { data: links } = await supabase
+                .from('messaging_conversation_links')
+                .select('chatwoot_conversation_id, ai_enabled')
+                .eq('organization_id', profile.organization_id)
+                .in('chatwoot_conversation_id', ids);
+
+            if (links && links.length > 0) {
+                const byId = new Map<number, boolean>(
+                    links.map(l => [l.chatwoot_conversation_id as number, l.ai_enabled as boolean])
+                );
+                conversations = conversations.map(c => {
+                    const aiEnabled = byId.get(c.id);
+                    return typeof aiEnabled === 'boolean' ? { ...c, ai_enabled: aiEnabled } : c;
+                });
+            }
+        }
+
         return NextResponse.json({
             data: conversations,
             meta: {

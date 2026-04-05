@@ -163,7 +163,12 @@ export function adaptChatwootConversation(
         group_name: null,
         status: mapConversationStatus(conversation.status),
         assigned_to: conversation.assignee?.id?.toString() || null,
-        ai_enabled: !conversation.labels?.includes('atendimento-humano'),
+        // Prefer the authoritative ai_enabled merged from messaging_conversation_links
+        // (populated by GET /api/chatwoot/conversations). Fall back to label derivation
+        // for conversations that haven't been synced yet.
+        ai_enabled: typeof conversation.ai_enabled === 'boolean'
+            ? conversation.ai_enabled
+            : !conversation.labels?.includes('atendimento-humano'),
         unread_count: conversation.unread_count,
         total_messages: conversation.messages?.length || 0,
         last_message_at: parseTimestamp(conversation.last_activity_at),

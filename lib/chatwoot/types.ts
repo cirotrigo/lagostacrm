@@ -87,6 +87,14 @@ export interface ChatwootConversation {
     created_at: number;
     can_reply: boolean;
     contact: ChatwootContact;
+    /**
+     * Handoff state merged from messaging_conversation_links.ai_enabled.
+     * This is NOT a native Chatwoot field — it is populated by the CRM
+     * GET /api/chatwoot/conversations layer so that the UI adapter can
+     * read the authoritative value without going back to the DB.
+     * When undefined, callers should fall back to label-based derivation.
+     */
+    ai_enabled?: boolean;
 }
 
 export interface ConversationFilters {
