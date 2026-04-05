@@ -343,6 +343,8 @@ async function handleConversationUpdated(
  * 1. Updates the conversation link with the last message preview
  * 2. Caches the message for realtime sync
  * 3. Increments unread count for incoming messages
+ * 4. During human mode (ai_enabled=false), pushes the message to the n8n
+ *    agent's Redis memory so the AI has full context when it resumes.
  */
 async function handleMessageCreated(
     supabase: SupabaseClient,
@@ -353,6 +355,7 @@ async function handleMessageCreated(
     if (!conversation || !message) return;
 
     const isIncoming = message.message_type === 'incoming';
+    const isActivity = message.message_type === 'activity' || (message.message_type as unknown as number) === 2;
     const sender = isIncoming ? 'customer' : 'agent';
     const preview = message.content?.substring(0, 100) || '';
     const messageTimestamp = new Date(message.created_at * 1000).toISOString();
@@ -428,6 +431,47 @@ async function handleMessageCreated(
             });
         } catch (error) {
             console.warn('Failed to increment unread count:', error);
+        }
+    }
+
+    // 4. Context Sync: during human mode, push messages to Redis so the AI
+    //    has full conversation context when it resumes.
+    //    Skip activity messages (label changes, assignments) — they're noise for the AI.
+    if (!isActivity && message.content) {
+        try {
+            // Check if conversation is in human mode
+            const { data: linkState } = await supabase
+                .from('messaging_conversation_links')
+                .select('ai_enabled')
+                .eq('organization_id', organizationId)
+                .eq('chatwoot_conversation_id', conversation.id)
+                .maybeSingle();
+
+            if (linkState && linkState.ai_enabled === false) {
+                // Conversation is in human mode — push to Redis for AI context preservation.
+                // Also check if bot message (content_attributes.bot = true) — skip those
+                // because they were already recorded before the handoff.
+                const isBotMessage = message.content_attributes?.bot === true;
+                if (!isBotMessage) {
+                    const { deriveSessionKey, pushContextToRedis } = await import('@/lib/messaging/contextSync');
+                    const sessionKey = await deriveSessionKey(supabase, organizationId, conversation.id);
+
+                    if (sessionKey) {
+                        // In LangChain memory: 'human' = user/customer, 'ai' = assistant/agent
+                        const role = isIncoming ? 'human' : 'ai';
+                        await pushContextToRedis({ sessionKey, role, content: message.content });
+                        console.log('[Webhook] Context synced to Redis:', {
+                            conversationId: conversation.id,
+                            sessionKey,
+                            role,
+                            contentPreview: message.content.substring(0, 40),
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            // Non-critical — the AI will still work, just with a gap in context
+            console.warn('[Webhook] Context sync failed:', error);
         }
     }
 }
