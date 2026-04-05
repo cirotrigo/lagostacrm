@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createChatwootClientForOrg } from '@/lib/chatwoot';
+import { deriveSessionKey, pushContextToRedis } from '@/lib/messaging/contextSync';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -146,21 +147,50 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             body.private ?? false
         );
 
-        // Auto-assign conversation to the human agent when sending a non-private message.
-        // This signals the AI bot to stop responding (the bot's filter checks for assignee).
+        // When a human sends a non-private message:
+        // 1. Switch to human mode (bot stops responding)
+        // 2. Push the sent message to Redis so the AI has context when it resumes
         if (!body.private) {
             try {
-                const agents = await chatwoot.listAgents();
-                const userEmail = user.email?.toLowerCase();
-                const match = agents.find((a: any) =>
-                    a.email?.toLowerCase() === userEmail
-                );
-                if (match) {
-                    await chatwoot.assignConversation(conversationId, match.id);
+                // Build the internal handoff URL (same origin)
+                const origin = request.headers.get('host')
+                    ? `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host')}`
+                    : '';
+
+                const handoffRes = await fetch(`${origin}/api/messaging/handoff`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // Forward auth cookie so the handoff route can authenticate
+                        'Cookie': request.headers.get('cookie') || '',
+                    },
+                    body: JSON.stringify({
+                        conversation_id: conversationId,
+                        mode: 'human',
+                        reason: 'human_sent_message_from_crm',
+                        source: 'ui',
+                    }),
+                });
+
+                if (!handoffRes.ok) {
+                    console.warn('[Messages API] Auto-handoff failed:', await handoffRes.text());
                 }
-            } catch (assignError) {
-                // Non-critical — log but don't fail the message send
-                console.warn('[Messages API] Auto-assign failed:', assignError);
+            } catch (handoffError) {
+                console.warn('[Messages API] Auto-handoff error:', handoffError);
+            }
+
+            // Push the human's message to Redis for AI context preservation
+            try {
+                const sessionKey = await deriveSessionKey(supabase, profile.organization_id, conversationId);
+                if (sessionKey) {
+                    await pushContextToRedis({
+                        sessionKey,
+                        role: 'ai', // Human agent's message = 'ai' in LangChain memory (it's a "response")
+                        content: body.content,
+                    });
+                }
+            } catch (syncError) {
+                console.warn('[Messages API] Context sync error:', syncError);
             }
         }
 
