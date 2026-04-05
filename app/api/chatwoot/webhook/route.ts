@@ -82,18 +82,27 @@ export async function POST(request: NextRequest) {
             }
 
             if (configs && configs.length > 0) {
-                const inboxScopedConfigs = webhookInboxId == null
-                    ? configs
-                    : configs.filter(c => c.chatwoot_inbox_id === webhookInboxId);
-                const candidates = inboxScopedConfigs.length > 0 ? inboxScopedConfigs : configs;
-                const uniqueOrganizationIds = [...new Set(candidates.map(c => c.organization_id))];
-
+                // Multi-tenant Chatwoot: each tenant's CRM URL receives ALL account-wide
+                // webhooks, but only cares about its OWN inboxes. We require an exact
+                // inbox_id match against a local active config — no fallback to
+                // "any config for this account". Events for unknown inboxes are not
+                // errors; they simply belong to another tenant.
+                if (webhookInboxId == null) {
+                    // Account-level event with no inbox context; acknowledge silently.
+                    return NextResponse.json({ success: true, ignored: 'no_inbox_context' });
+                }
+                const scopedConfigs = configs.filter(c => c.chatwoot_inbox_id === webhookInboxId);
+                if (scopedConfigs.length === 0) {
+                    // Foreign tenant's inbox — acknowledge and move on without noise.
+                    return NextResponse.json({ success: true, ignored: 'foreign_inbox' });
+                }
+                const uniqueOrganizationIds = [...new Set(scopedConfigs.map(c => c.organization_id))];
                 if (uniqueOrganizationIds.length === 1) {
-                    const chosenConfig = candidates.find(c => c.organization_id === uniqueOrganizationIds[0]);
+                    const chosenConfig = scopedConfigs.find(c => c.organization_id === uniqueOrganizationIds[0]);
                     organizationId = uniqueOrganizationIds[0];
                     resolvedBaseUrl = chosenConfig?.chatwoot_base_url ?? null;
                 } else {
-                    console.error('Ambiguous organization mapping for Chatwoot account:', {
+                    console.error('Ambiguous organization mapping for Chatwoot account/inbox:', {
                         accountId: payload.account.id,
                         inboxId: webhookInboxId,
                         organizations: uniqueOrganizationIds,
@@ -107,13 +116,10 @@ export async function POST(request: NextRequest) {
         }
 
         if (!organizationId) {
-            console.error('Could not determine organization for webhook:', {
-                accountId: payload.account?.id,
-            });
-            return NextResponse.json(
-                { error: 'Organization not found' },
-                { status: 400 }
-            );
+            // No config at all for this tenant → silently ignore the webhook.
+            // This happens in multi-tenant setups where Chatwoot fans out the same
+            // event to every CRM URL.
+            return NextResponse.json({ success: true, ignored: 'no_matching_tenant' });
         }
 
         // 4. Get Chatwoot base URL for building deep links

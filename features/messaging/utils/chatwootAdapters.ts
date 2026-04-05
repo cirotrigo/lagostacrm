@@ -250,18 +250,28 @@ export function adaptChatwootConversations(
 
 /**
  * Batch convert Chatwoot messages
- * Filters out activity messages (type 2 or 'activity') which have no user content
+ * Includes activity messages (system events like assignments/labels/resolves)
+ * marked with is_system=true so the UI can render them as centered pills.
  */
 export function adaptChatwootMessages(messages: ChatwootMessage[]): WhatsAppMessage[] {
     return messages
         .filter(m => {
-            // Filter out activity messages (system messages like "assigned to", "resolved", etc.)
             const isActivity = m.message_type === 'activity' || m.message_type === 2;
-            if (isActivity) return false;
-
-            // Filter out messages with no content and no attachments
+            if (isActivity) {
+                // Keep activity messages only if they have actual content (Chatwoot
+                // sends the human-readable event text in `content`).
+                return Boolean(m.content);
+            }
+            // Normal message: must have content or attachment
             const hasContent = m.content || (m.attachments && m.attachments.length > 0);
             return hasContent;
         })
-        .map(adaptChatwootMessage);
+        .map(m => {
+            const isActivity = m.message_type === 'activity' || m.message_type === 2;
+            const adapted = adaptChatwootMessage(m);
+            if (isActivity) {
+                adapted.is_system = true;
+            }
+            return adapted;
+        });
 }
