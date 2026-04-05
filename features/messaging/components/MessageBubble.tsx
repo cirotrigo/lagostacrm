@@ -30,7 +30,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
   const timestamp = message.wpp_timestamp || message.created_at;
   const formattedTime = format(new Date(timestamp), 'HH:mm', { locale: ptBR });
 
-  // Don't render empty messages (activity messages from Chatwoot)
+  // System/activity messages (e.g. "Ciro atribuiu a si mesmo", "Adicionou label")
+  // render as a centered discreet pill, matching the Chatwoot UX.
+  if (message.is_system) {
+    if (!message.content) return null;
+    return (
+      <div className="flex justify-center my-2">
+        <span className="px-3 py-1 text-[11px] font-medium bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 rounded-full border border-slate-200 dark:border-white/10">
+          {message.content} · {formattedTime}
+        </span>
+      </div>
+    );
+  }
+
+  // Don't render empty messages
   const hasContent = message.content || message.media_url || message.caption;
   if (!hasContent) {
     return null;

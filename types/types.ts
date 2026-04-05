@@ -656,6 +656,11 @@ export interface WhatsAppMessage {
   is_broadcast: boolean;
   wpp_timestamp: string | null;
   created_at: string;
+  /**
+   * System/activity message (Chatwoot events like "X added label", "X assigned",
+   * "X resolved"). Rendered as a centered pill instead of a normal bubble.
+   */
+  is_system?: boolean;
 }
 
 /**

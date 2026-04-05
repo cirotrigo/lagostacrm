@@ -95,8 +95,12 @@ export function useConversations(options: UseConversationsOptions = {}): UseQuer
         },
         select: selectConversations,
         enabled,
-        staleTime: 30000, // 30 seconds
-        refetchInterval: 60000, // 1 minute
+        // Short stale window so any interaction revalidates quickly.
+        // Realtime (via useMessagingRealtime) is the primary path; this is defense in depth.
+        staleTime: 5000,
+        refetchInterval: 30000,
+        refetchOnWindowFocus: true,
+        refetchOnMount: true,
     });
 }
 

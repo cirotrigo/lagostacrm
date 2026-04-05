@@ -154,6 +154,12 @@ export function useMessagingController() {
         // 1) Optimistic update: patch every conversations cache entry BEFORE the network call.
         //    This gives the user instant feedback (<16ms). The realtime channel on
         //    messaging_conversation_links confirms the state afterwards for other clients.
+        //
+        //    IMPORTANT: useConversations stores the queryFn return value (a raw
+        //    WhatsAppConversationView[] array) in the cache and applies a `select`
+        //    transform to wrap it into { data, total, limit, offset } at render time.
+        //    setQueryData operates on the raw cached value, so we must patch the array
+        //    directly — patching { data: [...] } would corrupt the shape.
         const conversationsCaches = queryClient.getQueryCache().findAll({
             queryKey: ['chatwoot', 'conversations'],
         });
@@ -165,20 +171,45 @@ export function useMessagingController() {
         const patchCache = (value: boolean) => {
             conversationsCaches.forEach((q) => {
                 queryClient.setQueryData(q.queryKey, (old: unknown) => {
-                    if (!old || typeof old !== 'object') return old;
-                    const oldData = old as { data?: Array<{ id: string; ai_enabled?: boolean }> };
-                    if (!Array.isArray(oldData.data)) return old;
-                    return {
-                        ...oldData,
-                        data: oldData.data.map((c) =>
+                    // Raw cache is WhatsAppConversationView[] (array)
+                    if (Array.isArray(old)) {
+                        return old.map((c: { id: string }) =>
                             c.id === selectedConversationId ? { ...c, ai_enabled: value } : c
-                        ),
-                    };
+                        );
+                    }
+                    // Defensive fallback for any wrapped shape
+                    if (old && typeof old === 'object') {
+                        const wrapped = old as { data?: Array<{ id: string }> };
+                        if (Array.isArray(wrapped.data)) {
+                            return {
+                                ...wrapped,
+                                data: wrapped.data.map((c) =>
+                                    c.id === selectedConversationId ? { ...c, ai_enabled: value } : c
+                                ),
+                            };
+                        }
+                    }
+                    return old;
                 });
             });
         };
 
         patchCache(nextAi);
+
+        // Also patch the selected conversation view directly so the header button
+        // reflects the new state even if the cache patch above is no-op.
+        queryClient.setQueryData(
+            ['chatwoot', 'conversation', numericId],
+            (old: unknown) => {
+                if (old && typeof old === 'object') {
+                    const wrapped = old as { data?: { ai_enabled?: boolean } };
+                    if (wrapped.data) {
+                        return { ...wrapped, data: { ...wrapped.data, ai_enabled: nextAi } };
+                    }
+                }
+                return old;
+            }
+        );
         setIsTogglingAI(true);
 
         try {

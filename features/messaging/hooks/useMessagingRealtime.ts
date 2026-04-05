@@ -101,12 +101,18 @@ export function useMessagingRealtime(options: UseMessagingRealtimeOptions = {}) 
 
         // Add to query cache
         const messageConvId = cachedMessage.chatwoot_conversation_id;
+        const isActivity = cachedMessage.message_type === 'activity'
+            || (cachedMessage.message_type as unknown as number) === 2;
         queryClient.setQueryData(
             [...queryKeys.chatwoot.messages(messageConvId), 'infinite'],
             (old: { pages: Array<{ data: unknown[] }> } | undefined) => {
                 if (!old) return old;
 
                 const adaptedMessage = adaptChatwootMessage(chatwootMessage);
+                // Activity/system messages are rendered as centered pills in the UI.
+                if (isActivity) {
+                    (adaptedMessage as { is_system?: boolean }).is_system = true;
+                }
 
                 // Check if message already exists
                 const exists = old.pages.some((page) =>
@@ -179,45 +185,82 @@ export function useMessagingRealtime(options: UseMessagingRealtimeOptions = {}) 
 
         let messagesChannel: RealtimeChannel | null = null;
         let linksChannel: RealtimeChannel | null = null;
+        const authListenerRef: { unsubscribe?: () => void } = {};
+        let cancelled = false;
 
-        // Subscribe to messaging_messages_cache
-        messagesChannel = sb
-            .channel('messaging-messages-realtime')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messaging_messages_cache',
-                },
-                handleNewMessage
-            )
-            .subscribe((status) => {
-                console.log('[MessagingRealtime] Messages channel status:', status);
-            });
+        const subscribe = async () => {
+            // Ensure the realtime socket is authenticated with the user's JWT.
+            // createBrowserClient from @supabase/ssr reads cookies but does NOT
+            // automatically propagate the access token to the realtime connection,
+            // which causes RLS-protected tables to silently block events.
+            try {
+                const { data: { session } } = await sb.auth.getSession();
+                if (session?.access_token) {
+                    sb.realtime.setAuth(session.access_token);
+                }
+            } catch (e) {
+                console.warn('[MessagingRealtime] getSession failed:', e);
+            }
 
-        // Subscribe to messaging_conversation_links
-        linksChannel = sb
-            .channel('messaging-links-realtime')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'messaging_conversation_links',
-                },
-                handleConversationUpdate
-            )
-            .subscribe((status) => {
-                console.log('[MessagingRealtime] Links channel status:', status);
-            });
+            if (cancelled) return;
+
+            // Subscribe to messaging_messages_cache
+            messagesChannel = sb
+                .channel('messaging-messages-realtime')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'messaging_messages_cache',
+                    },
+                    handleNewMessage
+                )
+                .subscribe((status) => {
+                    console.log('[MessagingRealtime] Messages channel status:', status);
+                });
+
+            // Subscribe to messaging_conversation_links
+            linksChannel = sb
+                .channel('messaging-links-realtime')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'messaging_conversation_links',
+                    },
+                    handleConversationUpdate
+                )
+                .subscribe((status) => {
+                    console.log('[MessagingRealtime] Links channel status:', status);
+                });
+        };
+
+        // React to auth changes (e.g. token refresh) and reapply to realtime
+        const { data: authSub } = sb.auth.onAuthStateChange((_event, session) => {
+            if (session?.access_token) {
+                try {
+                    sb.realtime.setAuth(session.access_token);
+                } catch (e) {
+                    console.warn('[MessagingRealtime] setAuth on auth change failed:', e);
+                }
+            }
+        });
+        authListenerRef.unsubscribe = () => authSub?.subscription?.unsubscribe();
+
+        void subscribe();
 
         return () => {
+            cancelled = true;
             if (messagesChannel) {
                 sb.removeChannel(messagesChannel);
             }
             if (linksChannel) {
                 sb.removeChannel(linksChannel);
+            }
+            if (authListenerRef.unsubscribe) {
+                authListenerRef.unsubscribe();
             }
         };
     }, [enabled, handleNewMessage, handleConversationUpdate]);
