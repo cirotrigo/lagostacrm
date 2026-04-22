@@ -69,6 +69,8 @@ async function resolveCompanyIdFromName(opts: { organizationId: string; companyN
   return created.data.id as string;
 }
 
+const VALID_CHANNELS = ['whatsapp','instagram','messenger','telegram','email','sms','other'] as const;
+
 export async function GET(request: Request) {
   const auth = await authPublicApi(request);
   if (!auth.ok) return NextResponse.json(auth.body, { status: auth.status });
@@ -78,10 +80,34 @@ export async function GET(request: Request) {
   const email = normalizeEmail(url.searchParams.get('email'));
   const phone = normalizePhone(url.searchParams.get('phone'));
   const clientCompanyId = sanitizeUUID(url.searchParams.get('client_company_id'));
+  const identifier = (url.searchParams.get('identifier') || '').trim();
+  const channelRaw = (url.searchParams.get('channel') || '').trim().toLowerCase();
+  const channel = (VALID_CHANNELS as readonly string[]).includes(channelRaw) ? channelRaw : '';
   const limit = parseLimit(url.searchParams.get('limit'));
   const offset = decodeOffsetCursor(url.searchParams.get('cursor'));
 
   const sb = createStaticAdminClient();
+
+  // Phase 1: lookup by channel identifier resolves to contact ids first,
+  // then queries contacts. Keeps legacy phone/email lookups working.
+  let contactIdsFromIdentifier: string[] | null = null;
+  if (identifier) {
+    let idQuery = sb
+      .from('contact_identifiers')
+      .select('contact_id')
+      .eq('organization_id', auth.organizationId)
+      .is('deleted_at', null)
+      .eq('identifier', identifier)
+      .limit(50);
+    if (channel) idQuery = idQuery.eq('channel', channel);
+    const { data: idRows, error: idErr } = await idQuery;
+    if (idErr) return NextResponse.json({ error: idErr.message, code: 'DB_ERROR' }, { status: 500 });
+    contactIdsFromIdentifier = (idRows || []).map((r: any) => r.contact_id).filter(Boolean);
+    if (contactIdsFromIdentifier.length === 0) {
+      return NextResponse.json({ data: [], nextCursor: null });
+    }
+  }
+
   let query = sb
     .from('contacts')
     .select('id,name,email,phone,role,company_name,client_company_id,avatar,notes,status,stage,source,birth_date,last_interaction,last_purchase_date,total_value,created_at,updated_at', { count: 'exact' })
@@ -89,6 +115,7 @@ export async function GET(request: Request) {
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
+  if (contactIdsFromIdentifier) query = query.in('id', contactIdsFromIdentifier);
   if (clientCompanyId) query = query.eq('client_company_id', clientCompanyId);
   if (email) query = query.eq('email', email);
   if (phone) query = query.eq('phone', phone);
