@@ -58,7 +58,7 @@ INSERT INTO documents (content, metadata, organization_id) VALUES
 '0ba344eb-8c40-403e-93e0-f6171e1cf06e'),
 
 -- CARDÁPIO
-('Cardápio do Empório Fonseca: O cardápio completo está disponível no link: https://drive.google.com/open?id=1ZIeZuI_AyT9qgv-rL-Wv9WXipISw7K07&usp=drive_fs. Quando o cliente solicitar o cardápio, enviar este link. Não descrever todos os itens do cardápio na conversa.',
+('Cardápio do Empório Fonseca: O cardápio completo está disponível no link: https://emporiofonseca.vercel.app/cardapio. Quando o cliente solicitar o cardápio, enviar este link. Não descrever todos os itens do cardápio na conversa.',
 '{"category": "CARDAPIO", "organization_id": "0ba344eb-8c40-403e-93e0-f6171e1cf06e"}',
 '0ba344eb-8c40-403e-93e0-f6171e1cf06e'),
 
@@ -73,6 +73,6 @@ INSERT INTO documents (content, metadata, organization_id) VALUES
 '0ba344eb-8c40-403e-93e0-f6171e1cf06e'),
 
 -- FAQ GERAL
-('Perguntas frequentes do Empório Fonseca: "Tem opções vegetarianas ou veganas?" — Sim, temos opções no cardápio. "Cobra rolha?" — Sim, R$ 70 por garrafa, às quintas a primeira é gratuita. "Aceita pet?" — Sim, somente na varanda. "Qual a tolerância de atraso?" — Até 10 minutos, após isso a mesa pode ser liberada se houver fila. "Posso reservar para daqui a pouco?" — Reservas precisam de pelo menos 1h30 de antecedência. "Vocês têm delivery?" — Transferir para humano. "Como pago reserva para grupo grande?" — Consumação mínima R$ 499, PIX pelo CNPJ 54.048.810/0001-47.',
+('Perguntas frequentes do Empório Fonseca: "Tem opções vegetarianas ou veganas?" — Sim, temos opções no cardápio. "Cobra rolha?" — Sim, R$ 70 por garrafa, às quintas a primeira é gratuita. "Aceita pet?" — Sim, somente na varanda. "Qual a tolerância de atraso?" — Até 10 minutos, após isso a mesa pode ser liberada se houver fila. "Posso reservar para daqui a pouco?" — Reservas precisam de pelo menos 1h30 de antecedência. "Vocês têm delivery?" — Não trabalhamos com delivery, mas o cliente pode fazer pedido para retirada no local. A Sofia oferece a alternativa de retirada e, se o cliente aceitar, segue o fluxo padrão de pedido para retirada. "Como pago reserva para grupo grande?" — Consumação mínima R$ 499, PIX pelo CNPJ 54.048.810/0001-47.',
 '{"category": "FAQ", "organization_id": "0ba344eb-8c40-403e-93e0-f6171e1cf06e"}',
 '0ba344eb-8c40-403e-93e0-f6171e1cf06e');
