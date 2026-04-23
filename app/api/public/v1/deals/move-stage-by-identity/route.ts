@@ -7,17 +7,23 @@ export const runtime = 'nodejs';
 
 const CHANNEL_ENUM = ['whatsapp','instagram','messenger','telegram','email','sms','other'] as const;
 
+// n8n templates render missing fields as empty strings rather than omitting them.
+// Treat "" and whitespace-only values as undefined so optional fields with
+// format constraints (uuid, enum, min(1)) don't reject the payload.
+const emptyToUndefined = (v: unknown) =>
+  typeof v === 'string' && v.trim() === '' ? undefined : v;
+
 const MoveStageByIdentitySchema = z.object({
   board_key_or_id: z.string().min(1),
-  phone: z.string().optional(),
-  email: z.string().optional(),
-  channel: z.enum(CHANNEL_ENUM).optional(),
-  identifier: z.string().optional(),
-  contact_id: z.string().uuid().optional(),
-  to_stage_id: z.string().uuid().optional(),
-  to_stage_label: z.string().min(1).optional(),
-  mark: z.enum(['won', 'lost']).optional(),
-  ai_summary: z.string().optional(),
+  phone: z.preprocess(emptyToUndefined, z.string().optional()),
+  email: z.preprocess(emptyToUndefined, z.string().optional()),
+  channel: z.preprocess(emptyToUndefined, z.enum(CHANNEL_ENUM).optional()),
+  identifier: z.preprocess(emptyToUndefined, z.string().optional()),
+  contact_id: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
+  to_stage_id: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
+  to_stage_label: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  mark: z.preprocess(emptyToUndefined, z.enum(['won', 'lost']).optional()),
+  ai_summary: z.preprocess(emptyToUndefined, z.string().optional()),
 }).strict()
   .refine(
     (v) => !!(v.contact_id || v.phone || v.email || (v.channel && v.identifier)),
