@@ -88,8 +88,10 @@ export async function GET(request: Request) {
 
   const sb = createStaticAdminClient();
 
-  // Phase 1: lookup by channel identifier resolves to contact ids first,
-  // then queries contacts. Keeps legacy phone/email lookups working.
+  // Phase 1+2: lookup by channel identifier resolves to contact ids first,
+  // then falls back to legacy phone/email when the identifier isn't found.
+  // The fallback is what lets a WhatsApp webhook match an existing Instagram
+  // contact whose phone was updated to the real number.
   let contactIdsFromIdentifier: string[] | null = null;
   if (identifier) {
     let idQuery = sb
@@ -104,7 +106,13 @@ export async function GET(request: Request) {
     if (idErr) return NextResponse.json({ error: idErr.message, code: 'DB_ERROR' }, { status: 500 });
     contactIdsFromIdentifier = (idRows || []).map((r: any) => r.contact_id).filter(Boolean);
     if (contactIdsFromIdentifier.length === 0) {
-      return NextResponse.json({ data: [], nextCursor: null });
+      // No identifier match. Fall back to phone/email if the caller provided
+      // them — this is how a WhatsApp webhook can still match a contact that
+      // was created via Instagram and had its phone updated.
+      if (!phone && !email) {
+        return NextResponse.json({ data: [], nextCursor: null });
+      }
+      contactIdsFromIdentifier = null;
     }
   }
 
@@ -204,8 +212,15 @@ export async function POST(request: Request) {
   else if (email) lookup = lookup.eq('email', email);
   else if (phone) lookup = lookup.eq('phone', phone);
 
-  const existing = await lookup.maybeSingle();
-  if (existing.error) return NextResponse.json({ error: existing.error.message, code: 'DB_ERROR' }, { status: 500 });
+  // Use order + limit instead of maybeSingle: with multi-channel contacts it's
+  // valid to have more than one row matching the same phone/email (e.g. same
+  // phone appears on both an Instagram contact and a WhatsApp contact). Pick
+  // the most recently updated one as the target for the upsert.
+  const { data: existingRows, error: lookupErr } = await lookup
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (lookupErr) return NextResponse.json({ error: lookupErr.message, code: 'DB_ERROR' }, { status: 500 });
+  const existing = { data: (existingRows && existingRows[0]) || null };
 
   const now = new Date().toISOString();
   const payload: any = {
