@@ -123,10 +123,17 @@ export async function GET(request: Request) {
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
-  if (contactIdsFromIdentifier) query = query.in('id', contactIdsFromIdentifier);
+  if (contactIdsFromIdentifier) {
+    // Identifier match is authoritative — narrow by these ids only. Do NOT
+    // apply phone/email filters on top, because the matched contact may have
+    // a different phone stored in contacts.phone (e.g. Instagram contact
+    // where phone still holds the IGSID but a whatsapp identifier exists).
+    query = query.in('id', contactIdsFromIdentifier);
+  } else {
+    if (email) query = query.eq('email', email);
+    if (phone) query = query.eq('phone', phone);
+  }
   if (clientCompanyId) query = query.eq('client_company_id', clientCompanyId);
-  if (email) query = query.eq('email', email);
-  if (phone) query = query.eq('phone', phone);
   if (q) {
     query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);
   }
