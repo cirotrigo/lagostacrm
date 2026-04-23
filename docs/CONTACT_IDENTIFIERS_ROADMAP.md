@@ -1,17 +1,40 @@
 # Contact Identifiers — Roadmap de Execução
 
-## Status atual (2026-04-22)
+> **Para rollout em novo cliente, usar o playbook operacional:** [CONTACT_IDENTIFIERS_PLAYBOOK.md](CONTACT_IDENTIFIERS_PLAYBOOK.md)
+>
+> Esse roadmap descreve as fases em alto nível. O playbook tem o checklist passo-a-passo com todas as armadilhas descobertas durante o rollout do Empório.
 
-**Fase 1 — Infraestrutura: ✅ PRONTA NO CÓDIGO, AGUARDA DEPLOY**
+## Status atual (2026-04-23)
 
-Entregue neste repo (ainda não deployado):
+**Fase 1 — Infraestrutura: ✅ DEPLOYADA NO EMPÓRIO**
+**Fase 2 — n8n usando identifiers: ✅ DEPLOYADA NO EMPÓRIO**
+**Fase 3 — Merge automático: ⏳ PENDENTE**
+**Fase 4 — Cleanup `contacts.phone`: ⏳ PENDENTE**
+
+**Clientes:**
+- Empório Fonseca — Fases 1+2 completas (2026-04-23)
+- Coronel Picanha — pendente
+- Wine Vix — pendente
+
+---
+
+## Fase 1 — Infraestrutura (completa no código)
+
+Entregue e deployado no main:
 
 - `supabase/migrations/20260422120000_contact_identifiers.sql` — tabela, índices, RLS, trigger, backfill, view `contacts_with_identifiers`
-- `app/api/public/v1/contacts/route.ts` — `GET` estendido com filtros `identifier` e `channel`
-- `app/api/public/v1/contacts/[contactId]/identifiers/route.ts` — `GET` (listar) e `POST` (adicionar/upsert)
+- `app/api/public/v1/contacts/route.ts` — `GET` estendido com filtros `identifier` e `channel`; dedup do POST tolera múltiplos matches
+- `app/api/public/v1/contacts/[contactId]/identifiers/route.ts` — `GET` (listar) e `POST` (adicionar/upsert, retorna 409 em conflito cross-contact)
 - `app/api/public/v1/contacts/[contactId]/identifiers/[identifierId]/route.ts` — `DELETE` (soft-delete)
+- `app/api/public/v1/deals/move-stage-by-identity/route.ts` — aceita `contact_id`, `channel+identifier` além de phone/email; preprocess de empty-strings para tolerar templates n8n
+- `lib/public-api/dealsMoveStage.ts` — resolve identidade em ordem: `contact_id > (channel,identifier) > phone/email`
 
 **Compatibilidade:** nenhuma funcionalidade existente é afetada. `contacts.phone` continua sendo lido e escrito como antes. A nova tabela é aditiva.
+
+**Bugs corrigidos durante o rollout do Empório:**
+- POST /contacts dedup com `.maybeSingle()` falhava em phones duplicados → trocado por `order + limit(1)`
+- GET /contacts aplicava `AND` entre identifier match e phone/email filters → agora identifier match é autoritativo, sem filtros adicionais
+- move-stage-by-identity Zod rejeitava `contact_id=""` de templates n8n → preprocess `emptyToUndefined` em todos os campos opcionais
 
 ---
 
@@ -47,6 +70,8 @@ Executar em cada CRM multi-tenant (Empório Fonseca, Coronel Picanha, Wine Vix, 
 ---
 
 ## Fase 2 — n8n passa a usar identifiers (por cliente)
+
+**✅ Procedimento completo documentado em [CONTACT_IDENTIFIERS_PLAYBOOK.md](CONTACT_IDENTIFIERS_PLAYBOOK.md).** A seção abaixo é overview — use o playbook para executar.
 
 **Escopo:** substituir o lookup por `phone` pelo lookup por `(channel, identifier)` nos workflows do agente.
 
