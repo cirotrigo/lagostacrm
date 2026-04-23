@@ -155,6 +155,9 @@ export async function moveStageByIdentity(opts: {
   boardKeyOrId: string;
   phone?: string | null;
   email?: string | null;
+  channel?: string | null;
+  identifier?: string | null;
+  contactId?: string | null;
   target: { to_stage_id?: string | null; to_stage_label?: string | null };
   mark?: 'won' | 'lost' | null;
   aiSummary?: string | null;
@@ -167,7 +170,13 @@ export async function moveStageByIdentity(opts: {
 
   const phone = normalizePhone(opts.phone);
   const email = normalizeEmail(opts.email);
-  if (!phone && !email) return { ok: false as const, status: 422, body: { error: 'Invalid phone/email', code: 'VALIDATION_ERROR' } };
+  const contactId = sanitizeUUID(opts.contactId || null);
+  const channel = (opts.channel || '').trim().toLowerCase() || null;
+  const identifier = (opts.identifier || '').trim() || null;
+
+  if (!contactId && !phone && !email && !(channel && identifier)) {
+    return { ok: false as const, status: 422, body: { error: 'Invalid identity', code: 'VALIDATION_ERROR' } };
+  }
 
   const sb = createStaticAdminClient();
   const { data: boardCfg, error: boardCfgError } = await sb
@@ -181,18 +190,37 @@ export async function moveStageByIdentity(opts: {
   const wonStageId = sanitizeUUID((boardCfg as any)?.won_stage_id) || null;
   const lostStageId = sanitizeUUID((boardCfg as any)?.lost_stage_id) || null;
 
-  let contactsQuery = sb
-    .from('contacts')
-    .select('id')
-    .eq('organization_id', opts.organizationId)
-    .is('deleted_at', null);
-  if (phone && email) contactsQuery = contactsQuery.or(`phone.eq.${phone},email.eq.${email}`);
-  else if (phone) contactsQuery = contactsQuery.eq('phone', phone);
-  else contactsQuery = contactsQuery.eq('email', email);
+  // Resolve contact IDs from the most stable identity first.
+  let contactIds: string[] = [];
 
-  const { data: contacts, error: contactsError } = await contactsQuery.limit(20);
-  if (contactsError) return { ok: false as const, status: 500, body: { error: contactsError.message, code: 'DB_ERROR' } };
-  const contactIds = (contacts || []).map((c: any) => c.id).filter(Boolean);
+  if (contactId) {
+    contactIds = [contactId];
+  } else if (channel && identifier) {
+    const { data: idRows, error: idErr } = await sb
+      .from('contact_identifiers')
+      .select('contact_id')
+      .eq('organization_id', opts.organizationId)
+      .eq('channel', channel)
+      .eq('identifier', identifier)
+      .is('deleted_at', null)
+      .limit(20);
+    if (idErr) return { ok: false as const, status: 500, body: { error: idErr.message, code: 'DB_ERROR' } };
+    contactIds = (idRows || []).map((r: any) => r.contact_id).filter(Boolean);
+  } else {
+    let contactsQuery = sb
+      .from('contacts')
+      .select('id')
+      .eq('organization_id', opts.organizationId)
+      .is('deleted_at', null);
+    if (phone && email) contactsQuery = contactsQuery.or(`phone.eq.${phone},email.eq.${email}`);
+    else if (phone) contactsQuery = contactsQuery.eq('phone', phone);
+    else if (email) contactsQuery = contactsQuery.eq('email', email);
+
+    const { data: contacts, error: contactsError } = await contactsQuery.limit(20);
+    if (contactsError) return { ok: false as const, status: 500, body: { error: contactsError.message, code: 'DB_ERROR' } };
+    contactIds = (contacts || []).map((c: any) => c.id).filter(Boolean);
+  }
+
   if (contactIds.length === 0) return { ok: false as const, status: 404, body: { error: 'Deal not found for this identity', code: 'NOT_FOUND' } };
 
   const { data: deals, error: dealsError } = await sb
