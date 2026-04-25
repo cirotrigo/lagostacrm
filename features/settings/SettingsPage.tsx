@@ -11,12 +11,13 @@ import { DataStorageSettings } from './components/DataStorageSettings';
 import { ProductsCatalogManager } from './components/ProductsCatalogManager';
 import { AICenterSettings } from './AICenterSettings';
 import { BrandingSettings } from './components/BrandingSettings';
+import { SchedulingSettings } from './components/SchedulingSettings';
 
 import { UsersPage } from './UsersPage';
 import { useAuth } from '@/context/AuthContext';
-import { Settings as SettingsIcon, Users, Database, Sparkles, Plug, Package } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Database, Sparkles, Plug, Package, Calendar } from 'lucide-react';
 
-type SettingsTab = 'general' | 'products' | 'integrations' | 'ai' | 'data' | 'users';
+type SettingsTab = 'general' | 'products' | 'integrations' | 'ai' | 'scheduling' | 'data' | 'users';
 
 interface GeneralSettingsProps {
   hash?: string;
@@ -196,6 +197,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ tab: initialTab }) => {
       setActiveTab('products');
     } else if (pathname?.includes('/settings/integracoes')) {
       setActiveTab('integrations');
+    } else if (pathname?.includes('/settings/agendamento')) {
+      setActiveTab('scheduling');
     } else if (pathname?.includes('/settings/data')) {
       setActiveTab('data');
     } else if (pathname?.includes('/settings/users')) {
@@ -210,6 +213,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ tab: initialTab }) => {
     ...(profile?.role === 'admin' ? [{ id: 'products' as SettingsTab, name: 'Produtos/Serviços', icon: Package }] : []),
     ...(profile?.role === 'admin' ? [{ id: 'integrations' as SettingsTab, name: 'Integrações', icon: Plug }] : []),
     { id: 'ai' as SettingsTab, name: 'Central de I.A', icon: Sparkles },
+    ...(profile?.role === 'admin' ? [{ id: 'scheduling' as SettingsTab, name: 'Agendamento', icon: Calendar }] : []),
     { id: 'data' as SettingsTab, name: 'Dados', icon: Database },
     ...(profile?.role === 'admin' ? [{ id: 'users' as SettingsTab, name: 'Equipe', icon: Users }] : []),
   ];
@@ -222,6 +226,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ tab: initialTab }) => {
         return <IntegrationsSettings />;
       case 'ai':
         return <AICenterSettings />;
+      case 'scheduling':
+        return <SchedulingSettings />;
       case 'data':
         return <DataStorageSettings />;
       case 'users':
