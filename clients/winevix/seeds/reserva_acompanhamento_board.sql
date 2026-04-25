@@ -1,0 +1,50 @@
+-- =============================================================================
+-- Seed: Wine Vix - Board "Reserva — Acompanhamento"
+-- Aplicado em: 2026-04-25
+--
+-- Board operacional pra lifecycle pós-reserva:
+--   Confirmada → Hoje / Próximas 24h → Concluída (won) ou Cancelada (lost)
+--
+-- IDs persistidos pra referência (workflows n8n e auto-move dependem):
+--
+-- organization_id  : 9bae9327-3f4e-4d57-9979-d63f380e528a (Wine Vix)
+-- board_id         : f468b193-7c37-4595-853e-91ab5f4dd80f
+-- board_key        : reserva-acompanhamento
+--
+-- stages:
+--   Confirmada              → f114da16-c301-4409-9c3b-152f8dcd7578 (order 0, default)
+--   Hoje / Próximas 24h     → b85d9b50-da78-455e-b125-44dd8674f4c4 (order 1)
+--   Concluída               → 694ea145-1d77-4e2a-9ebf-87d2fd3b627e (order 2, won_stage)
+--   Cancelada pelo cliente  → b9c3f5df-8008-41a5-b856-1131bde11a53 (order 3, lost_stage)
+--
+-- won_stay_in_stage = true / lost_stay_in_stage = true (ciclo fica visível)
+--
+-- Snippet de criação (para reaplicar em outro tenant ajustando organization_id):
+-- =============================================================================
+
+-- 1. Board
+-- INSERT INTO boards (key, name, description, type, organization_id, position)
+-- VALUES (
+--   'reserva-acompanhamento',
+--   'Reserva — Acompanhamento',
+--   'Lifecycle de reservas confirmadas: confirmada → próximas 24h → concluída/cancelada.',
+--   'OPERATIONS',
+--   '<ORG_ID>',
+--   2
+-- )
+-- RETURNING id;
+
+-- 2. Stages
+-- INSERT INTO board_stages (board_id, organization_id, name, label, "order", color, is_default) VALUES
+--   ('<BOARD_ID>', '<ORG_ID>', 'confirmada',              'Confirmada',              0, 'bg-blue-500',   true),
+--   ('<BOARD_ID>', '<ORG_ID>', 'hoje-proximas-24h',       'Hoje / Próximas 24h',     1, 'bg-yellow-500', false),
+--   ('<BOARD_ID>', '<ORG_ID>', 'concluida',               'Concluída',               2, 'bg-green-500',  false),
+--   ('<BOARD_ID>', '<ORG_ID>', 'cancelada-pelo-cliente',  'Cancelada pelo cliente',  3, 'bg-red-500',    false);
+
+-- 3. Marcar won/lost stages
+-- UPDATE boards SET
+--   won_stage_id  = '<CONCLUIDA_ID>',
+--   lost_stage_id = '<CANCELADA_ID>',
+--   won_stay_in_stage  = true,
+--   lost_stay_in_stage = true
+-- WHERE id = '<BOARD_ID>';
