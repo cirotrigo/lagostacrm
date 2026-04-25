@@ -8,6 +8,13 @@ import { normalizeText } from '@/lib/public-api/sanitize';
 
 export const runtime = 'nodejs';
 
+const ReservationMetadataSchema = z.object({
+  party_size: z.number().int().positive().optional(),
+  duration_minutes: z.number().int().positive().optional(),
+  area_id: z.string().min(1).optional(),
+  status: z.enum(['confirmed', 'canceled', 'rescheduled', 'completed']).optional(),
+}).passthrough();
+
 const ActivityCreateSchema = z.object({
   type: z.string().min(1),
   title: z.string().min(1),
@@ -16,6 +23,7 @@ const ActivityCreateSchema = z.object({
   deal_id: z.string().uuid().optional(),
   contact_id: z.string().uuid().optional(),
   client_company_id: z.string().uuid().optional(),
+  metadata: ReservationMetadataSchema.optional(),
 }).strict();
 
 export async function GET(request: Request) {
@@ -33,7 +41,7 @@ export async function GET(request: Request) {
   const sb = createStaticAdminClient();
   let query = sb
     .from('activities')
-    .select('id,title,description,type,date,completed,deal_id,contact_id,client_company_id,created_at', { count: 'exact' })
+    .select('id,title,description,type,date,completed,deal_id,contact_id,client_company_id,metadata,created_at', { count: 'exact' })
     .eq('organization_id', auth.organizationId)
     .is('deleted_at', null)
     .order('date', { ascending: false })
@@ -64,6 +72,7 @@ export async function GET(request: Request) {
       deal_id: a.deal_id ?? null,
       contact_id: a.contact_id ?? null,
       client_company_id: a.client_company_id ?? null,
+      metadata: a.metadata ?? {},
       created_at: a.created_at,
     })),
     nextCursor,
@@ -97,13 +106,14 @@ export async function POST(request: Request) {
     deal_id: sanitizeUUID(parsed.data.deal_id) || null,
     contact_id: sanitizeUUID(parsed.data.contact_id) || null,
     client_company_id: sanitizeUUID(parsed.data.client_company_id) || null,
+    metadata: parsed.data.metadata ?? {},
     created_at: now.toISOString(),
   };
 
   const { data, error } = await sb
     .from('activities')
     .insert(insertPayload)
-    .select('id,title,description,type,date,completed,deal_id,contact_id,client_company_id,created_at')
+    .select('id,title,description,type,date,completed,deal_id,contact_id,client_company_id,metadata,created_at')
     .single();
   if (error) return NextResponse.json({ error: error.message, code: 'DB_ERROR' }, { status: 500 });
   return NextResponse.json({ data, action: 'created' }, { status: 201 });
