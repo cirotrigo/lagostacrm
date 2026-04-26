@@ -1,0 +1,39 @@
+-- =============================================================================
+-- Seed: Empório Fonseca - Board "Reserva — Acompanhamento"
+-- Aplicado em: 2026-04-26
+--
+-- IDs persistidos pra referência (workflows n8n e auto-move dependem):
+--
+-- organization_id  : 0ba344eb-8c40-403e-93e0-f6171e1cf06e (Empório Fonseca)
+-- board_id         : 05101764-4288-455d-a2d5-6516f339c5e1
+-- board_key        : reserva-acompanhamento
+--
+-- stages:
+--   Confirmada              → d4e30065-d4e9-4520-9ea8-7eb30cc6c581 (order 0, default)
+--   Hoje / Próximas 24h     → 52a4ee50-a4c6-4515-820f-060210f4bb1d (order 1)
+--   Concluída               → 2f90152d-567d-46c6-af2c-9a8c828c339b (order 2, won_stage)
+--   Cancelada pelo cliente  → 846d6a49-c97e-498f-9858-e1f6d58abd2e (order 3, lost_stage)
+--
+-- won_stay_in_stage = true / lost_stay_in_stage = true
+--
+-- =============================================================================
+-- Workflows n8n associados (em produção)
+-- =============================================================================
+--
+-- 1. [Emporio Fonseca] Agente de atendimento Sofia (id TvNXUETbiNy2mE5k)
+--    - Tools: verificar_disponibilidade, registrar_agendamento_crm,
+--      cancelar_reserva, crm_mover_stage (com allow_cross_board:true),
+--      adicionar_identifier_contato (Empório-específico)
+--    - Prompt com FLUXO RESERVA / CANCELAMENTO / REMARCAÇÃO
+--      + anti-alucinação + suporte a 10+ pessoas (consumação mínima R$499)
+--
+-- 2. [Emporio Fonseca] Notificações de Stage (id 3uxs1Pdmsn17f0ke)
+--    - Webhook /emporio-fonseca/stage-notification (configurado)
+--    - Notifica Ciro, Débora, Kairo
+--    - Filtra stages dos 2 boards: principal + reserva-acompanhamento
+--
+-- 3. [Emporio Fonseca] Auto-assign ao responder manualmente (id OnLQKbho872Exw1a)
+--
+-- Pendente (futuro):
+-- 4. [Emporio Fonseca] Pós-Reserva — Auto-move (clonar do Wine Vix WYyCUipPIOWzJsu7
+--    quando quiserem habilitar auto-move 24h antes / 48h depois)
