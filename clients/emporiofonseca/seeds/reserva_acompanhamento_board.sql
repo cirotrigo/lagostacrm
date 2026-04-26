@@ -34,6 +34,8 @@
 --
 -- 3. [Emporio Fonseca] Auto-assign ao responder manualmente (id OnLQKbho872Exw1a)
 --
--- Pendente (futuro):
--- 4. [Emporio Fonseca] Pós-Reserva — Auto-move (clonar do Wine Vix WYyCUipPIOWzJsu7
---    quando quiserem habilitar auto-move 24h antes / 48h depois)
+-- 4. [Emporio Fonseca] Pós-Reserva — Auto-move (id 1jaNZGqlo9u0MWju)
+--    - ScheduleTrigger 1h
+--    - Confirmada + ≤24h → "Hoje / Próximas 24h"
+--    - Qualquer aberto + ≥48h após reserva → "Concluída" (won)
+--    - Estado inicial: INATIVO. Ativar via n8n UI quando quiser ligar.
