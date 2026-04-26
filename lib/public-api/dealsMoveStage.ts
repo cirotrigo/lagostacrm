@@ -161,6 +161,13 @@ export async function moveStageByIdentity(opts: {
   target: { to_stage_id?: string | null; to_stage_label?: string | null };
   mark?: 'won' | 'lost' | null;
   aiSummary?: string | null;
+  /**
+   * When true, finds the most recently updated open deal for the contact in ANY board
+   * and moves it to the target board+stage (updating `board_id`).
+   * When false (default), only finds deals already in the target board.
+   * Use case: agente confirma reserva → move o deal do board principal → board reserva-acompanhamento.
+   */
+  allowCrossBoard?: boolean;
 }) {
   const boardId = await resolveBoardId({
     organizationId: opts.organizationId,
@@ -223,21 +230,25 @@ export async function moveStageByIdentity(opts: {
 
   if (contactIds.length === 0) return { ok: false as const, status: 404, body: { error: 'Deal not found for this identity', code: 'NOT_FOUND' } };
 
-  const { data: deals, error: dealsError } = await sb
+  let dealsQuery = sb
     .from('deals')
-    .select('id')
+    .select('id, board_id')
     .eq('organization_id', opts.organizationId)
     .is('deleted_at', null)
-    .eq('board_id', boardId)
     .eq('is_won', false)
     .eq('is_lost', false)
-    .in('contact_id', contactIds)
+    .in('contact_id', contactIds);
+  if (!opts.allowCrossBoard) {
+    dealsQuery = dealsQuery.eq('board_id', boardId);
+  }
+  const { data: deals, error: dealsError } = await dealsQuery
     .order('updated_at', { ascending: false })
-    .limit(2);
+    .limit(5);
   if (dealsError) return { ok: false as const, status: 500, body: { error: dealsError.message, code: 'DB_ERROR' } };
   if (!deals || deals.length === 0) return { ok: false as const, status: 404, body: { error: 'Deal not found for this identity', code: 'NOT_FOUND' } };
   // When multiple open deals exist, use the most recently updated one (first in list due to order)
   const dealId = (deals[0] as any).id as string;
+  const currentBoardId = (deals[0] as any).board_id as string;
   const stageId = await resolveStageIdForBoard({
     organizationId: opts.organizationId,
     boardId,
@@ -257,6 +268,9 @@ export async function moveStageByIdentity(opts: {
 
   const now = new Date().toISOString();
   const updates: any = { stage_id: stageId, last_stage_change_date: now, updated_at: now };
+  if (opts.allowCrossBoard && currentBoardId !== boardId) {
+    updates.board_id = boardId;
+  }
   if (opts.aiSummary) {
     updates.ai_summary = opts.aiSummary;
   }

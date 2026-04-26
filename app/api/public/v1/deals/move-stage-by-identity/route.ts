@@ -24,6 +24,7 @@ const MoveStageByIdentitySchema = z.object({
   to_stage_label: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   mark: z.preprocess(emptyToUndefined, z.enum(['won', 'lost']).optional()),
   ai_summary: z.preprocess(emptyToUndefined, z.string().optional()),
+  allow_cross_board: z.preprocess(emptyToUndefined, z.boolean().optional()),
 }).strict()
   .refine(
     (v) => !!(v.contact_id || v.phone || v.email || (v.channel && v.identifier)),
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
     target: { to_stage_id: parsed.data.to_stage_id ?? null, to_stage_label: parsed.data.to_stage_label ?? null },
     mark: parsed.data.mark ?? null,
     aiSummary: parsed.data.ai_summary ?? null,
+    allowCrossBoard: parsed.data.allow_cross_board ?? false,
   });
   // Compatibility alias (old name) — keep working.
   return NextResponse.json(res.body, { status: res.status });

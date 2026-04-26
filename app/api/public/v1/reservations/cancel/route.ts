@@ -99,6 +99,7 @@ export async function POST(request: Request) {
       target: { to_stage_id: null, to_stage_label: parsed.data.cancel_stage_label },
       mark: 'lost',
       aiSummary: parsed.data.ai_summary ?? `Reserva cancelada: ${reason}`,
+      allowCrossBoard: true,
     });
     moveResult = moveRes.body;
   }
