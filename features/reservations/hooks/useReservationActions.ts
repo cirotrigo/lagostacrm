@@ -1,0 +1,73 @@
+'use client';
+
+import { useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
+
+export function useReservationActions() {
+  const [pending, setPending] = useState<Record<string, boolean>>({});
+
+  const setPendingFor = (id: string, val: boolean) =>
+    setPending((p) => ({ ...p, [id]: val }));
+
+  /**
+   * Cancela uma reserva: marca activity.metadata.status='canceled' + completed=true.
+   * Usa Supabase direto (RLS aplica). Não move o deal — equipe move manualmente se quiser.
+   */
+  async function cancelReservation(activityId: string, reason?: string): Promise<{ ok: boolean; error?: string }> {
+    setPendingFor(activityId, true);
+    try {
+      const sb = supabase;
+      if (!sb) return { ok: false, error: 'Supabase não configurado' };
+      const { data: existing, error: fetchErr } = await sb
+        .from('activities')
+        .select('metadata')
+        .eq('id', activityId)
+        .maybeSingle();
+      if (fetchErr) return { ok: false, error: fetchErr.message };
+      const nextMeta = {
+        ...((existing as any)?.metadata ?? {}),
+        status: 'canceled',
+        canceled_at: new Date().toISOString(),
+        cancel_reason: reason ?? 'Cancelado pela equipe',
+      };
+      const { error } = await sb
+        .from('activities')
+        .update({ metadata: nextMeta, completed: true })
+        .eq('id', activityId);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    } finally {
+      setPendingFor(activityId, false);
+    }
+  }
+
+  /** Marca como concluída (cliente compareceu). */
+  async function markCompleted(activityId: string): Promise<{ ok: boolean; error?: string }> {
+    setPendingFor(activityId, true);
+    try {
+      const sb = supabase;
+      if (!sb) return { ok: false, error: 'Supabase não configurado' };
+      const { data: existing, error: fetchErr } = await sb
+        .from('activities')
+        .select('metadata')
+        .eq('id', activityId)
+        .maybeSingle();
+      if (fetchErr) return { ok: false, error: fetchErr.message };
+      const nextMeta = {
+        ...((existing as any)?.metadata ?? {}),
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+      };
+      const { error } = await sb
+        .from('activities')
+        .update({ metadata: nextMeta, completed: true })
+        .eq('id', activityId);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    } finally {
+      setPendingFor(activityId, false);
+    }
+  }
+
+  return { pending, cancelReservation, markCompleted };
+}

@@ -18,10 +18,24 @@ export type Reservation = {
 
 const DEFAULT_DURATION = 120;
 
+/** Tenta extrair party_size do título. Ex: "Reserva 4 pessoas" → 4, "Reserva para 6" → 6. */
+function extractPartySizeFromTitle(title: string): number {
+  if (!title) return 0;
+  const m = title.match(/(\d+)\s*pessoas?/i) || title.match(/para\s+(\d+)/i) || title.match(/\b(\d+)\b/);
+  if (!m) return 0;
+  const n = Number(m[1]);
+  return Number.isFinite(n) && n > 0 && n < 1000 ? n : 0;
+}
+
+/** Aceita 'meeting', 'MEETING', etc. */
+export function isMeetingType(t: string | undefined): boolean {
+  return (t ?? '').toLowerCase() === 'meeting';
+}
+
 function toReservation(a: Activity): Reservation | null {
-  if (a.type !== 'MEETING') return null;
-  const partySize = Number(a.metadata?.party_size ?? 0);
-  if (partySize <= 0) return null;
+  if (!isMeetingType(a.type)) return null;
+  const partySize = Number(a.metadata?.party_size ?? 0) || extractPartySizeFromTitle(a.title);
+  // Aceita reservas mesmo sem party_size — mostra com 0 (UI sinaliza)
   const status = (a.metadata?.status as Reservation['status']) ?? 'confirmed';
   const durationMinutes = Number(a.metadata?.duration_minutes ?? DEFAULT_DURATION);
   const start = new Date(a.date);

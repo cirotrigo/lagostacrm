@@ -6,11 +6,20 @@ import { useReservations, filterByRange, isSameDay, type Reservation } from './h
 import { useSchedulingConfig } from '@/features/activities/hooks/useSchedulingConfig';
 import { ReservationsCalendar } from './components/ReservationsCalendar';
 import { ReservationsToday } from './components/ReservationsToday';
+import { ReservationsFilters, applyReservationFilter, type ReservationFilter } from './components/ReservationsFilters';
+import { ReservationsMonth } from './components/ReservationsMonth';
 
 const ReservationsPage: React.FC = () => {
   const { reservations, loading, refetch } = useReservations();
   const { config } = useSchedulingConfig();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [filter, setFilter] = useState<ReservationFilter>({ search: '', status: 'all' });
+  const [calendarTab, setCalendarTab] = useState<'week' | 'month'>('week');
+
+  const filteredReservations = useMemo(
+    () => applyReservationFilter(reservations, filter),
+    [reservations, filter],
+  );
 
   const today = useMemo(() => {
     const d = new Date();
@@ -115,18 +124,54 @@ const ReservationsPage: React.FC = () => {
 
       {/* Today's reservations */}
       <ReservationsToday
-        reservations={reservations.filter((r) => isSameDay(r.start, today))}
+        reservations={filteredReservations.filter((r) => isSameDay(r.start, today))}
         loading={loading}
         onRefresh={refetch}
       />
 
-      {/* Calendar */}
-      <ReservationsCalendar
-        reservations={reservations}
-        currentDate={currentDate}
-        setCurrentDate={setCurrentDate}
-        config={config}
+      {/* Filters */}
+      <ReservationsFilters
+        filter={filter}
+        onChange={setFilter}
+        totalCount={reservations.length}
+        filteredCount={filteredReservations.length}
       />
+
+      {/* Calendar with view toggle Semana / Mês */}
+      <div className="flex justify-end print:hidden">
+        <div className="flex bg-slate-100 dark:bg-white/5 rounded-xl p-0.5 border border-slate-200 dark:border-white/10">
+          <button
+            type="button"
+            onClick={() => setCalendarTab('week')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${calendarTab === 'week' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
+          >
+            Semana / Dia
+          </button>
+          <button
+            type="button"
+            onClick={() => setCalendarTab('month')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${calendarTab === 'month' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
+          >
+            Mês
+          </button>
+        </div>
+      </div>
+
+      {calendarTab === 'week' ? (
+        <ReservationsCalendar
+          reservations={filteredReservations}
+          currentDate={currentDate}
+          setCurrentDate={setCurrentDate}
+          config={config}
+        />
+      ) : (
+        <ReservationsMonth
+          reservations={filteredReservations}
+          currentDate={currentDate}
+          setCurrentDate={setCurrentDate}
+          config={config}
+        />
+      )}
     </div>
   );
 };

@@ -137,7 +137,7 @@ export const ActivitiesCalendar: React.FC<ActivitiesCalendarProps> = ({
     const occupancyByDayHour = useMemo(() => {
         const map = new Map<string, number>();
         for (const a of activities) {
-            if (a.type !== 'MEETING') continue;
+            if ((a.type ?? '').toLowerCase() !== 'meeting') continue;
             const status = a.metadata?.status;
             if (status && status !== 'confirmed') continue;
             const partySize = Number(a.metadata?.party_size ?? 0);
