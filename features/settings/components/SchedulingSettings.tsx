@@ -29,6 +29,7 @@ type SchedulingState = {
   slotDurationMinutes: number;
   slotStepMinutes: number;
   operatingHours: OperatingHours;
+  reservationHours: OperatingHours;
   blockedDates: BlockedDate[];
   areas: Area[];
 };
@@ -41,6 +42,7 @@ const DEFAULT_STATE: SchedulingState = {
   slotDurationMinutes: 120,
   slotStepMinutes: 30,
   operatingHours: {},
+  reservationHours: {},
   blockedDates: [],
   areas: [],
 };
@@ -66,6 +68,7 @@ export const SchedulingSettings: React.FC = () => {
         slotDurationMinutes: data.slotDurationMinutes ?? 120,
         slotStepMinutes: data.slotStepMinutes ?? 30,
         operatingHours: data.operatingHours ?? {},
+        reservationHours: data.reservationHours ?? {},
         blockedDates: data.blockedDates ?? [],
         areas: data.areas ?? [],
       });
@@ -116,41 +119,43 @@ export const SchedulingSettings: React.FC = () => {
     }
   };
 
-  const updateDay = (day: Weekday, partial: Partial<DayHours>) => {
+  type HoursField = 'operatingHours' | 'reservationHours';
+
+  const updateDay = (field: HoursField, day: Weekday, partial: Partial<DayHours>) => {
     setState((s) => ({
       ...s,
-      operatingHours: {
-        ...s.operatingHours,
+      [field]: {
+        ...s[field],
         [day]: {
-          open: s.operatingHours[day]?.open ?? false,
-          intervals: s.operatingHours[day]?.intervals ?? [],
+          open: s[field][day]?.open ?? false,
+          intervals: s[field][day]?.intervals ?? [],
           ...partial,
         },
       },
     }));
   };
 
-  const addInterval = (day: Weekday) => {
-    const current = state.operatingHours[day];
-    updateDay(day, {
+  const addInterval = (field: HoursField, day: Weekday) => {
+    const current = state[field][day];
+    updateDay(field, day, {
       open: true,
       intervals: [...(current?.intervals ?? []), { start: '11:00', end: '22:00' }],
     });
   };
 
-  const removeInterval = (day: Weekday, idx: number) => {
-    const current = state.operatingHours[day];
+  const removeInterval = (field: HoursField, day: Weekday, idx: number) => {
+    const current = state[field][day];
     if (!current) return;
-    updateDay(day, {
+    updateDay(field, day, {
       intervals: current.intervals.filter((_, i) => i !== idx),
     });
   };
 
-  const updateInterval = (day: Weekday, idx: number, field: 'start' | 'end', value: string) => {
-    const current = state.operatingHours[day];
+  const updateInterval = (field: HoursField, day: Weekday, idx: number, field2: 'start' | 'end', value: string) => {
+    const current = state[field][day];
     if (!current) return;
-    updateDay(day, {
-      intervals: current.intervals.map((iv, i) => (i === idx ? { ...iv, [field]: value } : iv)),
+    updateDay(field, day, {
+      intervals: current.intervals.map((iv, i) => (i === idx ? { ...iv, [field2]: value } : iv)),
     });
   };
 
@@ -273,76 +278,27 @@ export const SchedulingSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* Horário de funcionamento */}
-      <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6">
-        <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-1">Horário de funcionamento</h4>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          Reservas só são aceitas dentro destes intervalos.
-        </p>
-        <div className="space-y-3">
-          {WEEKDAYS.map((day) => {
-            const hours = state.operatingHours[day.id] ?? { open: false, intervals: [] };
-            return (
-              <div
-                key={day.id}
-                className="flex items-start gap-4 py-3 border-b border-slate-100 dark:border-white/5 last:border-b-0"
-              >
-                <label className="flex items-center gap-2 min-w-[120px] cursor-pointer pt-2">
-                  <input
-                    type="checkbox"
-                    checked={hours.open}
-                    onChange={(e) => updateDay(day.id, { open: e.target.checked })}
-                  />
-                  <span className="text-sm font-medium text-slate-900 dark:text-white">{day.label}</span>
-                </label>
-                <div className="flex-1 space-y-2">
-                  {!hours.open && (
-                    <span className="text-sm text-slate-400">Fechado</span>
-                  )}
-                  {hours.open && hours.intervals.length === 0 && (
-                    <span className="text-sm text-slate-400">Sem intervalos — adicione um abaixo</span>
-                  )}
-                  {hours.open &&
-                    hours.intervals.map((iv, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <input
-                          type="time"
-                          value={iv.start}
-                          onChange={(e) => updateInterval(day.id, idx, 'start', e.target.value)}
-                          className="px-3 py-1.5 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-lg text-sm"
-                        />
-                        <span className="text-slate-400">até</span>
-                        <input
-                          type="time"
-                          value={iv.end}
-                          onChange={(e) => updateInterval(day.id, idx, 'end', e.target.value)}
-                          className="px-3 py-1.5 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-lg text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeInterval(day.id, idx)}
-                          className="text-red-500 hover:text-red-600 p-1"
-                          aria-label="Remover intervalo"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  {hours.open && (
-                    <button
-                      type="button"
-                      onClick={() => addInterval(day.id)}
-                      className="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
-                    >
-                      <Plus className="h-3 w-3" /> Adicionar intervalo
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* Horário de funcionamento (informacional — quando o restaurante está aberto) */}
+      <HoursEditor
+        title="Horário de funcionamento"
+        helper="Quando o restaurante está aberto. A reserva pode terminar dentro desta janela (informacional)."
+        hours={state.operatingHours}
+        onAddInterval={(day) => addInterval('operatingHours', day)}
+        onRemoveInterval={(day, idx) => removeInterval('operatingHours', day, idx)}
+        onUpdateDay={(day, partial) => updateDay('operatingHours', day, partial)}
+        onUpdateInterval={(day, idx, f, v) => updateInterval('operatingHours', day, idx, f, v)}
+      />
+
+      {/* Horário de aceitação de reservas (funcional — quando aceita registrar) */}
+      <HoursEditor
+        title="Horário que aceita reservas"
+        helper="Janela em que o agente de IA aceita registrar reservas. Reservas começam dentro desta janela (e terminam dentro do horário de funcionamento)."
+        hours={state.reservationHours}
+        onAddInterval={(day) => addInterval('reservationHours', day)}
+        onRemoveInterval={(day, idx) => removeInterval('reservationHours', day, idx)}
+        onUpdateDay={(day, partial) => updateDay('reservationHours', day, partial)}
+        onUpdateInterval={(day, idx, f, v) => updateInterval('reservationHours', day, idx, f, v)}
+      />
 
       {/* Datas bloqueadas */}
       <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6">
@@ -515,4 +471,82 @@ const NumberField: React.FC<{
     />
     {help && <span className="block mt-1 text-xs text-slate-500 dark:text-slate-400">{help}</span>}
   </label>
+);
+
+const HoursEditor: React.FC<{
+  title: string;
+  helper: string;
+  hours: OperatingHours;
+  onAddInterval: (day: Weekday) => void;
+  onRemoveInterval: (day: Weekday, idx: number) => void;
+  onUpdateDay: (day: Weekday, partial: Partial<DayHours>) => void;
+  onUpdateInterval: (day: Weekday, idx: number, field: 'start' | 'end', value: string) => void;
+}> = ({ title, helper, hours, onAddInterval, onRemoveInterval, onUpdateDay, onUpdateInterval }) => (
+  <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6">
+    <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-1">{title}</h4>
+    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{helper}</p>
+    <div className="space-y-3">
+      {WEEKDAYS.map((day) => {
+        const dayHours = hours[day.id] ?? { open: false, intervals: [] };
+        return (
+          <div
+            key={day.id}
+            className="flex items-start gap-4 py-3 border-b border-slate-100 dark:border-white/5 last:border-b-0"
+          >
+            <label className="flex items-center gap-2 min-w-[120px] cursor-pointer pt-2">
+              <input
+                type="checkbox"
+                checked={dayHours.open}
+                onChange={(e) => onUpdateDay(day.id, { open: e.target.checked })}
+              />
+              <span className="text-sm font-medium text-slate-900 dark:text-white">{day.label}</span>
+            </label>
+            <div className="flex-1 space-y-2">
+              {!dayHours.open && (
+                <span className="text-sm text-slate-400">Fechado</span>
+              )}
+              {dayHours.open && dayHours.intervals.length === 0 && (
+                <span className="text-sm text-slate-400">Sem intervalos — adicione um abaixo</span>
+              )}
+              {dayHours.open &&
+                dayHours.intervals.map((iv, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="time"
+                      value={iv.start}
+                      onChange={(e) => onUpdateInterval(day.id, idx, 'start', e.target.value)}
+                      className="px-3 py-1.5 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-lg text-sm"
+                    />
+                    <span className="text-slate-400">até</span>
+                    <input
+                      type="time"
+                      value={iv.end}
+                      onChange={(e) => onUpdateInterval(day.id, idx, 'end', e.target.value)}
+                      className="px-3 py-1.5 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-lg text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onRemoveInterval(day.id, idx)}
+                      className="text-red-500 hover:text-red-600 p-1"
+                      aria-label="Remover intervalo"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              {dayHours.open && (
+                <button
+                  type="button"
+                  onClick={() => onAddInterval(day.id)}
+                  className="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
+                >
+                  <Plus className="h-3 w-3" /> Adicionar intervalo
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
 );

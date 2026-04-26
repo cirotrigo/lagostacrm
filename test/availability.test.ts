@@ -3,6 +3,9 @@ import {
   computeOverlapSum,
   findBlockedDate,
   getCapacityForArea,
+  getDayWindow,
+  getReservationHours,
+  isReservationAllowed,
   isWithinOperatingHours,
   type ActivityRow,
   type SchedulingConfig,
@@ -24,6 +27,7 @@ const baseConfig: SchedulingConfig = {
     saturday: { open: true, intervals: [{ start: '11:00', end: '23:00' }] },
     sunday: { open: false, intervals: [] },
   },
+  reservationHours: {},
   blockedDates: [
     { date: '2026-05-10', reason: 'Dia das Mães', mode: 'first_come' },
     { date: '2026-12-25', reason: 'Natal', mode: 'closed' },
@@ -93,6 +97,125 @@ describe('isWithinOperatingHours', () => {
     const start = new Date('2026-04-27T21:00:00Z'); // monday 21h-23h, closes 22h
     const end = new Date('2026-04-27T23:00:00Z');
     expect(isWithinOperatingHours(baseConfig, start, end)).toBe(false);
+  });
+});
+
+describe('getReservationHours fallback', () => {
+  it('falls back to operatingHours when reservationHours is empty', () => {
+    const r = getReservationHours(baseConfig);
+    expect(r.monday?.intervals[0].end).toBe('22:00');
+  });
+
+  it('uses reservationHours when configured', () => {
+    const cfg = {
+      ...baseConfig,
+      reservationHours: {
+        monday: { open: true, intervals: [{ start: '11:00', end: '20:00' }] },
+      },
+    };
+    const r = getReservationHours(cfg);
+    expect(r.monday?.intervals[0].end).toBe('20:00');
+  });
+});
+
+describe('isReservationAllowed (start in reservation_hours, end in operating_hours)', () => {
+  const cfg: SchedulingConfig = {
+    ...baseConfig,
+    operatingHours: {
+      monday: { open: true, intervals: [{ start: '11:00', end: '22:00' }] },
+    },
+    reservationHours: {
+      monday: { open: true, intervals: [{ start: '11:00', end: '20:00' }] },
+    },
+  };
+
+  it('allows reservation at 20h ending 22h (start in reservation, end in operating)', () => {
+    const start = new Date('2026-04-27T20:00:00Z');
+    const end = new Date('2026-04-27T22:00:00Z');
+    expect(isReservationAllowed(cfg, start, end)).toEqual({ ok: true });
+  });
+
+  it('rejects start after reservation_hours end (20h30)', () => {
+    const start = new Date('2026-04-27T20:30:00Z');
+    const end = new Date('2026-04-27T22:30:00Z');
+    expect(isReservationAllowed(cfg, start, end)).toEqual({ ok: false, reason: 'outside_reservation_hours' });
+  });
+
+  it('rejects when end exceeds operating_hours (start at 21h)', () => {
+    // Even if reservation_hours allowed up to 21h, end at 23h exceeds operating 22h
+    const cfg2 = { ...cfg, reservationHours: { monday: { open: true, intervals: [{ start: '11:00', end: '21:00' }] } } };
+    const start = new Date('2026-04-27T21:00:00Z');
+    const end = new Date('2026-04-27T23:00:00Z');
+    expect(isReservationAllowed(cfg2, start, end)).toEqual({ ok: false, reason: 'outside_operating_hours' });
+  });
+
+  it('rejects start before reservation_hours start (10h00)', () => {
+    const start = new Date('2026-04-27T10:00:00Z');
+    const end = new Date('2026-04-27T12:00:00Z');
+    expect(isReservationAllowed(cfg, start, end)).toEqual({ ok: false, reason: 'outside_reservation_hours' });
+  });
+
+  it('falls back to operatingHours when reservationHours is empty', () => {
+    const cfgFallback = {
+      ...baseConfig,
+      operatingHours: {
+        monday: { open: true, intervals: [{ start: '11:00', end: '22:00' }] },
+      },
+      reservationHours: {}, // empty → fallback
+    };
+    const start = new Date('2026-04-27T20:00:00Z');
+    const end = new Date('2026-04-27T22:00:00Z');
+    expect(isReservationAllowed(cfgFallback, start, end)).toEqual({ ok: true });
+  });
+});
+
+describe('getDayWindow', () => {
+  it('returns lastBookableStart respecting both reservation_hours and operating_hours', () => {
+    const cfg: SchedulingConfig = {
+      ...baseConfig,
+      operatingHours: {
+        monday: { open: true, intervals: [{ start: '11:00', end: '22:00' }] },
+      },
+      reservationHours: {
+        monday: { open: true, intervals: [{ start: '11:00', end: '20:00' }] },
+      },
+    };
+    const date = new Date('2026-04-27T15:00:00Z'); // monday
+    const w = getDayWindow(cfg, date, 120);
+    // Reservation ends 20h, operating ends 22h, duration 2h → last bookable = min(20h, 22h-2h) = 20h
+    expect(w?.lastBookableStart).toBe('20:00');
+  });
+
+  it('lastBookableStart limited by operating end when shorter', () => {
+    const cfg: SchedulingConfig = {
+      ...baseConfig,
+      operatingHours: {
+        monday: { open: true, intervals: [{ start: '11:00', end: '21:00' }] },
+      },
+      reservationHours: {
+        monday: { open: true, intervals: [{ start: '11:00', end: '22:00' }] },
+      },
+    };
+    const date = new Date('2026-04-27T15:00:00Z');
+    const w = getDayWindow(cfg, date, 120);
+    // operating ends 21h, duration 2h → last bookable = 19h
+    expect(w?.lastBookableStart).toBe('19:00');
+  });
+
+  it('returns separate operating and reservation hour intervals', () => {
+    const cfg: SchedulingConfig = {
+      ...baseConfig,
+      operatingHours: {
+        monday: { open: true, intervals: [{ start: '11:00', end: '22:00' }] },
+      },
+      reservationHours: {
+        monday: { open: true, intervals: [{ start: '12:00', end: '20:00' }] },
+      },
+    };
+    const date = new Date('2026-04-27T15:00:00Z');
+    const w = getDayWindow(cfg, date, 120);
+    expect(w?.operatingHours).toEqual([{ start: '11:00', end: '22:00' }]);
+    expect(w?.reservationHours).toEqual([{ start: '12:00', end: '20:00' }]);
   });
 });
 

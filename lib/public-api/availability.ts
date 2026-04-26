@@ -7,7 +7,10 @@ export type SchedulingConfig = {
   defaultCapacity: number;
   slotDurationMinutes: number;
   slotStepMinutes: number;
+  /** Horário em que o restaurante está aberto. End da reserva precisa caber aqui. */
   operatingHours: OperatingHours;
+  /** Horário em que aceita registrar reservas. Start da reserva precisa caber aqui. Vazio = usa operatingHours. */
+  reservationHours: OperatingHours;
   blockedDates: BlockedDate[];
   areas: Area[];
 };
@@ -37,7 +40,7 @@ export type AvailabilityRequest = {
 
 export type AvailabilityResult = {
   available: boolean;
-  reason?: 'feature_disabled' | 'before_min_advance' | 'after_max_advance' | 'outside_operating_hours' | 'date_blocked' | 'capacity_full';
+  reason?: 'feature_disabled' | 'before_min_advance' | 'after_max_advance' | 'outside_reservation_hours' | 'outside_operating_hours' | 'date_blocked' | 'capacity_full';
   blockedInfo?: BlockedDate;
   bookedInWindow: number;
   capacity: number;
@@ -46,6 +49,13 @@ export type AvailabilityResult = {
   start: string;
   end: string;
   suggestions?: { start: string; availableCapacity: number }[];
+  /** Janela do dia (operating + reservation) — útil pro agente comunicar limites. */
+  dayWindow?: {
+    operatingHours: { start: string; end: string }[];
+    reservationHours: { start: string; end: string }[];
+    /** Último horário que pode ser INICIADO uma reserva (start ≤ reservation_end E end ≤ operating_end). */
+    lastBookableStart?: string;
+  };
 };
 
 const WEEKDAYS: Weekday[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -62,6 +72,7 @@ export async function loadSchedulingConfig(organizationId: string): Promise<Sche
       scheduling_slot_duration_minutes,
       scheduling_slot_step_minutes,
       scheduling_operating_hours,
+      scheduling_reservation_hours,
       scheduling_blocked_dates,
       scheduling_areas
     `)
@@ -77,9 +88,16 @@ export async function loadSchedulingConfig(organizationId: string): Promise<Sche
     slotDurationMinutes: Number((data as any).scheduling_slot_duration_minutes ?? 120),
     slotStepMinutes: Number((data as any).scheduling_slot_step_minutes ?? 30),
     operatingHours: ((data as any).scheduling_operating_hours ?? {}) as OperatingHours,
+    reservationHours: ((data as any).scheduling_reservation_hours ?? {}) as OperatingHours,
     blockedDates: ((data as any).scheduling_blocked_dates ?? []) as BlockedDate[],
     areas: ((data as any).scheduling_areas ?? []) as Area[],
   };
+}
+
+/** Resolve qual reservationHours efetivo usar (com fallback pra operatingHours). */
+export function getReservationHours(config: SchedulingConfig): OperatingHours {
+  const isEmpty = !config.reservationHours || Object.keys(config.reservationHours).length === 0;
+  return isEmpty ? config.operatingHours : config.reservationHours;
 }
 
 export function getCapacityForArea(config: SchedulingConfig, areaId?: string | null): number {
@@ -100,9 +118,33 @@ export function getWeekday(date: Date): Weekday {
   return WEEKDAYS[date.getUTCDay()] ?? 'monday';
 }
 
+function parseHHMM(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function formatHHMM(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 /**
- * Checa se start..end cai inteiramente dentro de algum intervalo de horário do dia.
- * Aceita operação 24h se intervalo cobrir 00:00–23:59.
+ * Verifica se um TIMESTAMP cai dentro de algum intervalo do dia (verifica só o ponto, não janela).
+ */
+function timeWithinIntervals(
+  date: Date,
+  hours: DayHours | undefined,
+): boolean {
+  if (!hours || !hours.open || hours.intervals.length === 0) return false;
+  const min = date.getUTCHours() * 60 + date.getUTCMinutes();
+  return hours.intervals.some(({ start: s, end: e }) => min >= parseHHMM(s) && min <= parseHHMM(e));
+}
+
+/**
+ * Checa se start..end cai inteiramente dentro de algum intervalo de operatingHours do dia.
+ * (Compatibilidade — usado em sumOverlappingPartySizes/suggestions; a validação de reserva
+ * agora usa isReservationAllowed.)
  */
 export function isWithinOperatingHours(
   config: SchedulingConfig,
@@ -112,20 +154,80 @@ export function isWithinOperatingHours(
   const day = getWeekday(start);
   const hours = config.operatingHours[day];
   if (!hours || !hours.open || hours.intervals.length === 0) return false;
-
   const startMin = start.getUTCHours() * 60 + start.getUTCMinutes();
   const endMin = end.getUTCHours() * 60 + end.getUTCMinutes() + (end.getUTCDate() !== start.getUTCDate() ? 24 * 60 : 0);
-
   return hours.intervals.some(({ start: s, end: e }) => {
-    const intervalStart = parseHHMM(s);
-    const intervalEnd = parseHHMM(e);
-    return startMin >= intervalStart && endMin <= intervalEnd;
+    return startMin >= parseHHMM(s) && endMin <= parseHHMM(e);
   });
 }
 
-function parseHHMM(hhmm: string): number {
-  const [h, m] = hhmm.split(':').map(Number);
-  return (h || 0) * 60 + (m || 0);
+/**
+ * Validação de reserva com SEMÂNTICAS SEPARADAS:
+ *   - start deve cair dentro de reservationHours (com fallback pra operatingHours)
+ *   - end deve cair dentro de operatingHours
+ *
+ * Retorna ok ou um motivo específico.
+ */
+export function isReservationAllowed(
+  config: SchedulingConfig,
+  start: Date,
+  end: Date,
+): { ok: true } | { ok: false; reason: 'outside_reservation_hours' | 'outside_operating_hours' } {
+  const day = getWeekday(start);
+  const operating = config.operatingHours[day];
+  const effectiveReservation = getReservationHours(config)[day];
+
+  // Start dentro de reservationHours
+  const startMin = start.getUTCHours() * 60 + start.getUTCMinutes();
+  const reservationOk = effectiveReservation && effectiveReservation.open
+    && effectiveReservation.intervals.some(({ start: s, end: e }) => startMin >= parseHHMM(s) && startMin <= parseHHMM(e));
+  if (!reservationOk) return { ok: false, reason: 'outside_reservation_hours' };
+
+  // End dentro de operatingHours
+  const endMin = end.getUTCHours() * 60 + end.getUTCMinutes() + (end.getUTCDate() !== start.getUTCDate() ? 24 * 60 : 0);
+  const operatingOk = operating && operating.open
+    && operating.intervals.some(({ start: s, end: e }) => endMin <= parseHHMM(e) && endMin >= parseHHMM(s));
+  if (!operatingOk) return { ok: false, reason: 'outside_operating_hours' };
+
+  return { ok: true };
+}
+
+/**
+ * Calcula a janela do dia (intervals operating/reservation + lastBookableStart) pro agente.
+ */
+export function getDayWindow(
+  config: SchedulingConfig,
+  date: Date,
+  durationMinutes: number,
+): AvailabilityResult['dayWindow'] {
+  const day = getWeekday(date);
+  const operating = config.operatingHours[day];
+  const reservation = getReservationHours(config)[day];
+  const operatingHoursOut = (operating?.open ? operating.intervals : []).map(({ start, end }) => ({ start, end }));
+  const reservationHoursOut = (reservation?.open ? reservation.intervals : []).map(({ start, end }) => ({ start, end }));
+
+  // lastBookableStart: o maior start tal que start ∈ reservation E start+duration ∈ operating
+  let lastBookableStart: string | undefined;
+  if (operating?.open && reservation?.open) {
+    let maxStart = -1;
+    for (const r of reservation.intervals) {
+      const rStart = parseHHMM(r.start);
+      const rEnd = parseHHMM(r.end);
+      for (const o of operating.intervals) {
+        const oEnd = parseHHMM(o.end);
+        // start válido: máx(rStart) tal que start ≤ rEnd && start + duration ≤ oEnd
+        const candidate = Math.min(rEnd, oEnd - durationMinutes);
+        if (candidate >= rStart && candidate > maxStart) maxStart = candidate;
+      }
+    }
+    if (maxStart >= 0) lastBookableStart = formatHHMM(maxStart);
+  }
+
+  return {
+    operatingHours: operatingHoursOut,
+    reservationHours: reservationHoursOut,
+    lastBookableStart,
+  };
 }
 
 /**
@@ -152,25 +254,36 @@ export async function checkAvailability(req: AvailabilityRequest): Promise<Avail
     return { available: false, reason: 'feature_disabled', ...baseResult };
   }
 
+  const dayWindow = getDayWindow(config, start, durationMinutes);
+
   // Antecedência
   const now = Date.now();
   const minutesAhead = (start.getTime() - now) / 60_000;
   if (minutesAhead < config.minAdvanceMinutes) {
-    return { available: false, reason: 'before_min_advance', ...baseResult };
+    return { available: false, reason: 'before_min_advance', ...baseResult, dayWindow };
   }
   if (minutesAhead > config.maxAdvanceDays * 24 * 60) {
-    return { available: false, reason: 'after_max_advance', ...baseResult };
+    return { available: false, reason: 'after_max_advance', ...baseResult, dayWindow };
   }
 
   // Data bloqueada
   const blocked = findBlockedDate(config, start.toISOString());
   if (blocked) {
-    return { available: false, reason: 'date_blocked', blockedInfo: blocked, ...baseResult };
+    return { available: false, reason: 'date_blocked', blockedInfo: blocked, ...baseResult, dayWindow };
   }
 
-  // Horário de funcionamento
-  if (!isWithinOperatingHours(config, start, end)) {
-    return { available: false, reason: 'outside_operating_hours', ...baseResult };
+  // Horário de aceitação de reservas + horário de funcionamento (separados)
+  const allowed = isReservationAllowed(config, start, end);
+  if (!allowed.ok) {
+    const suggestions = await suggestAlternativeSlots({
+      organizationId: req.organizationId,
+      config,
+      around: start,
+      partySize: req.partySize,
+      durationMinutes,
+      areaId: req.areaId ?? null,
+    });
+    return { available: false, reason: allowed.reason, ...baseResult, dayWindow, suggestions };
   }
 
   // Capacidade
@@ -198,6 +311,7 @@ export async function checkAvailability(req: AvailabilityRequest): Promise<Avail
       bookedInWindow: booked,
       availableCapacity,
       suggestions,
+      dayWindow,
     };
   }
 
@@ -206,6 +320,7 @@ export async function checkAvailability(req: AvailabilityRequest): Promise<Avail
     ...baseResult,
     bookedInWindow: booked,
     availableCapacity,
+    dayWindow,
   };
 }
 
@@ -297,7 +412,8 @@ export async function suggestAlternativeSlots(opts: {
     if (offset === 0) continue;
     const start = new Date(opts.around.getTime() + offset * stepMs);
     const end = new Date(start.getTime() + opts.durationMinutes * 60_000);
-    if (!isWithinOperatingHours(opts.config, start, end)) continue;
+    const allowed = isReservationAllowed(opts.config, start, end);
+    if (!allowed.ok) continue;
     const blocked = findBlockedDate(opts.config, start.toISOString());
     if (blocked) continue;
     const booked = await sumOverlappingPartySizes({

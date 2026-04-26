@@ -52,6 +52,7 @@ const SchedulingPayloadSchema = z.object({
   slotDurationMinutes: z.number().int().min(15).max(60 * 12).optional(),
   slotStepMinutes: z.number().int().min(5).max(120).optional(),
   operatingHours: OperatingHoursSchema.optional(),
+  reservationHours: OperatingHoursSchema.optional(),
   blockedDates: z.array(BlockedDateSchema).optional(),
   areas: z.array(AreaSchema).optional(),
 }).strict();
@@ -78,6 +79,7 @@ export async function GET() {
       scheduling_slot_duration_minutes,
       scheduling_slot_step_minutes,
       scheduling_operating_hours,
+      scheduling_reservation_hours,
       scheduling_blocked_dates,
       scheduling_areas
     `)
@@ -93,6 +95,7 @@ export async function GET() {
     slotDurationMinutes: row?.scheduling_slot_duration_minutes ?? 120,
     slotStepMinutes: row?.scheduling_slot_step_minutes ?? 30,
     operatingHours: row?.scheduling_operating_hours ?? {},
+    reservationHours: row?.scheduling_reservation_hours ?? {},
     blockedDates: row?.scheduling_blocked_dates ?? [],
     areas: row?.scheduling_areas ?? [],
   });
@@ -129,6 +132,7 @@ export async function PUT(req: Request) {
   if (data.slotDurationMinutes !== undefined) dbUpdates.scheduling_slot_duration_minutes = data.slotDurationMinutes;
   if (data.slotStepMinutes !== undefined) dbUpdates.scheduling_slot_step_minutes = data.slotStepMinutes;
   if (data.operatingHours !== undefined) dbUpdates.scheduling_operating_hours = data.operatingHours;
+  if (data.reservationHours !== undefined) dbUpdates.scheduling_reservation_hours = data.reservationHours;
   if (data.blockedDates !== undefined) dbUpdates.scheduling_blocked_dates = data.blockedDates;
   if (data.areas !== undefined) dbUpdates.scheduling_areas = data.areas;
 
