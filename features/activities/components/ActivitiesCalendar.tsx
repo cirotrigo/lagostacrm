@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Phone, Users, Mail, CheckSquare } from 'lucide-react';
 import { Activity, Deal } from '@/types';
+import { findBlockedDate, getWeekHourRange, isDayClosed, isSlotOpen, useSchedulingConfig } from '../hooks/useSchedulingConfig';
 
 interface ActivitiesCalendarProps {
     activities: Activity[];
@@ -9,7 +10,6 @@ interface ActivitiesCalendarProps {
     setCurrentDate: (date: Date) => void;
 }
 
-const HOURS = Array.from({ length: 10 }, (_, i) => i + 9); // 9:00 to 18:00
 const DAYS_OF_WEEK = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 /**
@@ -34,6 +34,8 @@ export const ActivitiesCalendar: React.FC<ActivitiesCalendarProps> = ({
     currentDate,
     setCurrentDate
 }) => {
+    const { config: schedulingConfig } = useSchedulingConfig();
+
     const getWeekStart = (date: Date) => {
         const d = new Date(date);
         const day = d.getDay();
@@ -47,6 +49,20 @@ export const ActivitiesCalendar: React.FC<ActivitiesCalendarProps> = ({
         date.setDate(weekStart.getDate() + i);
         return date;
     });
+
+    // Range dinâmico de horas baseado nas operating_hours do tenant
+    const HOURS = useMemo(() => {
+        const { startHour, endHour } = getWeekHourRange(schedulingConfig, weekDays);
+        const range: number[] = [];
+        for (let h = startHour; h < endHour; h++) range.push(h);
+        return range;
+    }, [schedulingConfig, weekDays]);
+
+    // Capacidade total (soma das áreas, ou defaultCapacity)
+    const totalCapacity = useMemo(() => {
+        if (!schedulingConfig) return 0;
+        return schedulingConfig.defaultCapacity || 0;
+    }, [schedulingConfig]);
 
     const prevWeek = () => {
         const newDate = new Date(currentDate);
@@ -114,6 +130,32 @@ export const ActivitiesCalendar: React.FC<ActivitiesCalendarProps> = ({
         return map;
     }, [deals]);
 
+    /**
+     * Calcula ocupação (soma de party_size de meetings confirmadas) que se sobrepõem
+     * ao slot [date+hour, date+hour+1h). Considera duration_minutes da reserva.
+     */
+    const occupancyByDayHour = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const a of activities) {
+            if (a.type !== 'MEETING') continue;
+            const status = a.metadata?.status;
+            if (status && status !== 'confirmed') continue;
+            const partySize = Number(a.metadata?.party_size ?? 0);
+            if (partySize <= 0) continue;
+            const duration = Number(a.metadata?.duration_minutes ?? 120);
+            const start = new Date(a.date);
+            const end = new Date(start.getTime() + duration * 60_000);
+            // Distribui party_size em todos os slots de 1h que a reserva ocupa
+            const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate(), start.getHours(), 0, 0);
+            while (cur < end) {
+                const key = `${cur.getFullYear()}-${cur.getMonth()}-${cur.getDate()}|${cur.getHours()}`;
+                map.set(key, (map.get(key) ?? 0) + partySize);
+                cur.setHours(cur.getHours() + 1);
+            }
+        }
+        return map;
+    }, [activities]);
+
     return (
         <div className="bg-white dark:bg-dark-card rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-xl">
             {/* Header */}
@@ -176,14 +218,46 @@ export const ActivitiesCalendar: React.FC<ActivitiesCalendarProps> = ({
                             {weekDays.map((date, i) => {
                                 const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}|${hour}`;
                                 const hourActivities = activitiesByDayHour.get(key) ?? [];
+                                const blocked = findBlockedDate(schedulingConfig, date);
+                                const dayClosed = isDayClosed(schedulingConfig, date);
+                                const slotOpen = isSlotOpen(schedulingConfig, date, hour);
+                                const occupancy = occupancyByDayHour.get(key) ?? 0;
+                                const showMeter = slotOpen && totalCapacity > 0 && schedulingConfig?.enabled;
+                                const occupancyPct = showMeter ? Math.min(100, (occupancy / totalCapacity) * 100) : 0;
+                                const meterColor = occupancyPct >= 90 ? 'bg-red-500' : occupancyPct >= 70 ? 'bg-orange-500' : 'bg-green-500';
+                                const slotBgClass = blocked
+                                    ? 'bg-amber-50 dark:bg-amber-900/10 bg-stripes'
+                                    : (dayClosed || !slotOpen)
+                                    ? 'bg-slate-100/60 dark:bg-slate-900/30'
+                                    : isToday(date)
+                                    ? 'bg-primary-50/20 dark:bg-primary-500/5'
+                                    : '';
                                 return (
                                     <div
                                         key={i}
-                                        className={`min-h-[70px] p-2 border-l border-slate-200 dark:border-white/10 transition-colors ${isToday(date)
-                                                ? 'bg-primary-50/20 dark:bg-primary-500/5'
-                                                : ''
-                                            }`}
+                                        className={`min-h-[70px] p-2 border-l border-slate-200 dark:border-white/10 transition-colors relative ${slotBgClass}`}
+                                        title={blocked ? `🚫 ${blocked.reason} — ${blocked.mode === 'first_come' ? 'ordem de chegada' : 'fechado'}` : (!slotOpen && !dayClosed) ? 'Fora do horário de funcionamento' : undefined}
                                     >
+                                        {/* Capacity meter */}
+                                        {showMeter && (
+                                            <div className="absolute top-0 left-0 right-0 h-1 bg-slate-200 dark:bg-white/10 overflow-hidden">
+                                                <div
+                                                    className={`h-full ${meterColor} transition-all`}
+                                                    style={{ width: `${occupancyPct}%` }}
+                                                />
+                                            </div>
+                                        )}
+                                        {showMeter && occupancy > 0 && (
+                                            <div className="absolute top-1 right-1 text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-black/40 px-1 rounded">
+                                                {occupancy}/{totalCapacity}
+                                            </div>
+                                        )}
+                                        {/* Visual de dia bloqueado / fechado */}
+                                        {blocked && hourActivities.length === 0 && hour === HOURS[0] && (
+                                            <div className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold leading-tight">
+                                                {blocked.reason}
+                                            </div>
+                                        )}
                                         <div className="space-y-2">
                                             {hourActivities.map(activity => (
                                                 <div
@@ -212,8 +286,19 @@ export const ActivitiesCalendar: React.FC<ActivitiesCalendarProps> = ({
                                                             <span className="font-black text-white text-sm">
                                                                 {new Date(activity.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
+                                                            {activity.metadata?.party_size && (
+                                                                <span className="ml-auto px-1.5 py-0.5 bg-white/25 rounded text-white text-[11px] font-bold flex items-center gap-1">
+                                                                    <Users size={10} />
+                                                                    {activity.metadata.party_size}
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                        <div className={`font-bold text-white leading-tight ${activity.completed ? 'line-through' : ''}`}>
+                                                        {activity.metadata?.status === 'canceled' && (
+                                                            <div className="text-[10px] text-white/90 font-semibold uppercase tracking-wider">
+                                                                Cancelada
+                                                            </div>
+                                                        )}
+                                                        <div className={`font-bold text-white leading-tight ${activity.completed || activity.metadata?.status === 'canceled' ? 'line-through' : ''}`}>
                                                             {activity.title}
                                                         </div>
 

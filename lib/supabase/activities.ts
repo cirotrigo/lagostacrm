@@ -54,6 +54,8 @@ export interface DbActivity {
   client_company_id?: string | null;
   /** IDs dos contatos participantes (opcional). */
   participant_contact_ids?: string[] | null;
+  /** Metadata extra (party_size, duration_minutes, area_id, status para reservas). */
+  metadata?: Record<string, unknown> | null;
   /** Data de criação. */
   created_at: string;
   /** ID do dono/responsável. */
@@ -83,6 +85,7 @@ const transformActivity = (db: DbActivityWithDeal): Activity => ({
   contactId: db.contact_id || undefined,
   clientCompanyId: (db as any).client_company_id || undefined,
   participantContactIds: (db as any).participant_contact_ids || [],
+  metadata: (db.metadata as Activity['metadata']) || undefined,
   dealTitle: db.deals?.title || '',
   user: { name: 'Você', avatar: '' }, // Will be enriched later
 });

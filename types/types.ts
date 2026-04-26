@@ -302,6 +302,14 @@ export interface Activity {
     avatar: string;
   };
   completed: boolean;
+  /** Dados extras (ex: reservas: party_size, duration_minutes, area_id, status). */
+  metadata?: {
+    party_size?: number;
+    duration_minutes?: number;
+    area_id?: string;
+    status?: 'confirmed' | 'canceled' | 'rescheduled' | 'completed';
+    [key: string]: unknown;
+  };
 }
 
 export interface DashboardStats {
