@@ -48,3 +48,23 @@
 --   won_stay_in_stage  = true,
 --   lost_stay_in_stage = true
 -- WHERE id = '<BOARD_ID>';
+
+-- =============================================================================
+-- Workflows n8n associados (em produção)
+-- =============================================================================
+--
+-- 1. [Wine Vix] Agente de atendimento Cabernet (id wXp0MYdLN1xQhxZ4)
+--    - Tools: verificar_disponibilidade, registrar_agendamento_crm,
+--      cancelar_reserva, crm_mover_stage (com allow_cross_board:true)
+--    - Prompt com FLUXO RESERVA / CANCELAMENTO / REMARCAÇÃO
+--
+-- 2. [Wine Vix] Notificações de Stage (id dLErSnIQhIssWd0y)
+--    - Webhook /wine-vix/stage-notification
+--    - Notifica Ciro (5527997578627), Rafael (5527996497227), Laiany (5527999205540)
+--    - Filtra stages dos 2 boards: principal + reserva-acompanhamento
+--
+-- 3. [Wine Vix] Pós-Reserva — Auto-move (id WYyCUipPIOWzJsu7)
+--    - ScheduleTrigger 1h
+--    - Confirmada + ≤24h → "Hoje / Próximas 24h"
+--    - Qualquer aberto + ≥48h após reserva → "Concluída" (won)
+--    - Estado inicial: INATIVO. Ativar via n8n UI quando quiser ligar.
