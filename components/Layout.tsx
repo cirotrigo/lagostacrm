@@ -43,6 +43,7 @@ import {
   User,
   Bug,
   CheckSquare,
+  CalendarClock,
   PanelLeftClose,
   PanelLeftOpen,
   GraduationCap
@@ -270,6 +271,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             { to: '/dashboard', icon: LayoutDashboard, label: 'Visão Geral', prefetch: 'dashboard' as const },
             { to: '/boards', icon: KanbanSquare, label: 'Boards', prefetch: 'boards' as const },
             { to: '/contacts', icon: Users, label: 'Contatos', prefetch: 'contacts' as const },
+            { to: '/reservations', icon: CalendarClock, label: 'Reservas', prefetch: 'reservations' as const },
             { to: '/activities', icon: CheckSquare, label: 'Atividades', prefetch: 'activities' as const },
             { to: '/reports', icon: BarChart3, label: 'Relatórios', prefetch: 'reports' as const },
             { to: '/training', icon: GraduationCap, label: 'Treinamento', prefetch: 'training' as const },

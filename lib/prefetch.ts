@@ -13,6 +13,7 @@ const routeImports = {
   contacts: () => import('@/features/contacts/ContactsPage'),
   settings: () => import('@/features/settings/SettingsPage'),
   activities: () => import('@/features/activities/ActivitiesPage'),
+  reservations: () => import('@/features/reservations/ReservationsPage'),
   reports: () => import('@/features/reports/ReportsPage'),
   training: () => import('@/features/ai-training/TrainingPage'),
 } as const;
