@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Users as UsersIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Users as UsersIcon, GripVertical } from 'lucide-react';
 import type { Reservation } from '../hooks/useReservations';
 import {
   findBlockedDate,
@@ -10,6 +10,8 @@ import {
   isSlotOpen,
   type SchedulingConfig,
 } from '@/features/activities/hooks/useSchedulingConfig';
+import { useReservationActions } from '../hooks/useReservationActions';
+import { useToast } from '@/context/ToastContext';
 
 const DAYS_OF_WEEK = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const PIXELS_PER_HOUR = 64;
@@ -20,17 +22,91 @@ interface Props {
   currentDate: Date;
   setCurrentDate: (d: Date) => void;
   config: SchedulingConfig | null;
+  onChange?: () => void;
 }
 
 type View = 'week' | 'day';
+
+type DragState = {
+  reservationId: string;
+  partySize: number;
+  durationMinutes: number;
+  hoverDate?: Date | null;
+  hoverMinute?: number | null;
+} | null;
 
 export const ReservationsCalendar: React.FC<Props> = ({
   reservations,
   currentDate,
   setCurrentDate,
   config,
+  onChange,
 }) => {
   const [view, setView] = useState<View>('week');
+  const [drag, setDrag] = useState<DragState>(null);
+  const actions = useReservationActions();
+  const { addToast } = useToast();
+
+  const onDragStart = (r: Reservation, e: React.DragEvent) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', r.id);
+    setDrag({ reservationId: r.id, partySize: r.partySize, durationMinutes: r.durationMinutes });
+  };
+
+  const onDragEnd = () => setDrag(null);
+
+  const onDragOverColumn = (date: Date, e: React.DragEvent, startHour: number) => {
+    if (!drag) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const offsetY = e.clientY - rect.top;
+    const minutesFromStart = Math.max(0, Math.round((offsetY / PIXELS_PER_HOUR) * 60 / SLOT_MINUTES) * SLOT_MINUTES);
+    setDrag((prev) => prev ? { ...prev, hoverDate: date, hoverMinute: startHour * 60 + minutesFromStart } : prev);
+  };
+
+  const onDropColumn = async (date: Date, e: React.DragEvent, startHour: number) => {
+    if (!drag) return;
+    e.preventDefault();
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const offsetY = e.clientY - rect.top;
+    const minutesFromStart = Math.max(0, Math.round((offsetY / PIXELS_PER_HOUR) * 60 / SLOT_MINUTES) * SLOT_MINUTES);
+    const totalMin = startHour * 60 + minutesFromStart;
+    const newStart = new Date(date);
+    newStart.setHours(0, 0, 0, 0);
+    newStart.setMinutes(totalMin);
+
+    const id = drag.reservationId;
+    const partySize = drag.partySize;
+    const durationMinutes = drag.durationMinutes;
+    setDrag(null);
+
+    const res = await actions.rescheduleReservation(id, newStart, partySize, durationMinutes);
+    if (res.ok) {
+      addToast(`Remarcada para ${newStart.toLocaleString('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}`, 'success');
+      onChange?.();
+    } else if (res.reason) {
+      const messages: Record<string, string> = {
+        feature_disabled: 'Sistema de reservas desabilitado.',
+        before_min_advance: 'Antecedência mínima não atendida.',
+        after_max_advance: 'Além da antecedência máxima.',
+        outside_reservation_hours: 'Fora do horário que aceita reservas.',
+        outside_operating_hours: 'Fora do horário de funcionamento.',
+        date_blocked: 'Esta data não aceita reservas.',
+        capacity_full: 'Sem capacidade nesse horário.',
+      };
+      const msg = messages[res.reason] ?? `Não foi possível remarcar (${res.reason})`;
+      const lastBookable = res.dayWindow?.lastBookableStart;
+      const detail = lastBookable && (res.reason === 'outside_reservation_hours' || res.reason === 'outside_operating_hours')
+        ? ` Último horário do dia: ${lastBookable}.`
+        : '';
+      addToast(`${msg}${detail}`, 'error');
+    } else {
+      addToast(res.error ?? 'Erro ao remarcar', 'error');
+    }
+  };
 
   const weekStart = useMemo(() => {
     const d = new Date(currentDate);
@@ -222,11 +298,30 @@ export const ReservationsCalendar: React.FC<Props> = ({
                 (r) => r.start.getHours() < endHour && r.end.getHours() >= startHour - 1,
               );
               const blocked = findBlockedDate(config, date);
+              const isDragHovered = drag?.hoverDate && ymdKey(drag.hoverDate) === ymdKey(date);
+              const dragGhostTopMin = isDragHovered ? (drag!.hoverMinute! - startHour * 60) : null;
+              const dragGhostHeight = drag ? (drag.durationMinutes / 60) * PIXELS_PER_HOUR : 0;
               return (
                 <div
                   key={dayIdx}
-                  className={`relative border-l border-slate-200 dark:border-white/10 ${blocked ? 'bg-amber-50/40 dark:bg-amber-900/10' : ''}`}
+                  className={`relative border-l border-slate-200 dark:border-white/10 ${blocked ? 'bg-amber-50/40 dark:bg-amber-900/10' : ''} ${isDragHovered ? 'ring-2 ring-primary-500/50 ring-inset' : ''}`}
+                  onDragOver={(e) => onDragOverColumn(date, e, startHour)}
+                  onDrop={(e) => onDropColumn(date, e, startHour)}
                 >
+                  {/* Drop ghost preview */}
+                  {drag && isDragHovered && dragGhostTopMin !== null && dragGhostTopMin >= 0 && (
+                    <div
+                      className="absolute left-1 right-1 rounded-lg border-2 border-dashed border-primary-500 bg-primary-500/15 pointer-events-none z-10"
+                      style={{
+                        top: `${(dragGhostTopMin / 60) * PIXELS_PER_HOUR}px`,
+                        height: `${dragGhostHeight}px`,
+                      }}
+                    >
+                      <div className="text-[10px] font-bold text-primary-700 dark:text-primary-300 p-1">
+                        {String(Math.floor((startHour * 60 + dragGhostTopMin) / 60)).padStart(2, '0')}:{String((startHour * 60 + dragGhostTopMin) % 60).padStart(2, '0')}
+                      </div>
+                    </div>
+                  )}
                   {/* Hour grid lines + closed slot shading */}
                   {Array.from({ length: totalHours }, (_, i) => {
                     const hour = startHour + i;
@@ -261,18 +356,28 @@ export const ReservationsCalendar: React.FC<Props> = ({
                     const top = (startMin / 60) * PIXELS_PER_HOUR;
                     const height = Math.max(20, (r.durationMinutes / 60) * PIXELS_PER_HOUR);
                     const isCanceled = r.status === 'canceled';
+                    const isDragging = drag?.reservationId === r.id;
+                    const isPending = !!actions.pending[r.id];
                     return (
                       <div
                         key={r.id}
-                        className={`absolute left-1 right-1 rounded-lg p-2 text-white shadow-md overflow-hidden border-l-4 transition-all hover:scale-[1.02] hover:z-20 cursor-pointer ${
+                        draggable={!isCanceled && !isPending}
+                        onDragStart={(e) => onDragStart(r, e)}
+                        onDragEnd={onDragEnd}
+                        className={`absolute left-1 right-1 rounded-lg p-2 text-white shadow-md overflow-hidden border-l-4 transition-all hover:z-20 ${
                           isCanceled
-                            ? 'bg-slate-400 border-slate-600 opacity-70'
-                            : 'bg-gradient-to-br from-violet-500 to-purple-600 border-violet-700 shadow-violet-500/30'
+                            ? 'bg-slate-400 border-slate-600 opacity-70 cursor-default'
+                            : isDragging
+                            ? 'bg-gradient-to-br from-violet-500 to-purple-600 border-violet-700 opacity-40 cursor-grabbing'
+                            : 'bg-gradient-to-br from-violet-500 to-purple-600 border-violet-700 shadow-violet-500/30 cursor-grab hover:scale-[1.02]'
                         }`}
                         style={{ top: `${top}px`, height: `${height}px` }}
-                        title={`${r.contactName} — ${r.partySize} pessoas\n${r.start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${r.end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}\n${r.activity.description ?? ''}`}
+                        title={`${r.contactName} — ${r.partySize} pessoas\n${r.start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${r.end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}${isCanceled ? '' : '\nArraste pra remarcar'}\n${r.activity.description ?? ''}`}
                       >
-                        <div className="flex items-start gap-1.5 mb-0.5">
+                        <div className="flex items-start gap-1 mb-0.5">
+                          {!isCanceled && (
+                            <GripVertical size={10} className="text-white/60 flex-shrink-0 mt-0.5" />
+                          )}
                           <span className="text-[11px] font-mono font-bold tabular-nums">
                             {r.start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </span>

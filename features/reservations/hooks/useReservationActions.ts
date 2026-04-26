@@ -41,6 +41,64 @@ export function useReservationActions() {
     }
   }
 
+  /**
+   * Remarca uma reserva pra novo horário. Verifica disponibilidade primeiro.
+   * Se disponível → UPDATE activity.date.
+   * Se não → retorna { ok: false, reason, suggestions }.
+   */
+  async function rescheduleReservation(
+    activityId: string,
+    newStart: Date,
+    partySize: number,
+    durationMinutes: number,
+  ): Promise<{
+    ok: boolean;
+    error?: string;
+    reason?: string;
+    suggestions?: { start: string; availableCapacity: number }[];
+    dayWindow?: { lastBookableStart?: string };
+  }> {
+    setPendingFor(activityId, true);
+    try {
+      // Check availability
+      const checkRes = await fetch('/api/reservations/availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          start: newStart.toISOString(),
+          party_size: partySize,
+          duration_minutes: durationMinutes,
+        }),
+      });
+      if (!checkRes.ok) {
+        return { ok: false, error: 'Falha ao verificar disponibilidade' };
+      }
+      const result = await checkRes.json();
+      if (!result.available) {
+        return {
+          ok: false,
+          reason: result.reason,
+          suggestions: result.suggestions,
+          dayWindow: result.dayWindow,
+        };
+      }
+      // Apply update
+      const sb = supabase;
+      if (!sb) return { ok: false, error: 'Supabase não configurado' };
+      const { error } = await sb
+        .from('activities')
+        .update({ date: newStart.toISOString() })
+        .eq('id', activityId);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : 'Erro' };
+    } finally {
+      setPendingFor(activityId, false);
+    }
+  }
+
   /** Marca como concluída (cliente compareceu). */
   async function markCompleted(activityId: string): Promise<{ ok: boolean; error?: string }> {
     setPendingFor(activityId, true);
@@ -69,5 +127,5 @@ export function useReservationActions() {
     }
   }
 
-  return { pending, cancelReservation, markCompleted };
+  return { pending, cancelReservation, markCompleted, rescheduleReservation };
 }

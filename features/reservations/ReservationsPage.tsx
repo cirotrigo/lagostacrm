@@ -163,6 +163,7 @@ const ReservationsPage: React.FC = () => {
           currentDate={currentDate}
           setCurrentDate={setCurrentDate}
           config={config}
+          onChange={refetch}
         />
       ) : (
         <ReservationsMonth
