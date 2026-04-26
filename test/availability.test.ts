@@ -72,30 +72,30 @@ describe('findBlockedDate', () => {
   });
 });
 
-describe('isWithinOperatingHours', () => {
+describe('isWithinOperatingHours (timezone-aware: America/Sao_Paulo)', () => {
   it('returns true for normal monday slot', () => {
-    // 2026-04-27 is a Monday
-    const start = new Date('2026-04-27T19:00:00Z');
-    const end = new Date('2026-04-27T21:00:00Z');
+    // 2026-04-27 is a Monday. 19h BR (-03:00) = 22h UTC
+    const start = new Date('2026-04-27T19:00:00-03:00');
+    const end = new Date('2026-04-27T21:00:00-03:00');
     expect(isWithinOperatingHours(baseConfig, start, end)).toBe(true);
   });
 
   it('returns false for closed sunday', () => {
-    // 2026-04-26 is a Sunday
-    const start = new Date('2026-04-26T19:00:00Z');
-    const end = new Date('2026-04-26T21:00:00Z');
+    // 2026-04-26 is a Sunday in BR
+    const start = new Date('2026-04-26T19:00:00-03:00');
+    const end = new Date('2026-04-26T21:00:00-03:00');
     expect(isWithinOperatingHours(baseConfig, start, end)).toBe(false);
   });
 
-  it('returns false when slot starts before opening', () => {
-    const start = new Date('2026-04-27T10:00:00Z'); // monday 10h, opens 11h
-    const end = new Date('2026-04-27T12:00:00Z');
+  it('returns false when slot starts before opening (10h BR, opens 11h)', () => {
+    const start = new Date('2026-04-27T10:00:00-03:00');
+    const end = new Date('2026-04-27T12:00:00-03:00');
     expect(isWithinOperatingHours(baseConfig, start, end)).toBe(false);
   });
 
-  it('returns false when slot ends after closing', () => {
-    const start = new Date('2026-04-27T21:00:00Z'); // monday 21h-23h, closes 22h
-    const end = new Date('2026-04-27T23:00:00Z');
+  it('returns false when slot ends after closing (21h-23h BR on Monday closes 22h)', () => {
+    const start = new Date('2026-04-27T21:00:00-03:00');
+    const end = new Date('2026-04-27T23:00:00-03:00');
     expect(isWithinOperatingHours(baseConfig, start, end)).toBe(false);
   });
 });
@@ -118,7 +118,7 @@ describe('getReservationHours fallback', () => {
   });
 });
 
-describe('isReservationAllowed (start in reservation_hours, end in operating_hours)', () => {
+describe('isReservationAllowed (timezone-aware America/Sao_Paulo)', () => {
   const cfg: SchedulingConfig = {
     ...baseConfig,
     operatingHours: {
@@ -129,29 +129,28 @@ describe('isReservationAllowed (start in reservation_hours, end in operating_hou
     },
   };
 
-  it('allows reservation at 20h ending 22h (start in reservation, end in operating)', () => {
-    const start = new Date('2026-04-27T20:00:00Z');
-    const end = new Date('2026-04-27T22:00:00Z');
+  it('allows reservation at 20h BR ending 22h BR (Wine Vix scenario)', () => {
+    const start = new Date('2026-04-27T20:00:00-03:00');
+    const end = new Date('2026-04-27T22:00:00-03:00');
     expect(isReservationAllowed(cfg, start, end)).toEqual({ ok: true });
   });
 
-  it('rejects start after reservation_hours end (20h30)', () => {
-    const start = new Date('2026-04-27T20:30:00Z');
-    const end = new Date('2026-04-27T22:30:00Z');
+  it('rejects start after reservation_hours end (20h30 BR)', () => {
+    const start = new Date('2026-04-27T20:30:00-03:00');
+    const end = new Date('2026-04-27T22:30:00-03:00');
     expect(isReservationAllowed(cfg, start, end)).toEqual({ ok: false, reason: 'outside_reservation_hours' });
   });
 
-  it('rejects when end exceeds operating_hours (start at 21h)', () => {
-    // Even if reservation_hours allowed up to 21h, end at 23h exceeds operating 22h
+  it('rejects when end exceeds operating_hours (21h BR start, ends 23h BR)', () => {
     const cfg2 = { ...cfg, reservationHours: { monday: { open: true, intervals: [{ start: '11:00', end: '21:00' }] } } };
-    const start = new Date('2026-04-27T21:00:00Z');
-    const end = new Date('2026-04-27T23:00:00Z');
+    const start = new Date('2026-04-27T21:00:00-03:00');
+    const end = new Date('2026-04-27T23:00:00-03:00');
     expect(isReservationAllowed(cfg2, start, end)).toEqual({ ok: false, reason: 'outside_operating_hours' });
   });
 
-  it('rejects start before reservation_hours start (10h00)', () => {
-    const start = new Date('2026-04-27T10:00:00Z');
-    const end = new Date('2026-04-27T12:00:00Z');
+  it('rejects start before reservation_hours start (10h BR)', () => {
+    const start = new Date('2026-04-27T10:00:00-03:00');
+    const end = new Date('2026-04-27T12:00:00-03:00');
     expect(isReservationAllowed(cfg, start, end)).toEqual({ ok: false, reason: 'outside_reservation_hours' });
   });
 
@@ -161,11 +160,29 @@ describe('isReservationAllowed (start in reservation_hours, end in operating_hou
       operatingHours: {
         monday: { open: true, intervals: [{ start: '11:00', end: '22:00' }] },
       },
-      reservationHours: {}, // empty → fallback
+      reservationHours: {},
     };
-    const start = new Date('2026-04-27T20:00:00Z');
-    const end = new Date('2026-04-27T22:00:00Z');
+    const start = new Date('2026-04-27T20:00:00-03:00');
+    const end = new Date('2026-04-27T22:00:00-03:00');
     expect(isReservationAllowed(cfgFallback, start, end)).toEqual({ ok: true });
+  });
+
+  // Regression test for Wine Vix bug: agente enviou 20h BR -03:00,
+  // a lib usava getUTCHours() retornando 23 (UTC) e comparava contra hora local
+  // 20:00 dos intervals → falhava incorretamente.
+  it('regression: 20h BR thursday with operating 10-22 + reservation 11-20 should be ALLOWED', () => {
+    const cfg: SchedulingConfig = {
+      ...baseConfig,
+      operatingHours: {
+        thursday: { open: true, intervals: [{ start: '10:00', end: '22:00' }] },
+      },
+      reservationHours: {
+        thursday: { open: true, intervals: [{ start: '11:00', end: '20:00' }] },
+      },
+    };
+    const start = new Date('2026-04-30T20:00:00-03:00'); // 23:00 UTC
+    const end = new Date('2026-04-30T22:00:00-03:00');   // 01:00 UTC do dia seguinte
+    expect(isReservationAllowed(cfg, start, end)).toEqual({ ok: true });
   });
 });
 
@@ -180,9 +197,8 @@ describe('getDayWindow', () => {
         monday: { open: true, intervals: [{ start: '11:00', end: '20:00' }] },
       },
     };
-    const date = new Date('2026-04-27T15:00:00Z'); // monday
+    const date = new Date('2026-04-27T15:00:00-03:00');
     const w = getDayWindow(cfg, date, 120);
-    // Reservation ends 20h, operating ends 22h, duration 2h → last bookable = min(20h, 22h-2h) = 20h
     expect(w?.lastBookableStart).toBe('20:00');
   });
 
@@ -196,9 +212,8 @@ describe('getDayWindow', () => {
         monday: { open: true, intervals: [{ start: '11:00', end: '22:00' }] },
       },
     };
-    const date = new Date('2026-04-27T15:00:00Z');
+    const date = new Date('2026-04-27T15:00:00-03:00');
     const w = getDayWindow(cfg, date, 120);
-    // operating ends 21h, duration 2h → last bookable = 19h
     expect(w?.lastBookableStart).toBe('19:00');
   });
 
@@ -212,7 +227,7 @@ describe('getDayWindow', () => {
         monday: { open: true, intervals: [{ start: '12:00', end: '20:00' }] },
       },
     };
-    const date = new Date('2026-04-27T15:00:00Z');
+    const date = new Date('2026-04-27T15:00:00-03:00');
     const w = getDayWindow(cfg, date, 120);
     expect(w?.operatingHours).toEqual([{ start: '11:00', end: '22:00' }]);
     expect(w?.reservationHours).toEqual([{ start: '12:00', end: '20:00' }]);

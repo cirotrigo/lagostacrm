@@ -109,13 +109,61 @@ export function getCapacityForArea(config: SchedulingConfig, areaId?: string | n
   return area ? area.capacity : 0;
 }
 
+/**
+ * Timezone do restaurante. Hardcoded por enquanto (todos os clientes são BR).
+ * Futuro: vai virar config por tenant em organization_settings.
+ */
+const RESTAURANT_TZ = 'America/Sao_Paulo';
+
+/**
+ * Converte um Date (UTC interno) pra { hour, minute, day, ymd } no fuso do restaurante.
+ * Necessário porque os intervals de operating/reservation hours estão em hora local
+ * mas Date.getUTCHours() retorna a hora UTC.
+ */
+export function getLocalDateParts(date: Date, tz: string = RESTAURANT_TZ): {
+  hour: number;
+  minute: number;
+  weekday: Weekday;
+  ymd: string;
+} {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    weekday: 'short',
+    hour12: false,
+  }).formatToParts(date);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  const hour = Number(get('hour'));
+  const minute = Number(get('minute'));
+  const year = get('year');
+  const month = get('month');
+  const day = get('day');
+  const weekdayShort = get('weekday').toLowerCase();
+  const weekdayMap: Record<string, Weekday> = {
+    sun: 'sunday', mon: 'monday', tue: 'tuesday', wed: 'wednesday',
+    thu: 'thursday', fri: 'friday', sat: 'saturday',
+  };
+  return {
+    hour: hour === 24 ? 0 : hour,
+    minute,
+    weekday: weekdayMap[weekdayShort] ?? 'monday',
+    ymd: `${year}-${month}-${day}`,
+  };
+}
+
 export function findBlockedDate(config: SchedulingConfig, dateISO: string): BlockedDate | null {
-  const ymd = dateISO.slice(0, 10);
+  // dateISO pode vir como UTC; convertemos pra YYYY-MM-DD no fuso do restaurante
+  const date = new Date(dateISO);
+  const ymd = Number.isNaN(date.getTime()) ? dateISO.slice(0, 10) : getLocalDateParts(date).ymd;
   return config.blockedDates.find((b) => b.date === ymd) ?? null;
 }
 
 export function getWeekday(date: Date): Weekday {
-  return WEEKDAYS[date.getUTCDay()] ?? 'monday';
+  return getLocalDateParts(date).weekday;
 }
 
 function parseHHMM(hhmm: string): number {
@@ -129,20 +177,14 @@ function formatHHMM(minutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-/**
- * Verifica se um TIMESTAMP cai dentro de algum intervalo do dia (verifica só o ponto, não janela).
- */
-function timeWithinIntervals(
-  date: Date,
-  hours: DayHours | undefined,
-): boolean {
-  if (!hours || !hours.open || hours.intervals.length === 0) return false;
-  const min = date.getUTCHours() * 60 + date.getUTCMinutes();
-  return hours.intervals.some(({ start: s, end: e }) => min >= parseHHMM(s) && min <= parseHHMM(e));
+/** Hora local em minutos desde meia-noite (no fuso do restaurante). */
+function localMinutes(date: Date): number {
+  const { hour, minute } = getLocalDateParts(date);
+  return hour * 60 + minute;
 }
 
 /**
- * Checa se start..end cai inteiramente dentro de algum intervalo de operatingHours do dia.
+ * Checa se start..end cai inteiramente dentro de algum intervalo de operatingHours do dia (em hora local).
  * (Compatibilidade — usado em sumOverlappingPartySizes/suggestions; a validação de reserva
  * agora usa isReservationAllowed.)
  */
@@ -154,8 +196,10 @@ export function isWithinOperatingHours(
   const day = getWeekday(start);
   const hours = config.operatingHours[day];
   if (!hours || !hours.open || hours.intervals.length === 0) return false;
-  const startMin = start.getUTCHours() * 60 + start.getUTCMinutes();
-  const endMin = end.getUTCHours() * 60 + end.getUTCMinutes() + (end.getUTCDate() !== start.getUTCDate() ? 24 * 60 : 0);
+  const startMin = localMinutes(start);
+  const endLocal = getLocalDateParts(end);
+  const startLocal = getLocalDateParts(start);
+  const endMin = endLocal.hour * 60 + endLocal.minute + (endLocal.ymd !== startLocal.ymd ? 24 * 60 : 0);
   return hours.intervals.some(({ start: s, end: e }) => {
     return startMin >= parseHHMM(s) && endMin <= parseHHMM(e);
   });
@@ -177,14 +221,16 @@ export function isReservationAllowed(
   const operating = config.operatingHours[day];
   const effectiveReservation = getReservationHours(config)[day];
 
-  // Start dentro de reservationHours
-  const startMin = start.getUTCHours() * 60 + start.getUTCMinutes();
+  // Start dentro de reservationHours (hora local)
+  const startMin = localMinutes(start);
   const reservationOk = effectiveReservation && effectiveReservation.open
     && effectiveReservation.intervals.some(({ start: s, end: e }) => startMin >= parseHHMM(s) && startMin <= parseHHMM(e));
   if (!reservationOk) return { ok: false, reason: 'outside_reservation_hours' };
 
-  // End dentro de operatingHours
-  const endMin = end.getUTCHours() * 60 + end.getUTCMinutes() + (end.getUTCDate() !== start.getUTCDate() ? 24 * 60 : 0);
+  // End dentro de operatingHours (hora local, com cuidado pra cruzar meia-noite)
+  const endLocal = getLocalDateParts(end);
+  const startLocal = getLocalDateParts(start);
+  const endMin = endLocal.hour * 60 + endLocal.minute + (endLocal.ymd !== startLocal.ymd ? 24 * 60 : 0);
   const operatingOk = operating && operating.open
     && operating.intervals.some(({ start: s, end: e }) => endMin <= parseHHMM(e) && endMin >= parseHHMM(s));
   if (!operatingOk) return { ok: false, reason: 'outside_operating_hours' };
