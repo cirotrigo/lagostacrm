@@ -346,6 +346,13 @@ async function handleConversationUpdated(
  * 4. During human mode (ai_enabled=false), pushes the message to the n8n
  *    agent's Redis memory so the AI has full context when it resumes.
  */
+// Patterns of system/status messages we never want to persist (e.g. Evolution
+// API connection notifications relayed into Chatwoot when an instance restarts).
+const SYSTEM_MESSAGE_PATTERNS: RegExp[] = [
+    /^🚀\s*Connection\s+successfully/i,
+    /^🚀\s*Conex[aã]o\s+estabelecida/i,
+];
+
 async function handleMessageCreated(
     supabase: SupabaseClient,
     organizationId: string,
@@ -353,6 +360,16 @@ async function handleMessageCreated(
     message: ChatwootWebhookPayload['message']
 ): Promise<void> {
     if (!conversation || !message) return;
+
+    const trimmedContent = message.content?.trim() ?? '';
+    if (SYSTEM_MESSAGE_PATTERNS.some((re) => re.test(trimmedContent))) {
+        console.log('[Webhook] Skipping Evolution status message:', {
+            messageId: message.id,
+            conversationId: conversation.id,
+            preview: trimmedContent.substring(0, 60),
+        });
+        return;
+    }
 
     const isIncoming = message.message_type === 'incoming';
     const isActivity = message.message_type === 'activity' || (message.message_type as unknown as number) === 2;
