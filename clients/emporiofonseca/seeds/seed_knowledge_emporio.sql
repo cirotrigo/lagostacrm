@@ -75,4 +75,9 @@ INSERT INTO documents (content, metadata, organization_id) VALUES
 -- FAQ GERAL
 ('Perguntas frequentes do Empório Fonseca: "Tem opções vegetarianas ou veganas?" — Sim, temos opções no cardápio. "Cobra rolha?" — Sim, R$ 70 por garrafa, às quintas a primeira é gratuita. "Aceita pet?" — Sim, somente na varanda. "Qual a tolerância de atraso?" — Até 10 minutos, após isso a mesa pode ser liberada se houver fila. "Posso reservar para daqui a pouco?" — Reservas precisam de pelo menos 1h30 de antecedência. "Vocês têm delivery?" — Não trabalhamos com delivery, mas o cliente pode fazer pedido para retirada no local. A Sofia oferece a alternativa de retirada e, se o cliente aceitar, segue o fluxo padrão de pedido para retirada. "Como pago reserva para grupo grande?" — Consumação mínima R$ 499, PIX pelo CNPJ 54.048.810/0001-47.',
 '{"category": "FAQ", "organization_id": "0ba344eb-8c40-403e-93e0-f6171e1cf06e"}',
+'0ba344eb-8c40-403e-93e0-f6171e1cf06e'),
+
+-- ALMOÇO EXECUTIVO (campanha temporária 28/04 a 08/05/2026)
+('Almoço Executivo do Empório Fonseca: campanha temporária válida de 28/04/2026 a 08/05/2026. Atendimento de segunda a sexta, das 11h às 16h, exceto feriados. Combo de preço fixo R$ 89,90 com 1 entrada + 1 principal + 1 sobremesa. Entradas: Salada da Casa ou Croqueta de Pato. Principais: Tilápia grelhada com purê de batata e brócolis ao alho, Cubos de mignon com arroz branco vinagrete e fritas, ou Escondidinho de ragu de cupim. Sobremesas: Café, Pudim ou Sobremesa do dia. Após 08/05/2026 a campanha encerra.',
+'{"category": "CARDAPIO", "subcategory": "ALMOCO_EXECUTIVO", "organization_id": "0ba344eb-8c40-403e-93e0-f6171e1cf06e"}',
 '0ba344eb-8c40-403e-93e0-f6171e1cf06e');

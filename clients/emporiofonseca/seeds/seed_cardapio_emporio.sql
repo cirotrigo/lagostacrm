@@ -146,4 +146,18 @@ INSERT INTO public.products (organization_id, name, description, price, category
 ('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Refrigerante', NULL, 13, 'Bebidas Sem Álcool', 6, true, true, false, '{}'),
 ('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Água com Gás', NULL, 11, 'Bebidas Sem Álcool', 7, true, true, false, '{}'),
 ('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Água Sem Gás', NULL, 11, 'Bebidas Sem Álcool', 8, true, true, false, '{}'),
-('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Água Tônica', NULL, 11, 'Bebidas Sem Álcool', 9, true, true, false, '{}');
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Água Tônica', NULL, 11, 'Bebidas Sem Álcool', 9, true, true, false, '{}'),
+
+-- ═══════════════════════════════════════════════════════════════
+-- ALMOÇO EXECUTIVO (vigência 28/04 a 08/05/2026 — campanha temporária)
+-- Após 08/05, desativar (active=false) os 9 itens desta seção.
+-- ═══════════════════════════════════════════════════════════════
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Almoço Executivo', 'Combo do almoço executivo (Seg-Sex, 11h-16h, exceto feriados): 1 entrada + 1 principal + 1 sobremesa por R$ 89,90. Vigência: 28/04 a 08/05/2026.', 89.90, 'Almoço Executivo', 0, true, true, true, '{"executivo","campanha-temporaria","destaque"}'),
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Salada da Casa', 'Opção de entrada do Almoço Executivo (incluso no combo R$ 89,90).', 0, 'Almoço Executivo', 1, true, true, false, '{"executivo","campanha-temporaria"}'),
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Croqueta de Pato', 'Opção de entrada do Almoço Executivo (incluso no combo R$ 89,90).', 0, 'Almoço Executivo', 2, true, true, false, '{"executivo","campanha-temporaria"}'),
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Tilápia Grelhada (Almoço Executivo)', 'Tilápia grelhada com purê de batata e brócolis ao alho. Opção de principal do Almoço Executivo (incluso no combo R$ 89,90).', 0, 'Almoço Executivo', 3, true, true, false, '{"executivo","campanha-temporaria"}'),
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Cubos de Mignon (Almoço Executivo)', 'Cubos de mignon com arroz branco, vinagrete e fritas. Opção de principal do Almoço Executivo (incluso no combo R$ 89,90).', 0, 'Almoço Executivo', 4, true, true, false, '{"executivo","campanha-temporaria"}'),
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Escondidinho de Ragu de Cupim (Almoço Executivo)', 'Escondidinho com ragu de cupim. Opção de principal do Almoço Executivo (incluso no combo R$ 89,90).', 0, 'Almoço Executivo', 5, true, true, false, '{"executivo","campanha-temporaria"}'),
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Café (Almoço Executivo)', 'Opção de sobremesa do Almoço Executivo (incluso no combo R$ 89,90).', 0, 'Almoço Executivo', 6, true, true, false, '{"executivo","campanha-temporaria"}'),
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Pudim (Almoço Executivo)', 'Opção de sobremesa do Almoço Executivo (incluso no combo R$ 89,90).', 0, 'Almoço Executivo', 7, true, true, false, '{"executivo","campanha-temporaria"}'),
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Sobremesa do Dia (Almoço Executivo)', 'Opção de sobremesa do Almoço Executivo (incluso no combo R$ 89,90). Consultar sabor com a equipe.', 0, 'Almoço Executivo', 8, true, true, false, '{"executivo","campanha-temporaria"}');
