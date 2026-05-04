@@ -85,4 +85,9 @@ INSERT INTO documents (content, metadata, organization_id) VALUES
 -- DIA DA PIZZA (recorrente — toda quarta-feira)
 ('Dia da Pizza do Empório Fonseca: evento recorrente toda quarta-feira. Pizzas a partir de R$ 79,90. Os sabores são rotativos a cada semana, mas os 3 mais comuns são: Queijo, Parma e Mel; Queijo, Pepperoni e Tapenade de Azeitona Preta; Caprese (mozzarela de búfala, tomate cereja confitado e manjericão). A Sofia deve avisar que os sabores podem variar e orientar o cliente a consultar os destaques do Instagram @emporiofonseca ou perguntar ao garçom no momento do atendimento presencial para ver as opções da semana.',
 '{"category": "CARDAPIO", "subcategory": "DIA_DA_PIZZA", "recorrencia": "quarta-feira", "organization_id": "0ba344eb-8c40-403e-93e0-f6171e1cf06e"}',
+'0ba344eb-8c40-403e-93e0-f6171e1cf06e'),
+
+-- MENU DIA DAS MÃES 2026 (10/05/2026)
+('Menu do Dia das Mães 2026 do Empório Fonseca: menu especial servido no Dia das Mães em 10/05/2026 (segundo domingo de maio). Preço fixo de R$ 199,00 por pessoa, com 1 entrada + 1 prato principal + 1 sobremesa. ENTRADAS (escolher 1): (a) Couscous Marroquino com damasco, gorgonzola e ervas frescas; ou (b) Salada de folhas com fatias de salmão curado, geleia de laranja e queijo brie. PRATOS PRINCIPAIS (escolher 1): (a) Peixe branco grelhado em manteiga de ervas, risoto de laranja Bahia e pistache; ou (b) Filé mignon ao funghi, purê de batatas gratinado e crocante de parma. SOBREMESAS (escolher 1): (a) Torta de maçã com sorvete de creme; ou (b) Taça de chocolate com morangos frescos e creme de avelã. Reserva é recomendada para garantir mesa. Para edições de Dia das Mães em outros anos (2027 em diante), o menu pode mudar — consultar a equipe.',
+'{"category": "CARDAPIO", "subcategory": "DIA_DAS_MAES_2026", "data_evento": "2026-05-10", "preco_pessoa": 199.00, "organization_id": "0ba344eb-8c40-403e-93e0-f6171e1cf06e"}',
 '0ba344eb-8c40-403e-93e0-f6171e1cf06e');
