@@ -160,4 +160,14 @@ INSERT INTO public.products (organization_id, name, description, price, category
 ('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Escondidinho de Ragu de Cupim (Almoço Executivo)', 'Escondidinho com ragu de cupim. Opção de principal do Almoço Executivo (incluso no combo R$ 89,90).', 0, 'Almoço Executivo', 5, true, true, false, '{"executivo","campanha-temporaria"}'),
 ('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Café (Almoço Executivo)', 'Opção de sobremesa do Almoço Executivo (incluso no combo R$ 89,90).', 0, 'Almoço Executivo', 6, true, true, false, '{"executivo","campanha-temporaria"}'),
 ('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Pudim (Almoço Executivo)', 'Opção de sobremesa do Almoço Executivo (incluso no combo R$ 89,90).', 0, 'Almoço Executivo', 7, true, true, false, '{"executivo","campanha-temporaria"}'),
-('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Sobremesa do Dia (Almoço Executivo)', 'Opção de sobremesa do Almoço Executivo (incluso no combo R$ 89,90). Consultar sabor com a equipe.', 0, 'Almoço Executivo', 8, true, true, false, '{"executivo","campanha-temporaria"}');
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Sobremesa do Dia (Almoço Executivo)', 'Opção de sobremesa do Almoço Executivo (incluso no combo R$ 89,90). Consultar sabor com a equipe.', 0, 'Almoço Executivo', 8, true, true, false, '{"executivo","campanha-temporaria"}'),
+
+-- ═══════════════════════════════════════════════════════════════
+-- DIA DA PIZZA (recorrente — toda quarta-feira)
+-- A partir de R$ 79,90. Sabores rotativos; os 3 abaixo são os mais
+-- comuns. Cliente deve consultar destaques @emporiofonseca ou
+-- garçom para ver as opções da semana.
+-- ═══════════════════════════════════════════════════════════════
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Pizza Queijo, Parma e Mel', 'Disponível às quartas-feiras (Dia da Pizza). A partir de R$ 79,90. Sabores rotativos a cada semana — consulte os destaques do Instagram @emporiofonseca ou pergunte ao garçom para ver as opções do dia.', 79.90, 'Dia da Pizza', 1, true, true, true, '{"pizza","dia-da-pizza","recorrente-quarta"}'),
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Pizza Queijo, Pepperoni e Tapenade de Azeitona Preta', 'Disponível às quartas-feiras (Dia da Pizza). A partir de R$ 79,90. Sabores rotativos a cada semana — consulte os destaques do Instagram @emporiofonseca ou pergunte ao garçom para ver as opções do dia.', 79.90, 'Dia da Pizza', 2, true, true, true, '{"pizza","dia-da-pizza","recorrente-quarta"}'),
+('0ba344eb-8c40-403e-93e0-f6171e1cf06e', 'Pizza Caprese', 'Mozzarela de búfala, tomate cereja confitado e manjericão. Disponível às quartas-feiras (Dia da Pizza). A partir de R$ 79,90. Sabores rotativos a cada semana — consulte os destaques do Instagram @emporiofonseca ou pergunte ao garçom para ver as opções do dia.', 79.90, 'Dia da Pizza', 3, true, true, true, '{"pizza","dia-da-pizza","recorrente-quarta","vegetariano"}');

@@ -80,4 +80,9 @@ INSERT INTO documents (content, metadata, organization_id) VALUES
 -- ALMOÇO EXECUTIVO (campanha temporária 28/04 a 08/05/2026)
 ('Almoço Executivo do Empório Fonseca: campanha temporária válida de 28/04/2026 a 08/05/2026. Atendimento de segunda a sexta, das 11h às 16h, exceto feriados. Combo de preço fixo R$ 89,90 com 1 entrada + 1 principal + 1 sobremesa. Entradas: Salada da Casa ou Croqueta de Pato. Principais: Tilápia grelhada com purê de batata e brócolis ao alho, Cubos de mignon com arroz branco vinagrete e fritas, ou Escondidinho de ragu de cupim. Sobremesas: Café, Pudim ou Sobremesa do dia. Após 08/05/2026 a campanha encerra.',
 '{"category": "CARDAPIO", "subcategory": "ALMOCO_EXECUTIVO", "organization_id": "0ba344eb-8c40-403e-93e0-f6171e1cf06e"}',
+'0ba344eb-8c40-403e-93e0-f6171e1cf06e'),
+
+-- DIA DA PIZZA (recorrente — toda quarta-feira)
+('Dia da Pizza do Empório Fonseca: evento recorrente toda quarta-feira. Pizzas a partir de R$ 79,90. Os sabores são rotativos a cada semana, mas os 3 mais comuns são: Queijo, Parma e Mel; Queijo, Pepperoni e Tapenade de Azeitona Preta; Caprese (mozzarela de búfala, tomate cereja confitado e manjericão). A Sofia deve avisar que os sabores podem variar e orientar o cliente a consultar os destaques do Instagram @emporiofonseca ou perguntar ao garçom no momento do atendimento presencial para ver as opções da semana.',
+'{"category": "CARDAPIO", "subcategory": "DIA_DA_PIZZA", "recorrencia": "quarta-feira", "organization_id": "0ba344eb-8c40-403e-93e0-f6171e1cf06e"}',
 '0ba344eb-8c40-403e-93e0-f6171e1cf06e');
