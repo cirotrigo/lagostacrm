@@ -13,7 +13,7 @@ export type Reservation = {
   durationMinutes: number;
   start: Date;
   end: Date;
-  status: 'confirmed' | 'canceled' | 'rescheduled' | 'completed';
+  status: 'confirmed' | 'canceled' | 'rescheduled' | 'completed' | 'pending' | 'rejected';
 };
 
 const DEFAULT_DURATION = 120;

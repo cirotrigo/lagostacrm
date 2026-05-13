@@ -9,6 +9,7 @@ import { ReservationsToday } from './components/ReservationsToday';
 import { ReservationsFilters, applyReservationFilter, type ReservationFilter } from './components/ReservationsFilters';
 import { ReservationsMonth } from './components/ReservationsMonth';
 import { NewReservationModal } from './components/NewReservationModal';
+import { PendingApprovalsBanner } from './components/PendingApprovalsBanner';
 
 const ReservationsPage: React.FC = () => {
   const { reservations, loading, refetch } = useReservations();
@@ -133,6 +134,9 @@ const ReservationsPage: React.FC = () => {
           gradient="from-red-500 to-rose-600"
         />
       </div>
+
+      {/* Pending approvals banner (any date) */}
+      <PendingApprovalsBanner reservations={reservations} onChange={refetch} />
 
       {/* Today's reservations */}
       <ReservationsToday

@@ -62,6 +62,7 @@ export const NewReservationModal: React.FC<NewReservationModalProps> = ({
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notifyCustomer, setNotifyCustomer] = useState(true);
 
   // Reset everything when modal opens
   useEffect(() => {
@@ -214,25 +215,50 @@ export const NewReservationModal: React.FC<NewReservationModalProps> = ({
         observations.trim() ? `Observações: ${observations.trim()}` : null,
       ].filter(Boolean);
 
-      const { error: insertErr } = await sb.from('activities').insert({
-        title,
-        description: descParts.join(' | '),
-        type: 'meeting',
-        date: startDate.toISOString(),
-        completed: false,
-        contact_id: selectedContact.id,
-        organization_id: profile.organization_id,
-        metadata: {
-          status: 'confirmed',
-          party_size: partySize,
-          duration_minutes: duration,
-          source: 'manual',
-        },
-      });
+      const { data: inserted, error: insertErr } = await sb
+        .from('activities')
+        .insert({
+          title,
+          description: descParts.join(' | '),
+          type: 'meeting',
+          date: startDate.toISOString(),
+          completed: false,
+          contact_id: selectedContact.id,
+          organization_id: profile.organization_id,
+          metadata: {
+            status: 'confirmed',
+            party_size: partySize,
+            duration_minutes: duration,
+            source: 'manual',
+          },
+        })
+        .select('id')
+        .single();
       if (insertErr) {
         setError(insertErr.message);
         return;
       }
+
+      // Dispara notificação ao cliente via Chatwoot (best-effort, não bloqueia)
+      if (notifyCustomer && inserted?.id && selectedContact.phone) {
+        try {
+          const notifyRes = await fetch(`/api/reservations/${inserted.id}/notify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ template: 'approve' }),
+          });
+          const notifyJson = await notifyRes.json().catch(() => ({}));
+          const notif = notifyJson?.notification as { ok?: boolean; reason?: string; detail?: string } | undefined;
+          if (notif && !notif.ok) {
+            // Não bloqueia o fluxo: reserva foi criada, só a notificação falhou.
+            console.warn('[NewReservation] notify falhou:', notif);
+          }
+        } catch (notifyErr) {
+          console.warn('[NewReservation] notify request error:', notifyErr);
+        }
+      }
+
       onCreated();
       onClose();
     } catch (e) {
@@ -457,6 +483,19 @@ export const NewReservationModal: React.FC<NewReservationModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* Notify customer toggle */}
+        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={notifyCustomer}
+            onChange={(e) => setNotifyCustomer(e.target.checked)}
+            className="h-4 w-4"
+          />
+          <span>
+            Notificar cliente via WhatsApp <span className="text-xs text-slate-500">(usa template "reserva aprovada")</span>
+          </span>
+        </label>
 
         {/* Footer actions */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-white/10">

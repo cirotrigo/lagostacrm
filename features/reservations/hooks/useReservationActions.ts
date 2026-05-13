@@ -99,6 +99,51 @@ export function useReservationActions() {
     }
   }
 
+  /**
+   * Aprova uma reserva pendente (status='pending' → 'confirmed') e dispara
+   * notificação ao cliente via Chatwoot.
+   */
+  async function approveReservation(
+    activityId: string,
+  ): Promise<{ ok: boolean; error?: string; notification?: unknown }> {
+    setPendingFor(activityId, true);
+    try {
+      const res = await fetch(`/api/reservations/${activityId}/approve`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: body?.error || `HTTP ${res.status}` };
+      return { ok: true, notification: body?.notification };
+    } finally {
+      setPendingFor(activityId, false);
+    }
+  }
+
+  /**
+   * Rejeita uma reserva pendente (status='pending' → 'rejected') com motivo e
+   * dispara notificação ao cliente via Chatwoot.
+   */
+  async function rejectReservation(
+    activityId: string,
+    reason: string,
+  ): Promise<{ ok: boolean; error?: string; notification?: unknown }> {
+    setPendingFor(activityId, true);
+    try {
+      const res = await fetch(`/api/reservations/${activityId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reason }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: body?.error || `HTTP ${res.status}` };
+      return { ok: true, notification: body?.notification };
+    } finally {
+      setPendingFor(activityId, false);
+    }
+  }
+
   /** Marca como concluída (cliente compareceu). */
   async function markCompleted(activityId: string): Promise<{ ok: boolean; error?: string }> {
     setPendingFor(activityId, true);
@@ -127,5 +172,12 @@ export function useReservationActions() {
     }
   }
 
-  return { pending, cancelReservation, markCompleted, rescheduleReservation };
+  return {
+    pending,
+    cancelReservation,
+    markCompleted,
+    rescheduleReservation,
+    approveReservation,
+    rejectReservation,
+  };
 }

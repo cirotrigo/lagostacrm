@@ -5,7 +5,7 @@ import { Search, X } from 'lucide-react';
 
 export type ReservationFilter = {
   search: string;
-  status: 'all' | 'confirmed' | 'canceled' | 'completed';
+  status: 'all' | 'confirmed' | 'canceled' | 'completed' | 'pending' | 'rejected';
 };
 
 interface Props {
@@ -46,8 +46,10 @@ export const ReservationsFilters: React.FC<Props> = ({ filter, onChange, totalCo
         <div className="flex gap-1 bg-slate-100 dark:bg-white/5 rounded-xl p-0.5">
           {([
             { id: 'all', label: 'Todas' },
+            { id: 'pending', label: 'Aguardando' },
             { id: 'confirmed', label: 'Confirmadas' },
             { id: 'canceled', label: 'Canceladas' },
+            { id: 'rejected', label: 'Rejeitadas' },
             { id: 'completed', label: 'Concluídas' },
           ] as const).map(({ id, label }) => (
             <button

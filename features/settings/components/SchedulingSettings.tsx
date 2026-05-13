@@ -21,8 +21,13 @@ type OperatingHours = Partial<Record<Weekday, DayHours>>;
 type BlockedDate = { date: string; reason: string; mode: 'first_come' | 'closed'; message?: string };
 type Area = { id: string; name: string; capacity: number };
 
+type ConfirmationMode = 'automatic' | 'manual';
+
 type SchedulingState = {
   enabled: boolean;
+  confirmationMode: ConfirmationMode;
+  approveTemplate: string | null;
+  rejectTemplate: string | null;
   maxAdvanceDays: number;
   minAdvanceMinutes: number;
   defaultCapacity: number;
@@ -34,8 +39,16 @@ type SchedulingState = {
   areas: Area[];
 };
 
+const DEFAULT_APPROVE_TEMPLATE =
+  'Boas notícias, {nome}! Sua reserva para {data} às {hora} para {pessoas} pessoa(s) foi confirmada. Te esperamos! 🍷';
+const DEFAULT_REJECT_TEMPLATE =
+  'Olá, {nome}. Infelizmente não consegui confirmar sua reserva para {data} às {hora}. Motivo: {motivo}. Posso te ajudar a buscar outro horário? 😊';
+
 const DEFAULT_STATE: SchedulingState = {
   enabled: false,
+  confirmationMode: 'automatic',
+  approveTemplate: null,
+  rejectTemplate: null,
   maxAdvanceDays: 30,
   minAdvanceMinutes: 90,
   defaultCapacity: 0,
@@ -62,6 +75,9 @@ export const SchedulingSettings: React.FC = () => {
       const data = await res.json();
       setState({
         enabled: !!data.enabled,
+        confirmationMode: (data.confirmationMode as ConfirmationMode) ?? 'automatic',
+        approveTemplate: data.approveTemplate ?? null,
+        rejectTemplate: data.rejectTemplate ?? null,
         maxAdvanceDays: data.maxAdvanceDays ?? 30,
         minAdvanceMinutes: data.minAdvanceMinutes ?? 90,
         defaultCapacity: data.defaultCapacity ?? 0,
@@ -231,6 +247,106 @@ export const SchedulingSettings: React.FC = () => {
             Habilitar agendamento de reservas neste tenant
           </span>
         </label>
+      </div>
+
+      {/* Modo de confirmação */}
+      <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
+        <div>
+          <h4 className="text-base font-semibold text-slate-900 dark:text-white">Modo de confirmação</h4>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Define se o agente de IA confirma reservas automaticamente ou se elas ficam aguardando a equipe aprovar.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label
+            className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
+              state.confirmationMode === 'automatic'
+                ? 'border-primary-400 dark:border-primary-500/60 bg-primary-50/50 dark:bg-primary-500/10'
+                : 'border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
+            }`}
+          >
+            <input
+              type="radio"
+              name="confirmationMode"
+              checked={state.confirmationMode === 'automatic'}
+              onChange={() => setState((s) => ({ ...s, confirmationMode: 'automatic' }))}
+              className="mt-1"
+            />
+            <div className="min-w-0">
+              <div className="font-semibold text-sm text-slate-900 dark:text-white">Automático</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                A IA confirma na hora e o cliente recebe imediatamente a confirmação.
+              </div>
+            </div>
+          </label>
+
+          <label
+            className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
+              state.confirmationMode === 'manual'
+                ? 'border-primary-400 dark:border-primary-500/60 bg-primary-50/50 dark:bg-primary-500/10'
+                : 'border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
+            }`}
+          >
+            <input
+              type="radio"
+              name="confirmationMode"
+              checked={state.confirmationMode === 'manual'}
+              onChange={() => setState((s) => ({ ...s, confirmationMode: 'manual' }))}
+              className="mt-1"
+            />
+            <div className="min-w-0">
+              <div className="font-semibold text-sm text-slate-900 dark:text-white">Manual</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                A IA anota a reserva e avisa o cliente que será confirmada em breve. Equipe aprova ou rejeita na página de reservas.
+              </div>
+            </div>
+          </label>
+        </div>
+
+        {state.confirmationMode === 'manual' && (
+          <div className="space-y-4 pt-2 border-t border-slate-200 dark:border-white/10">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Mensagens enviadas ao cliente via Chatwoot. Placeholders disponíveis:{' '}
+              <code className="text-[11px] bg-slate-100 dark:bg-white/10 px-1 py-0.5 rounded">{'{nome}'}</code>{' '}
+              <code className="text-[11px] bg-slate-100 dark:bg-white/10 px-1 py-0.5 rounded">{'{data}'}</code>{' '}
+              <code className="text-[11px] bg-slate-100 dark:bg-white/10 px-1 py-0.5 rounded">{'{hora}'}</code>{' '}
+              <code className="text-[11px] bg-slate-100 dark:bg-white/10 px-1 py-0.5 rounded">{'{pessoas}'}</code>{' '}
+              <code className="text-[11px] bg-slate-100 dark:bg-white/10 px-1 py-0.5 rounded">{'{motivo}'}</code>{' '}
+              (motivo só na rejeição). Deixe vazio para usar o padrão.
+            </p>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">
+                Template — reserva aprovada
+              </label>
+              <textarea
+                rows={3}
+                value={state.approveTemplate ?? ''}
+                onChange={(e) =>
+                  setState((s) => ({ ...s, approveTemplate: e.target.value || null }))
+                }
+                placeholder={DEFAULT_APPROVE_TEMPLATE}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-white/5 text-sm outline-none focus:ring-2 focus:ring-primary-500 dark:text-white resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">
+                Template — reserva rejeitada
+              </label>
+              <textarea
+                rows={3}
+                value={state.rejectTemplate ?? ''}
+                onChange={(e) =>
+                  setState((s) => ({ ...s, rejectTemplate: e.target.value || null }))
+                }
+                placeholder={DEFAULT_REJECT_TEMPLATE}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-white/5 text-sm outline-none focus:ring-2 focus:ring-primary-500 dark:text-white resize-none"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Limites e capacidade */}
