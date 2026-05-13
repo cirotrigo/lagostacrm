@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { CalendarClock, Users as UsersIcon, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { CalendarClock, Users as UsersIcon, TrendingUp, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
 import { useReservations, filterByRange, isSameDay, type Reservation } from './hooks/useReservations';
 import { useSchedulingConfig } from '@/features/activities/hooks/useSchedulingConfig';
 import { ReservationsCalendar } from './components/ReservationsCalendar';
 import { ReservationsToday } from './components/ReservationsToday';
 import { ReservationsFilters, applyReservationFilter, type ReservationFilter } from './components/ReservationsFilters';
 import { ReservationsMonth } from './components/ReservationsMonth';
+import { NewReservationModal } from './components/NewReservationModal';
 
 const ReservationsPage: React.FC = () => {
   const { reservations, loading, refetch } = useReservations();
@@ -15,6 +16,7 @@ const ReservationsPage: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filter, setFilter] = useState<ReservationFilter>({ search: '', status: 'all' });
   const [calendarTab, setCalendarTab] = useState<'week' | 'month'>('week');
+  const [showNewReservationModal, setShowNewReservationModal] = useState(false);
 
   const filteredReservations = useMemo(
     () => applyReservationFilter(reservations, filter),
@@ -79,15 +81,25 @@ const ReservationsPage: React.FC = () => {
             Visão operacional das reservas — capacidade, lifecycle e ações rápidas.
           </p>
         </div>
-        {!config?.enabled && !loading && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl text-amber-700 dark:text-amber-300 text-sm">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <span>
-              Sistema de reservas desabilitado. Habilite em{' '}
-              <a href="/settings/agendamento" className="underline font-semibold">Settings → Agendamento</a>.
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {!config?.enabled && !loading && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl text-amber-700 dark:text-amber-300 text-sm">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>
+                Sistema de reservas desabilitado. Habilite em{' '}
+                <a href="/settings/agendamento" className="underline font-semibold">Settings → Agendamento</a>.
+              </span>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowNewReservationModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-primary-600/20 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Nova Reserva
+          </button>
+        </div>
       </header>
 
       {/* Stats */}
@@ -173,6 +185,13 @@ const ReservationsPage: React.FC = () => {
           config={config}
         />
       )}
+
+      <NewReservationModal
+        isOpen={showNewReservationModal}
+        onClose={() => setShowNewReservationModal(false)}
+        onCreated={refetch}
+        config={config}
+      />
     </div>
   );
 };
