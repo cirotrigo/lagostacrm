@@ -46,6 +46,9 @@ const AreaSchema = z.object({
 
 const SchedulingPayloadSchema = z.object({
   enabled: z.boolean().optional(),
+  confirmationMode: z.enum(['automatic', 'manual']).optional(),
+  approveTemplate: z.string().max(2000).nullable().optional(),
+  rejectTemplate: z.string().max(2000).nullable().optional(),
   maxAdvanceDays: z.number().int().min(1).max(365).optional(),
   minAdvanceMinutes: z.number().int().min(0).max(60 * 24 * 7).optional(),
   defaultCapacity: z.number().int().min(0).optional(),
@@ -73,6 +76,9 @@ export async function GET() {
     .from('organization_settings')
     .select(`
       scheduling_enabled,
+      scheduling_confirmation_mode,
+      scheduling_approve_template,
+      scheduling_reject_template,
       scheduling_max_advance_days,
       scheduling_min_advance_minutes,
       scheduling_default_capacity,
@@ -89,6 +95,9 @@ export async function GET() {
 
   return json({
     enabled: !!row?.scheduling_enabled,
+    confirmationMode: (row?.scheduling_confirmation_mode as 'automatic' | 'manual') ?? 'automatic',
+    approveTemplate: row?.scheduling_approve_template ?? null,
+    rejectTemplate: row?.scheduling_reject_template ?? null,
     maxAdvanceDays: row?.scheduling_max_advance_days ?? 30,
     minAdvanceMinutes: row?.scheduling_min_advance_minutes ?? 90,
     defaultCapacity: row?.scheduling_default_capacity ?? 0,
@@ -126,6 +135,9 @@ export async function PUT(req: Request) {
     updated_at: new Date().toISOString(),
   };
   if (data.enabled !== undefined) dbUpdates.scheduling_enabled = data.enabled;
+  if (data.confirmationMode !== undefined) dbUpdates.scheduling_confirmation_mode = data.confirmationMode;
+  if (data.approveTemplate !== undefined) dbUpdates.scheduling_approve_template = data.approveTemplate;
+  if (data.rejectTemplate !== undefined) dbUpdates.scheduling_reject_template = data.rejectTemplate;
   if (data.maxAdvanceDays !== undefined) dbUpdates.scheduling_max_advance_days = data.maxAdvanceDays;
   if (data.minAdvanceMinutes !== undefined) dbUpdates.scheduling_min_advance_minutes = data.minAdvanceMinutes;
   if (data.defaultCapacity !== undefined) dbUpdates.scheduling_default_capacity = data.defaultCapacity;

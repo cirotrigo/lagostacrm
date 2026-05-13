@@ -12,7 +12,9 @@ const ReservationMetadataSchema = z.object({
   party_size: z.number().int().positive().optional(),
   duration_minutes: z.number().int().positive().optional(),
   area_id: z.string().min(1).optional(),
-  status: z.enum(['confirmed', 'canceled', 'rescheduled', 'completed']).optional(),
+  status: z.enum(['confirmed', 'canceled', 'rescheduled', 'completed', 'pending', 'rejected']).optional(),
+  chatwoot_conversation_id: z.number().int().positive().optional(),
+  channel: z.enum(['WHATSAPP', 'INSTAGRAM']).optional(),
 }).passthrough();
 
 const ActivityCreateSchema = z.object({
@@ -96,6 +98,27 @@ export async function POST(request: Request) {
   }
 
   const sb = createStaticAdminClient();
+  const normalizedType = (normalizeText(parsed.data.type) || parsed.data.type).toLowerCase();
+  let metadata: Record<string, unknown> = { ...(parsed.data.metadata ?? {}) };
+  let confirmationMode: 'automatic' | 'manual' = 'automatic';
+
+  // Para reservas (meeting) criadas externamente: respeitar o modo de confirmação da org.
+  // Se manual, sobrescreve status=pending (mesmo se o caller mandou "confirmed").
+  if (normalizedType === 'meeting') {
+    const { data: settings } = await sb
+      .from('organization_settings')
+      .select('scheduling_confirmation_mode')
+      .eq('organization_id', auth.organizationId)
+      .maybeSingle();
+    confirmationMode =
+      ((settings as any)?.scheduling_confirmation_mode as 'automatic' | 'manual') ?? 'automatic';
+    if (confirmationMode === 'manual') {
+      metadata = { ...metadata, status: 'pending' };
+    } else if (!metadata.status) {
+      metadata = { ...metadata, status: 'confirmed' };
+    }
+  }
+
   const insertPayload: any = {
     organization_id: auth.organizationId,
     title: normalizeText(parsed.data.title) || parsed.data.title,
@@ -106,7 +129,7 @@ export async function POST(request: Request) {
     deal_id: sanitizeUUID(parsed.data.deal_id) || null,
     contact_id: sanitizeUUID(parsed.data.contact_id) || null,
     client_company_id: sanitizeUUID(parsed.data.client_company_id) || null,
-    metadata: parsed.data.metadata ?? {},
+    metadata,
     created_at: now.toISOString(),
   };
 
@@ -116,6 +139,9 @@ export async function POST(request: Request) {
     .select('id,title,description,type,date,completed,deal_id,contact_id,client_company_id,metadata,created_at')
     .single();
   if (error) return NextResponse.json({ error: error.message, code: 'DB_ERROR' }, { status: 500 });
-  return NextResponse.json({ data, action: 'created' }, { status: 201 });
+  return NextResponse.json(
+    { data, action: 'created', confirmation_mode: normalizedType === 'meeting' ? confirmationMode : undefined },
+    { status: 201 },
+  );
 }
 
