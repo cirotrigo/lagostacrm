@@ -7,6 +7,7 @@ import { ApiKeysSection } from './components/ApiKeysSection';
 import { WebhooksSection } from './components/WebhooksSection';
 import { McpSection } from './components/McpSection';
 import { WhatsAppSection } from './components/WhatsAppSection';
+import { EvolutionSection } from './components/EvolutionSection';
 import { DataStorageSettings } from './components/DataStorageSettings';
 import { ProductsCatalogManager } from './components/ProductsCatalogManager';
 import { AICenterSettings } from './AICenterSettings';
@@ -110,13 +111,13 @@ const ProductsSettings: React.FC = () => {
 };
 
 const IntegrationsSettings: React.FC = () => {
-  type IntegrationsSubTab = 'whatsapp' | 'api' | 'webhooks' | 'mcp';
-  const [subTab, setSubTab] = useState<IntegrationsSubTab>('whatsapp');
+  type IntegrationsSubTab = 'evolution' | 'whatsapp' | 'api' | 'webhooks' | 'mcp';
+  const [subTab, setSubTab] = useState<IntegrationsSubTab>('evolution');
 
   useEffect(() => {
     const syncFromHash = () => {
     const h = typeof window !== 'undefined' ? (window.location.hash || '').replace('#', '') : '';
-    if (h === 'whatsapp' || h === 'webhooks' || h === 'api' || h === 'mcp') setSubTab(h as IntegrationsSubTab);
+    if (h === 'evolution' || h === 'whatsapp' || h === 'webhooks' || h === 'api' || h === 'mcp') setSubTab(h as IntegrationsSubTab);
     };
 
     syncFromHash();
@@ -140,7 +141,8 @@ const IntegrationsSettings: React.FC = () => {
     <div className="pb-10">
       <div className="flex items-center gap-2 mb-6">
         {([
-          { id: 'whatsapp' as const, label: 'WhatsApp' },
+          { id: 'evolution' as const, label: 'WhatsApp (Evolution)' },
+          { id: 'whatsapp' as const, label: 'WhatsApp (WPP)' },
           { id: 'webhooks' as const, label: 'Webhooks' },
           { id: 'api' as const, label: 'API' },
           { id: 'mcp' as const, label: 'MCP' },
@@ -163,6 +165,7 @@ const IntegrationsSettings: React.FC = () => {
         })}
       </div>
 
+      {subTab === 'evolution' && <EvolutionSection />}
       {subTab === 'whatsapp' && <WhatsAppSection />}
       {subTab === 'api' && <ApiKeysSection />}
       {subTab === 'webhooks' && <WebhooksSection />}
