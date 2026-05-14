@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/sync-chatwoot-avatars",
       "schedule": "0 */8 * * *"
+    },
+    {
+      "path": "/api/cron/expire-handoffs",
+      "schedule": "0 * * * *"
     }
   ]
 }
