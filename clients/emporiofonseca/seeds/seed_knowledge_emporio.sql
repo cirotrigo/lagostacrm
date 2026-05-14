@@ -77,8 +77,8 @@ INSERT INTO documents (content, metadata, organization_id) VALUES
 '{"category": "FAQ", "organization_id": "0ba344eb-8c40-403e-93e0-f6171e1cf06e"}',
 '0ba344eb-8c40-403e-93e0-f6171e1cf06e'),
 
--- ALMOÇO EXECUTIVO (campanha temporária 28/04 a 08/05/2026)
-('Almoço Executivo do Empório Fonseca: campanha temporária válida de 28/04/2026 a 08/05/2026. Atendimento de segunda a sexta, das 11h às 16h, exceto feriados. Combo de preço fixo R$ 89,90 com 1 entrada + 1 principal + 1 sobremesa. Entradas: Salada da Casa ou Croqueta de Pato. Principais: Tilápia grelhada com purê de batata e brócolis ao alho, Cubos de mignon com arroz branco vinagrete e fritas, ou Escondidinho de ragu de cupim. Sobremesas: Café, Pudim ou Sobremesa do dia. Após 08/05/2026 a campanha encerra.',
+-- ALMOÇO EXECUTIVO (campanha temporária 12/05 a 22/05/2026)
+('Almoço Executivo do Empório Fonseca: campanha temporária válida de 12/05/2026 a 22/05/2026. Atendimento de segunda a sexta, das 11h às 16h, exceto feriados. Combo de preço fixo R$ 89,90 com 1 entrada + 1 principal + 1 sobremesa. ENTRADAS (escolher 1): Mix de folhas e couscous Marroquino com damasco e ervas, ou Salada da Casa. PRINCIPAIS (escolher 1): Tilápia empanada com Risoni à Margheritta, Polenta com ragu de cupim e Parmesão, ou Sobrecoxa de frango assada com salada de batata e rúcula. SOBREMESAS (escolher 1): Café, Pudim ou Sobremesa do dia. Após 22/05/2026 a campanha encerra.',
 '{"category": "CARDAPIO", "subcategory": "ALMOCO_EXECUTIVO", "organization_id": "0ba344eb-8c40-403e-93e0-f6171e1cf06e"}',
 '0ba344eb-8c40-403e-93e0-f6171e1cf06e'),
 
